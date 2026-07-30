@@ -1,0 +1,40 @@
+name: Allow only collaborator PRs
+
+# GitHub offers no setting that disables pull requests on a personally-owned
+# public repository, and forking cannot be turned off outside org-owned
+# private repos. Interaction limits are capped at six months. So the block is
+# enforced here instead.
+#
+# pull_request_target runs in the context of the base repository, which is why
+# the token has write access. Nothing from the incoming branch is checked out
+# or executed, so this stays safe.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  gatekeep:
+    if: ${{ !contains(fromJson('["OWNER","COLLABORATOR"]'), github.event.pull_request.author_association)
+            && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment and close PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request.number;
+            const { owner, repo } = context.repo;
+
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: pr,
+              body: 'This is a personal fork published as-is under the MIT licence. Pull requests are not accepted from the public.\n\nFor the original extension, see [tscpp/xit-vscode](https://github.com/tscpp/xit-vscode). Otherwise feel free to fork and continue development under the MIT licence.'
+            });
+
+            await github.rest.pulls.update({
+              owner, repo, pull_number: pr, state: 'closed'
+            });
