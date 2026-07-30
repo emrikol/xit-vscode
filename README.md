@@ -8,6 +8,7 @@ the official format.
 
 - [Syntax Highlighting](#syntax-highlighting)
 - [Comments](#comments)
+- [Development](#development)
 - [Shortcuts](#shortcuts)
 - [Snippets](#snippets)
 
@@ -94,6 +95,25 @@ lines. An unterminated comment runs to the end of the file.
 Comments are a fork of the [x]it! specification, not part of the official
 format, so other [x]it! tools will not understand them. See
 [emrikol/xit](https://github.com/emrikol/xit).
+
+## Development
+
+```sh
+npm install   # also installs the git hooks
+npm test      # build, then run the suite
+```
+
+`npm install` points `core.hooksPath` at `.githooks`, so the hooks install
+themselves with no extra dependency. `pre-commit` runs the suite. `pre-push`
+runs the suite and confirms the extension still packages, which catches
+manifest mistakes that the tests cannot see. Both take `--no-verify` if you
+need to get past them.
+
+The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`,
+the same libraries VS Code uses, so they exercise the real Oniguruma engine
+rather than JavaScript's regular expressions. The conformance fixture is the
+reference `test.xit` from
+[jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
 
 ## Shortcuts
 

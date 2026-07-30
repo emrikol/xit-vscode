@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# Build and run the test suite before every commit.
+#
+# Installed by the `prepare` script in package.json, which points
+# core.hooksPath at this directory on `npm install`. No dependency needed.
+#
+# Note this tests the working tree, not the staged snapshot. Stashing to test
+# exactly what is being committed is more correct, but a failed stash can lose
+# work, which is a worse outcome than the case it guards against on a
+# single-maintainer repo.
+#
+# Bypass with `git commit --no-verify` when you need to.
+
+set -e
+
+if ! npm test; then
+	echo
+	echo "pre-commit: tests failed, commit aborted." >&2
+	echo "            fix them, or bypass with: git commit --no-verify" >&2
+	exit 1
+fi

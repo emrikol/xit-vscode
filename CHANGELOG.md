@@ -62,5 +62,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   `noImplicitOverride` and `noFallthroughCasesInSwitch` checks.
 - Removed the `onCommand:` activation events, which VS Code has inferred from
   contributed commands since 1.74.
-- `.claude` and source maps are no longer bundled into the extension, and the
-  test suite runs in CI on Node 22 and 24.
+- `.claude` and source maps are no longer bundled into the extension.
+- Git hooks run the suite before a commit, and the suite plus a packaging
+  check before a push. They install themselves on `npm install` through
+  `core.hooksPath`, with no extra dependency.

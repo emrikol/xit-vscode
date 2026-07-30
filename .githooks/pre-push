@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Last gate before anything leaves the machine: run the tests, then confirm
+# the extension still packages.
+#
+# The packaging check earns its place. Manifest mistakes are invisible to the
+# test suite and to the compiler, and you only meet them at publish time. It
+# is what caught .claude/settings.local.json being bundled into the vsix.
+#
+# Needs network the first time, to fetch vsce.
+#
+# Bypass with `git push --no-verify` when you need to.
+
+set -e
+
+vsix=$(mktemp -t xit-prepush).vsix
+
+cleanup() {
+	rm -f "$vsix"
+}
+trap cleanup EXIT
+
+if ! npm test; then
+	echo
+	echo "pre-push: tests failed, push aborted." >&2
+	echo "          fix them, or bypass with: git push --no-verify" >&2
+	exit 1
+fi
+
+if ! npx --yes @vscode/vsce package --no-git-tag-version --out "$vsix" >/dev/null; then
+	echo
+	echo "pre-push: the extension failed to package, push aborted." >&2
+	echo "          run it yourself to see why:" >&2
+	echo "            npx @vscode/vsce package --no-git-tag-version --out /tmp/x.vsix" >&2
+	echo "          or bypass with: git push --no-verify" >&2
+	exit 1
+fi
+
+echo "pre-push: tests pass and the extension packages."

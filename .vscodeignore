@@ -1,6 +1,8 @@
 .vscode/**
 .vscode-test/**
 .claude/**
+.github/**
+.githooks/**
 src/**
 test/**
 node_modules/**
