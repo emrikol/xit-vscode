@@ -40,6 +40,17 @@ const targets = [
 		format: 'cjs',
 		outfile: 'dist/extension.js',
 	},
+	{
+		...common,
+		// The web extension host runs each extension in a web worker. There
+		// is no module loader and no importScripts, so a single file is not
+		// an optimisation there, it is the only thing that loads. `vscode`
+		// stays external because the host intercepts that one require.
+		platform: 'browser',
+		target: 'es2022',
+		format: 'cjs',
+		outfile: 'dist/web/extension.js',
+	},
 ];
 
 if (watch) {
