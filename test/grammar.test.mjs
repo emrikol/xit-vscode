@@ -1,0 +1,445 @@
+/**
+ * Conformance tests for the [x]it! TextMate grammar.
+ *
+ * Each test cites the rule it enforces from the [x]it! Specification v1.1
+ * (https://github.com/jotaen/xit/blob/main/Specification.md). Where the
+ * specification is ambiguous, the reference implementation
+ * (https://github.com/jotaen/xit-sublime) breaks the tie.
+ */
+
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { tokenize, tokenizeLine, scoped, onlyScoped, fixture } from './tokenizer.mjs';
+
+const CHECKBOX = 'task.checkbox';
+const OPEN = 'task.checkbox.open';
+const CHECKED = 'task.checkbox.checked';
+const ONGOING = 'task.checkbox.ongoing';
+const OBSOLETE = 'task.checkbox.obsolete';
+const IN_QUESTION = 'task.checkbox.in-question';
+const PRIORITY = 'task.priority';
+const DATE = 'task.date';
+const TAG = 'task.tag';
+const TITLE = 'task.title';
+const COMMENT = 'markup.other.comment';
+
+/** Assert that `line` carries exactly one token run scoped `fragment`, equal to `expected`. */
+async function assertScope(line, fragment, expected) {
+	const tokens = await tokenizeLine(line);
+	assert.equal(onlyScoped(tokens, fragment), expected, `${JSON.stringify(line)} → ${fragment}`);
+}
+
+/** Assert that `line` carries no token scoped `fragment`. */
+async function assertNoScope(line, fragment) {
+	const tokens = await tokenizeLine(line);
+	assert.deepEqual(scoped(tokens, fragment), [], `${JSON.stringify(line)} → ${fragment}`);
+}
+
+describe('checkbox (spec §Checkbox)', () => {
+	it('recognises all five statuses', async () => {
+		await assertScope('[ ] Open', OPEN, '[ ]');
+		await assertScope('[x] Checked', CHECKED, '[x]');
+		await assertScope('[@] Ongoing', ONGOING, '[@]');
+		await assertScope('[~] Obsolete', OBSOLETE, '[~]');
+		await assertScope('[?] In question', IN_QUESTION, '[?]');
+	});
+
+	it('gives the in-question status its own scope, not the ongoing one', async () => {
+		// Regression: the v1.1 commit copy-pasted the ongoing scope onto [?].
+		await assertNoScope('[?] In question', ONGOING);
+	});
+
+	it('requires exactly three characters', async () => {
+		// Spec: "It MUST be a sequence of 3 characters".
+		for (const line of ['[] Invalid', '[  ] Invalid', '[ x ] Invalid', '[@@] Invalid']) {
+			await assertNoScope(line, CHECKBOX);
+		}
+	});
+
+	it('rejects unknown status characters', async () => {
+		for (const line of ['[*] Invalid', '[o] Invalid', '[X] Invalid']) {
+			await assertNoScope(line, CHECKBOX);
+		}
+	});
+
+	it('must start at the beginning of the line', async () => {
+		// Spec §Item: "It MUST start at the beginning of a line with a checkbox."
+		await assertNoScope(' [x] Invalid', CHECKBOX);
+		await assertNoScope('    [x] Invalid', CHECKBOX);
+	});
+
+	it('must be followed by a space or the end of the line', async () => {
+		await assertNoScope('[ ]Invalid', CHECKBOX);
+		await assertScope('[ ]', OPEN, '[ ]');
+		await assertScope('[ ] ', OPEN, '[ ]');
+	});
+});
+
+describe('priority (spec §Priority)', () => {
+	it('is recognised after every checkbox status', async () => {
+		await assertScope('[ ] ! Open', PRIORITY, '!');
+		await assertScope('[x] ! Checked', PRIORITY, '!');
+		await assertScope('[@] ! Ongoing', PRIORITY, '!');
+		await assertScope('[~] ! Obsolete', PRIORITY, '!');
+		// Regression: the priority lookbehind omitted `?`.
+		await assertScope('[?] ! In question', PRIORITY, '!');
+	});
+
+	it('accepts any number of exclamation marks', async () => {
+		await assertScope('[ ] !!! Very important', PRIORITY, '!!!');
+		await assertScope('[ ] !!!!!!!!!! Super important', PRIORITY, '!!!!!!!!!!');
+	});
+
+	it('accepts dot padding on one side', async () => {
+		// Spec: "The dots MUST appear either before or after the exclamation mark(s)."
+		await assertScope('[ ] ..! Important', PRIORITY, '..!');
+		await assertScope('[ ] !!. More important', PRIORITY, '!!.');
+	});
+
+	it('rejects dots on both sides', async () => {
+		await assertNoScope('[ ] .!. Invalid', PRIORITY);
+		await assertNoScope('[ ] !.! Invalid', PRIORITY);
+	});
+
+	it('requires at least one exclamation mark', async () => {
+		// Dots alone carry no meaning, so they are not a priority.
+		await assertNoScope('[ ] ... Not important', PRIORITY);
+		await assertNoScope('[ ] . Not important', PRIORITY);
+	});
+
+	it('allows additional spaces before it', async () => {
+		// Spec §Item: "(Additional space characters MAY appear.)"
+		await assertScope('[ ]    ! Do something', PRIORITY, '!');
+		await assertScope('[ ]   !!. Do something', PRIORITY, '!!.');
+	});
+
+	it('must be a separate token', async () => {
+		await assertNoScope('[ ] !This has regular priority', PRIORITY);
+	});
+
+	it('is only recognised at the start of the description', async () => {
+		const [, second] = await tokenize('[ ] The next line is ...\n    !!! not important');
+		assert.deepEqual(scoped(second, PRIORITY), []);
+	});
+
+	it('does not treat later exclamation marks as priority', async () => {
+		await assertScope('[ ] ! !!! This is important!', PRIORITY, '!');
+	});
+});
+
+describe('due date (spec §Due Date)', () => {
+	it('accepts all five date patterns with a hyphen separator', async () => {
+		await assertScope('[ ] -> 2022-01-31', DATE, '-> 2022-01-31');
+		await assertScope('[ ] -> 2022-01', DATE, '-> 2022-01');
+		await assertScope('[ ] -> 2022', DATE, '-> 2022');
+		await assertScope('[ ] -> 2022-W01', DATE, '-> 2022-W01');
+		await assertScope('[ ] -> 2022-Q1', DATE, '-> 2022-Q1');
+	});
+
+	it('accepts all five date patterns with a slash separator', async () => {
+		await assertScope('[ ] -> 2022/01/31', DATE, '-> 2022/01/31');
+		await assertScope('[ ] -> 2022/01', DATE, '-> 2022/01');
+		await assertScope('[ ] -> 2022/W01', DATE, '-> 2022/W01');
+		await assertScope('[ ] -> 2022/Q1', DATE, '-> 2022/Q1');
+	});
+
+	it('requires a consistent separator', async () => {
+		await assertNoScope('[ ] -> 2022-01/31', DATE);
+	});
+
+	it('requires the exact "-> " prefix', async () => {
+		await assertNoScope('[ ] ->2022-01-31', DATE);
+		await assertNoScope('[ ] ->   2022-01-31', DATE);
+		await assertNoScope('[ ] > 2022-01-31', DATE);
+		await assertNoScope('[ ] Do until ->', DATE);
+	});
+
+	it('rejects trailing junk', async () => {
+		await assertNoScope('[ ] -> 2022-01-31very urgent', DATE);
+		await assertNoScope('[ ] -> 2022-01-31-0', DATE);
+		await assertNoScope('[ ] -> 2022/01/31/0', DATE);
+		await assertNoScope('[ ] -> 2022-01-31T10:00', DATE);
+	});
+
+	it('rejects out-of-range months, weeks and quarters', async () => {
+		await assertNoScope('[ ] -> 2022-13-01', DATE);
+		await assertNoScope('[ ] -> 2022-W54', DATE);
+		await assertNoScope('[ ] -> 2022-Q5', DATE);
+		await assertNoScope('[ ] -> 2022-01-32', DATE);
+	});
+
+	it('may be surrounded by punctuation', async () => {
+		await assertScope('[ ] Do this soon -> 2022-01-31!!!', DATE, '-> 2022-01-31');
+		await assertScope('[ ] Do this (-> 2022-01-31)', DATE, '-> 2022-01-31');
+	});
+
+	it('is recognised on a continuation line', async () => {
+		const [, second] = await tokenize('[ ] Do something until ...\n    -> 2022-01-31');
+		assert.equal(onlyScoped(second, DATE), '-> 2022-01-31');
+	});
+
+	it('only counts the first occurrence on a line', async () => {
+		// Spec: "(Any additional due dates MUST be disregarded.)"
+		const line = await tokenizeLine('[ ] -> 2022-01-31 -> 2022-02-28');
+		assert.deepEqual(scoped(line, DATE), ['-> 2022-01-31']);
+	});
+
+	it('still recognises tags after the first due date', async () => {
+		const line = await tokenizeLine('[ ] -> 2022-01-31 #tag and #two');
+		assert.deepEqual(scoped(line, TAG), ['#tag', '#two']);
+	});
+
+	it('only counts the first occurrence across continuation lines', async () => {
+		const [, second] = await tokenize('[ ] -> 2022-01-31 first\n    -> 2022-02-28 second');
+		assert.deepEqual(scoped(second, DATE), []);
+	});
+
+	it('only counts the first occurrence when it is on a continuation line', async () => {
+		const lines = await tokenize('[ ] Do something ...\n    until -> 2022-01-31\n    not -> 2022-02-28');
+		assert.deepEqual(scoped(lines[1], DATE), ['-> 2022-01-31']);
+		assert.deepEqual(scoped(lines[2], DATE), []);
+	});
+
+	it('starts counting again at the next item', async () => {
+		const lines = await tokenize('[ ] First -> 2022-01-31\n[ ] Second -> 2022-02-28');
+		assert.deepEqual(scoped(lines[0], DATE), ['-> 2022-01-31']);
+		assert.deepEqual(scoped(lines[1], DATE), ['-> 2022-02-28']);
+	});
+
+	it('starts counting again after a blank line', async () => {
+		const lines = await tokenize('[ ] First -> 2022-01-31\n\n[ ] Second -> 2022-02-28');
+		assert.deepEqual(scoped(lines[0], DATE), ['-> 2022-01-31']);
+		assert.deepEqual(scoped(lines[2], DATE), ['-> 2022-02-28']);
+	});
+});
+
+describe('tag (spec §Tag)', () => {
+	it('accepts letters, digits, underscore and hyphen', async () => {
+		await assertScope('[ ] #tag', TAG, '#tag');
+		await assertScope('[ ] #T-A-G', TAG, '#T-A-G');
+		await assertScope('[ ] #--tag--', TAG, '#--tag--');
+		await assertScope('[ ] #__tag__', TAG, '#__tag__');
+		await assertScope('[ ] #123', TAG, '#123');
+		await assertScope('[ ] #1t2a3g', TAG, '#1t2a3g');
+	});
+
+	it('accepts Unicode letters', async () => {
+		// Spec glossary: "Letter: a character from the Unicode Letter category (L)".
+		await assertScope('[ ] #täg', TAG, '#täg');
+		await assertScope('[ ] #今日は', TAG, '#今日は');
+		await assertScope('[ ] #გამარჯობა', TAG, '#გამარჯობა');
+	});
+
+	it('stops at punctuation', async () => {
+		await assertScope('[ ] This is a #tag.', TAG, '#tag');
+		await assertScope('[ ] #t-a-g!', TAG, '#t-a-g');
+		await assertScope('[ ] #--tag--?', TAG, '#--tag--');
+		await assertScope('[ ] #--tag--:text', TAG, '#--tag--');
+		await assertScope('[ ] (#tag)', TAG, '#tag');
+		await assertScope('[ ] #Actually, it is', TAG, '#Actually');
+	});
+
+	it('stops at characters that are not letters', async () => {
+		await assertScope('[ ] #tag🥳', TAG, '#tag');
+	});
+
+	it('separates adjacent tags', async () => {
+		const line = await tokenizeLine('[ ] Tags: #tag1/#tag2');
+		assert.deepEqual(scoped(line, TAG), ['#tag1', '#tag2']);
+	});
+
+	it('finds several tags on one line', async () => {
+		const line = await tokenizeLine('[ ] #tag1 #tag2 and #tag3');
+		assert.deepEqual(scoped(line, TAG), ['#tag1', '#tag2', '#tag3']);
+	});
+
+	it('requires a name', async () => {
+		await assertNoScope('[ ] Not a tag: #', TAG);
+		await assertNoScope('[ ] Not a tag: #=value', TAG);
+		await assertNoScope('[ ] Not a tag: #="value"', TAG);
+	});
+
+	it('accepts unquoted values', async () => {
+		await assertScope('[ ] #tag=value', TAG, '#tag=value');
+		await assertScope('[ ] #t-a-g=v-a-l-u-e', TAG, '#t-a-g=v-a-l-u-e');
+		await assertScope('[ ] #国=日本', TAG, '#国=日本');
+	});
+
+	it('accepts quoted values', async () => {
+		await assertScope('[ ] #tag="v a l u e"', TAG, '#tag="v a l u e"');
+		await assertScope("[ ] #tag='v!a.l?u+e'", TAG, "#tag='v!a.l?u+e'");
+		await assertScope('[ ] (#tag="bar")', TAG, '#tag="bar"');
+	});
+
+	it('treats a bare "=" as an absent value', async () => {
+		// Spec: "An empty tag value (e.g. #tag= or #tag="") MUST be treated
+		// the same as an absent tag value (e.g. #tag)."
+		await assertScope('[ ] #tag=', TAG, '#tag');
+	});
+
+	it('accepts explicitly empty quoted values', async () => {
+		await assertScope('[ ] #tag=""', TAG, '#tag=""');
+		await assertScope("[ ] #tag=''", TAG, "#tag=''");
+	});
+
+	it('treats an unterminated quoted value as absent', async () => {
+		// Spec: "In case no matching closing quote appears on the same line,
+		// the tag value MUST be treated as absent."
+		await assertScope('[ ] #tag="v a l u e', TAG, '#tag');
+		await assertScope('[ ] #tag="v a l u e\'', TAG, '#tag');
+	});
+
+	it('does not span lines', async () => {
+		const [first, second] = await tokenize('[ ] #tag="hello\n    World!"');
+		assert.equal(onlyScoped(first, TAG), '#tag');
+		assert.deepEqual(scoped(second, TAG), []);
+	});
+
+	it('is recognised on a continuation line', async () => {
+		const [, second] = await tokenize('[ ] #Actually it #has a #LOT\n    Even on the #next-line!');
+		assert.equal(onlyScoped(second, TAG), '#next-line');
+	});
+});
+
+describe('description (spec §Description)', () => {
+	it('continues on lines indented by four spaces', async () => {
+		const lines = await tokenize('[ ] And this one ...\n    is even ...\n    longer');
+		assert.equal(onlyScoped(lines[0], OPEN), '[ ]');
+		for (const line of lines.slice(1)) assert.deepEqual(scoped(line, CHECKBOX), []);
+	});
+
+	it('does not continue on lines indented by fewer than four spaces', async () => {
+		for (const indent of ['', ' ', '  ', '   ']) {
+			const [, second] = await tokenize(`[ ] The next line is ...\n${indent}invalid`);
+			assert.deepEqual(scoped(second, TAG), [], `indent of ${indent.length}`);
+		}
+	});
+
+	it('does not mistake bracketed text for a checkbox', async () => {
+		const [, second] = await tokenize('[ ] The next line is ...\n    [ ] all description text');
+		assert.deepEqual(scoped(second, CHECKBOX), []);
+	});
+});
+
+describe('title (spec §Title)', () => {
+	it('matches a line that does not start with a blank or a bracket', async () => {
+		await assertScope('My TODO list', TITLE, 'My TODO list');
+		await assertScope('今日は', TITLE, '今日は');
+	});
+
+	it('does not match a line starting with a blank character', async () => {
+		await assertNoScope(' Todos', TITLE);
+		await assertNoScope('    Todos', TITLE);
+	});
+
+	it('does not match a line starting with an opening bracket', async () => {
+		// Spec: a title "MUST NOT start with a blank character or the
+		// opening square bracket character `[`".
+		await assertNoScope('[Todos]', TITLE);
+	});
+});
+
+describe('comment (fork spec v1.2 §Comment)', () => {
+	it('matches a comment that opens and closes on one line', async () => {
+		await assertScope('<!-- on hold -->', COMMENT, '<!-- on hold -->');
+	});
+
+	it('matches a comment that spans lines', async () => {
+		const lines = await tokenize('<!--\n[ ] Commented out\n-->\n[ ] Active');
+		assert.equal(onlyScoped(lines[0], COMMENT), '<!--');
+		assert.equal(onlyScoped(lines[1], COMMENT), '[ ] Commented out');
+		assert.equal(onlyScoped(lines[2], COMMENT), '-->');
+		assert.deepEqual(scoped(lines[3], COMMENT), []);
+	});
+
+	it('hides items inside a comment', async () => {
+		const [, second] = await tokenize('<!--\n[ ] Commented out -> 2022-01-31 #tag\n-->');
+		assert.deepEqual(scoped(second, CHECKBOX), []);
+		assert.deepEqual(scoped(second, DATE), []);
+		assert.deepEqual(scoped(second, TAG), []);
+	});
+
+	it('resumes normal highlighting after the comment closes', async () => {
+		const lines = await tokenize('<!--\nhidden\n-->\n[ ] ! Active -> 2022-01-31 #tag');
+		assert.equal(onlyScoped(lines[3], OPEN), '[ ]');
+		assert.equal(onlyScoped(lines[3], PRIORITY), '!');
+		assert.equal(onlyScoped(lines[3], DATE), '-> 2022-01-31');
+		assert.equal(onlyScoped(lines[3], TAG), '#tag');
+	});
+
+	it('is not mistaken for a title', async () => {
+		await assertNoScope('<!-- on hold -->', TITLE);
+	});
+
+	it('keeps blank lines inside the comment', async () => {
+		const lines = await tokenize('<!--\n\n-->\nTitle');
+		assert.deepEqual(scoped(lines[3], COMMENT), []);
+		assert.equal(onlyScoped(lines[3], TITLE), 'Title');
+	});
+
+	it('runs to the end of the file when never closed', async () => {
+		const lines = await tokenize('<!--\n[ ] Never comes back\nTitle');
+		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
+		assert.deepEqual(scoped(lines[2], TITLE), []);
+	});
+
+	it('does not open when `<!--` is indented', async () => {
+		// Spec: `<!--` MUST appear at the beginning of a line.
+		const [, second] = await tokenize('Title\n  <!-- not a comment -->');
+		assert.deepEqual(scoped(second, COMMENT), []);
+	});
+
+	it('does not close when `-->` has trailing text', async () => {
+		// Spec: `-->` MUST be followed by nothing other than blank characters.
+		const lines = await tokenize('<!--\n--> trailing text\n[ ] Still hidden');
+		assert.deepEqual(scoped(lines[2], CHECKBOX), []);
+	});
+
+	it('closes when `-->` is followed only by blanks', async () => {
+		const lines = await tokenize('<!--\n-->   \n[ ] Active');
+		assert.equal(onlyScoped(lines[2], OPEN), '[ ]');
+	});
+
+	it('is transparent to grouping', async () => {
+		// A comment neither commences nor terminates a group, so the items
+		// on either side are still tokenized as ordinary items.
+		const lines = await tokenize('[ ] Item 1\n<!-- note -->\n[ ] Item 2');
+		assert.equal(onlyScoped(lines[0], OPEN), '[ ]');
+		assert.equal(onlyScoped(lines[1], COMMENT), '<!-- note -->');
+		assert.equal(onlyScoped(lines[2], OPEN), '[ ]');
+	});
+
+	it('ends an item, because a comment may not appear within one', async () => {
+		const lines = await tokenize('[ ] Description ...\n<!-- note -->\n    orphaned');
+		assert.equal(onlyScoped(lines[1], COMMENT), '<!-- note -->');
+		assert.deepEqual(scoped(lines[2], COMMENT), []);
+	});
+});
+
+describe('scope hygiene', () => {
+	it('never emits a scope containing a comma', async () => {
+		// TextMate `name` fields are space separated. A comma ends up inside
+		// the scope string and breaks theme selectors that target it.
+		const lines = await tokenize(await fixture());
+		const offenders = new Set();
+
+		for (const line of lines) {
+			for (const token of line.tokens) {
+				for (const scope of token.scopes) {
+					if (scope.includes(',')) offenders.add(scope);
+				}
+			}
+		}
+
+		assert.deepEqual([...offenders], []);
+	});
+
+	it('tokenizes the whole reference fixture without collapsing', async () => {
+		const lines = await tokenize(await fixture());
+		assert.ok(lines.length > 200, 'fixture should be fully tokenized');
+		for (const line of lines) {
+			if (line.text !== '') assert.ok(line.tokens.length > 0, `no tokens for ${JSON.stringify(line.text)}`);
+		}
+	});
+});

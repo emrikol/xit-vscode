@@ -33,5 +33,15 @@
         "prefix": "~",
         "body": ["[~] $1"],
         "description": "Obsolete item"
+    },
+    "Comment (c)": {
+        "prefix": "c",
+        "body": ["<!-- $1 -->"],
+        "description": "Comment"
+    },
+    "Comment Block (cb)": {
+        "prefix": "cb",
+        "body": ["<!--", "$1", "-->"],
+        "description": "Comment spanning several lines"
     }
 }

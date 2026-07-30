@@ -4,42 +4,49 @@
     "description": "Language support for todo lists with xit syntax.",
     "version": "0.0.5",
     "publisher": "tscpp",
-    "repository": "https://github.com/tscpp/xit-vscode",
+    "repository": "https://github.com/emrikol/xit-vscode",
     "engines": {
-        "vscode": "^1.66.0"
+        "vscode": "^1.75.0"
     },
     "categories": [
         "Programming Languages",
         "Snippets"
     ],
-	"activationEvents": [
-        "onCommand:xit.suggest",
-        "onCommand:xit.toggle",
-        "onCommand:xit.shuffle"
-	],
-	"main": "./dist/extension.js",
-	"scripts": {
-		"vscode:prepublish": "npm run build",
-		"build": "tsc",
-		"watch": "tsc -w"
-	},
-	"devDependencies": {
-		"@types/vscode": "^1.66.0",
-		"@types/node": "14.x",
-		"typescript": "^4.5.5"
-	},
+    "main": "./dist/extension.js",
+    "scripts": {
+        "vscode:prepublish": "npm run build",
+        "build": "tsc",
+        "watch": "tsc -w",
+        "test": "npm run build && node --test \"test/**/*.test.mjs\""
+    },
+    "devDependencies": {
+        "@types/node": "^20.19.43",
+        "@types/vscode": "~1.75.0",
+        "typescript": "^7.0.2",
+        "vscode-oniguruma": "^2.0.1",
+        "vscode-textmate": "^9.3.2"
+    },
     "contributes": {
-        "languages": [{
-            "id": "xit",
-            "aliases": ["xit!", "xit"],
-            "extensions": [".xit"],
-            "configuration": "./language-configuration.json"
-        }],
-        "grammars": [{
-            "language": "xit",
-            "scopeName": "source.xit",
-            "path": "./syntaxes/xit.tmLanguage.json"
-        }],
+        "languages": [
+            {
+                "id": "xit",
+                "aliases": [
+                    "xit!",
+                    "xit"
+                ],
+                "extensions": [
+                    ".xit"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "xit",
+                "scopeName": "source.xit",
+                "path": "./syntaxes/xit.tmLanguage.json"
+            }
+        ],
         "keybindings": [
             {
                 "command": "xit.suggest",
@@ -57,6 +64,22 @@
                 "when": "editorFocus && editorLangId == 'xit'"
             }
         ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "xit.suggest",
+                    "when": "false"
+                },
+                {
+                    "command": "xit.toggle",
+                    "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.shuffle",
+                    "when": "editorLangId == 'xit'"
+                }
+            ]
+        },
         "commands": [
             {
                 "title": "Suggest (internal)",

@@ -1,4 +1,8 @@
 {
+    // comments occupy whole lines, so there is no line comment to toggle
+    "comments": {
+        "blockComment": ["<!--", "-->"]
+    },
     // symbols used as brackets
     "brackets": [
         ["[", "]"]

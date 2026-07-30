@@ -1,83 +1,59 @@
 import * as vscode from 'vscode';
+import { readStatus, writeStatus, toggle, shuffle, Status } from './checkbox';
+import { selectedLines } from './selection';
 
-function range(min: number, max: number) {
-	return Array.from({ length: max - min + 1 }, (_, i) => min + i);
-}
-
-function eliminateDuplicates<T extends unknown[]>(array: T): T {
-	return Array.from(new Set(array)) as T;
-}
-
-function getSelectedLines(editor: vscode.TextEditor) {
-	return eliminateDuplicates(
-		editor.selections
-			.flatMap(selection => range(selection.start.line, selection.end.line))
-			.sort()
-	);
-}
-
-function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (value: string) => string) {
-	const lines = getSelectedLines(editor);
+function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: Status) => Status) {
+	const lines = selectedLines(editor.selections);
 
 	editor.edit(builder => {
 		for (const line of lines) {
 			const text = editor.document.lineAt(line).text;
-			const match = /^\[([^\]])*\]/.exec(text);
-			if (!match) continue;
-			const [checkbox, value] = match;
-			const edit = `[${replacer(value)}]`;
-			const range = new vscode.Range(line, 0, line, checkbox.length);
-			builder.replace(range, edit);
+			const status = readStatus(text);
+			if (status === null) continue;
+			const range = new vscode.Range(line, 0, line, 3);
+			builder.replace(range, writeStatus(text, replacer(status)).slice(0, 3));
 		}
 	})
 }
 
 function selectionHasCheckboxes(editor: vscode.TextEditor) {
-	const lines = getSelectedLines(editor);
-
-	for (const line of lines) {
-		const text = editor.document.lineAt(line).text;
-		if (/^\[([^\]])*\]/.test(text)) return true;
+	for (const line of selectedLines(editor.selections)) {
+		if (readStatus(editor.document.lineAt(line).text) !== null) return true;
 	}
 
 	return false;
 }
 
+/**
+ * Register a command that needs a text editor.
+ *
+ * The commands are contributed to the command palette, so they can be invoked
+ * with no editor focused at all. Reaching for `activeTextEditor!` in that case
+ * threw a TypeError.
+ */
+function registerEditorCommand(
+	context: vscode.ExtensionContext,
+	command: string,
+	run: (editor: vscode.TextEditor) => void,
+) {
+	context.subscriptions.push(vscode.commands.registerCommand(command, () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) return;
+		run(editor);
+	}));
+}
+
 export function activate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.commands.registerCommand('xit.toggle', () => {
-		const editor = vscode.window.activeTextEditor!;
+	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 
-		editSelectedCheckboxes(editor, (value) => {
-			return /^(\s*|\?)$/.test(value) ? 'x' : ' ';
-		});
-	}));
+	registerEditorCommand(context, 'xit.shuffle', editor => editSelectedCheckboxes(editor, shuffle));
 
-	context.subscriptions.push(vscode.commands.registerCommand('xit.shuffle', () => {
-		const editor = vscode.window.activeTextEditor!;
-
-		editSelectedCheckboxes(editor, (value) => {
-			const edit =
-				/* 1. " " -> "@" */ /^\s*$/.test(value) ? '@' :
-				/* 2. "@" -> "~" */ value === '@' ? '~' :
-				/* 3. "~" -> "?" */ value === '~' ? '?' :
-				/* 3. "?" -> "x" */ value === '?' ? 'x' :
-				/* 4. "x" -> " " */ value === 'x' ? ' '
-				/* fallback */ : ' ';
-
-			return edit;
-		});
-	}));
-
-	context.subscriptions.push(
-		vscode.commands.registerCommand('xit.suggest', () => {
-			const editor = vscode.window.activeTextEditor!;
-
-			if (selectionHasCheckboxes(editor))
-				vscode.commands.executeCommand('xit.toggle');
-			else
-				vscode.commands.executeCommand('editor.action.triggerSuggest');
-		})
-	);
+	registerEditorCommand(context, 'xit.suggest', editor => {
+		if (selectionHasCheckboxes(editor))
+			vscode.commands.executeCommand('xit.toggle');
+		else
+			vscode.commands.executeCommand('editor.action.triggerSuggest');
+	});
 }
 
 export function deactivate() { }

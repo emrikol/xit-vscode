@@ -1,6 +1,13 @@
 .vscode/**
 .vscode-test/**
+.claude/**
 src/**
+test/**
+node_modules/**
 .gitignore
+.gitattributes
 vsc-extension-quickstart.md
 tsconfig.json
+package-lock.json
+# source maps would point at src/, which is not shipped
+**/*.map

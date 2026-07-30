@@ -1,7 +1,11 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
 	"name": "xit!",
+	"scopeName": "source.xit",
 	"patterns": [
+		{
+			"include": "#comment"
+		},
 		{
 			"include": "#item"
 		},
@@ -10,9 +14,16 @@
 		}
 	],
 	"repository": {
+		"comment": {
+			"comment": "Spec §Comment (fork v1.2): whole lines between `<!--` at the start of a line and `-->` followed only by blanks. Must be tried before #title, which would otherwise claim the opening line. An unterminated comment runs to the end of the file, as the spec requires.",
+			"name": "comment.block.xit markup.other.comment.xit",
+			"begin": "^<!--",
+			"end": "-->[^\\S\\n]*$"
+		},
 		"title": {
-			"name": "markup.underline.xit, markup.other.task.title.xit",
-			"match": "^[^\\s].*"
+			"comment": "Spec §Title: a single line that MUST NOT start with a blank character or `[`.",
+			"name": "markup.underline.xit markup.other.task.title.xit",
+			"match": "^[^\\s\\[].*"
 		},
 		"item": {
 			"patterns": [
@@ -25,82 +36,93 @@
 			]
 		},
 		"open-item": {
-			"begin": "^(?:(\\[ *\\])|(\\[@\\])|(\\[\\?\\]))[^\\S\\n]*(.*(?= |$))",
+			"comment": "Spec §Checkbox: exactly 3 characters, followed by a space or the end of the line. This is a begin/end rule rather than begin/while so that the context survives across continuation lines, which is what lets #due-date apply the \"first due date only\" rule to the whole description. The end is a zero-width match on the first line that does not continue the item: per spec §Description a continuation line is indented by exactly four spaces, and per spec §Item plus the glossary a line of only blank characters is blank and so ends the item, which is what the `(?=.*\\S)` guard enforces. #due-date repeats this same end pattern so that the nested context pops together with its item.",
+			"begin": "^(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
 				"1": {
-					"name": "variable.function.xit, markup.other.task.checkbox.open.xit"
+					"name": "variable.function.xit markup.other.task.checkbox.open.xit"
 				},
 				"2": {
-					"name": "storage.type.xit, markup.other.task.checkbox.ongoing.xit"
+					"name": "storage.type.xit markup.other.task.checkbox.ongoing.xit"
 				},
 				"3": {
-					"name": "entity.name.type.enum.xit, markup.other.task.checkbox.ongoing.xit"
-				},
-				"4": {
-					"patterns": [
-						{
-							"include": "#item-description"
-						}
-					]
+					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
 				}
 			},
-			"while": "    (.+)",
-			"whileCaptures": {
-				"1": {
-					"patterns": [
-						{
-							"include": "#item-description"
-						}
-					]
+			"end": "^(?!    (?=.*\\S))",
+			"patterns": [
+				{
+					"include": "#item-description"
 				}
-			}
+			]
 		},
 		"closed-item": {
-			"begin": "^(?:(\\[x\\])|(\\[~\\]))[^\\S\\n]*(.*(?= |$))",
+			"comment": "Checked and obsolete items render their whole description as struck-through.",
+			"begin": "^(?:(\\[x\\])|(\\[~\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
 				"1": {
-					"name": "markup.inserted.xit, markup.other.task.checkbox.checked.xit"
+					"name": "markup.inserted.xit markup.other.task.checkbox.checked.xit"
 				},
 				"2": {
-					"name": "comment.xit, markup.other.task.checkbox.obsolete.xit"
-				},
-				"3": {
-					"name": "comment.xit, markup.strikethrough.xit",
-					"patterns": [
-						{
-							"include": "#item-description"
-						}
-					]
+					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"while": "    (.+)",
-			"whileCaptures": {
-				"1": {
-					"name": "comment.xit, markup.strikethrough.xit",
-					"patterns": [
-						{
-							"include": "#item-description"
-						}
-					]
+			"end": "^(?!    (?=.*\\S))",
+			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
+			"patterns": [
+				{
+					"include": "#item-description"
 				}
-			}
+			]
 		},
 		"item-description": {
 			"patterns": [
 				{
-					"match": "(?<=^\\[[ x@~]\\] )(?:(?:!+\\.*)|(?:\\.*!+))",
-					"name": "markup.deleted.xit, markup.other.task.priority.xit"
+					"include": "#priority"
 				},
 				{
-					"name": "constant.other.xit, markup.other.task.date.xit",
-					"match": "-> [0-9Q\\-/]+"
+					"include": "#due-date"
 				},
 				{
-					"name": "comment.block.documentation.xit, markup.other.task.tag.xit",
-					"match": "\\#(?:(?:\\S+=\"[^\"]*\")|(?:\\S+='[^']*')|(?:[^\\s\\.]+))"
+					"include": "#tag"
 				}
 			]
+		},
+		"priority": {
+			"comment": "Spec §Priority: exclamation marks with optional dot padding on one side only. Spec §Item allows additional space characters between the checkbox and the priority, so the separator is `[^\\S\\n]+` rather than a single space.",
+			"match": "(?<=^\\[[ x@~?]\\])[^\\S\\n]+((?:!+\\.*)|(?:\\.*!+))(?=[^\\S\\n]|$)",
+			"captures": {
+				"1": {
+					"name": "markup.deleted.xit markup.other.task.priority.xit"
+				}
+			}
+		},
+		"due-date": {
+			"comment": "Spec §Due Date: `-> ` followed by yyyy, yyyy-mm, yyyy-mm-dd, yyyy-Www or yyyy-Qq, with `-` or `/` as separator. The backreference to group 5 forces one separator style per date. Trailing junk is rejected, but calendar validity beyond simple ranges cannot be checked here. This is a begin/end rule rather than a plain match so that the remainder of the item is tokenized without the due-date pattern: that is how \"any additional due dates MUST be disregarded\" is enforced. Its end is the end of the enclosing item, so the rule holds across continuation lines too.",
+			"begin": "-> ((\\d{4})((([-/])(0[1-9]|1[0-2])(\\5(0[1-9]|[1-2]\\d|3[0-1])?)?)|([-/](W(0[1-9]|[1-4]\\d|5[0-3])|Q[1-4])))?)(?![-/])(?=[\\p{P} ]|$)",
+			"beginCaptures": {
+				"0": {
+					"name": "constant.other.xit markup.other.task.date.xit"
+				}
+			},
+			"end": "^(?!    (?=.*\\S))",
+			"patterns": [
+				{
+					"include": "#tag"
+				}
+			]
+		},
+		"tag": {
+			"comment": "Spec §Tag: the name is letters (Unicode L), digits, `_` or `-`. An unquoted value uses the same set; a quoted value may hold anything but its own quote, and an unterminated quote means the value is absent.",
+			"match": "((?<=[\\s\\p{P}])#[\\p{L}\\d_-]+)(=(?:(?:'[^'\\n]*')|(?:\"[^\"\\n]*\")|(?:[\\p{L}\\d_-]+)))?",
+			"captures": {
+				"1": {
+					"name": "comment.block.documentation.xit markup.other.task.tag.xit markup.other.task.tag.name.xit"
+				},
+				"2": {
+					"name": "comment.block.documentation.xit markup.other.task.tag.xit markup.other.task.tag.value.xit"
+				}
+			}
 		}
-	},
-	"scopeName": "source.xit"
+	}
 }
