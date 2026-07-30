@@ -1,0 +1,31 @@
+Reading list
+
+[ ] The Design of Everyday Things #book
+[x] Thinking in Systems #book #reread
+[@] Structure and Interpretation of Computer Programs #book
+    Chapter 3 of 5, one chapter a week
+[~] Yet another framework tutorial #video
+[?] Something about type theory -> 2026-Q4
+
+Work
+
+[ ] ! Ship the release notes -> 2026-08-14 #release
+[ ] .! Reply to the accessibility report #a11y #priority="high"
+[@] Rewrite the onboarding docs -> 2026-W34
+    Half of it is still the 2023 wording
+[x] Cut the 0.1.0 tag #release
+
+<!--
+    A comment is whole lines, opened with the sequence above and closed
+    with the one below. Everything between is ignored, so a group can be
+    parked without deleting it.
+
+    [ ] Move the office plants -> 2026-09
+    [ ] Find out whose mug this is
+-->
+
+House
+
+[ ] Replace the hallway bulb
+[ ] Book the boiler service -> 2026-10-01 #home
+[~] Repaint the shed #home

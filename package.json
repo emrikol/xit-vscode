@@ -49,13 +49,21 @@
         "package": "npm run compile && node scripts/build.mjs --production",
         "watch": "node scripts/build.mjs --watch",
         "icons": "sh scripts/render-icons.sh",
+        "open-web": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. test/fixtures",
+        "open-web:demo": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. demo",
         "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+        "test:integration": "npm run compile && vscode-test",
         "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
     },
     "devDependencies": {
+        "@types/mocha": "^10.0.10",
         "@types/node": "^20.19.43",
         "@types/vscode": "~1.75.0",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.1.0",
+        "@vscode/test-web": "^0.0.81",
         "esbuild": "^0.28.1",
+        "mocha": "^11.7.6",
         "typescript": "^7.0.2",
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2"

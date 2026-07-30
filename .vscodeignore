@@ -6,6 +6,9 @@
 src/**
 test/**
 scripts/**
+demo/**
+.vscode-test-web/**
+.vscode-test/**
 # tsc output, for type checking and the tests. dist/ is what ships.
 out/**
 # the rendered PNGs ship; their SVG sources do not
