@@ -13,6 +13,11 @@
         "Snippets"
     ],
     "main": "./dist/extension.js",
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": true
+        }
+    },
     "scripts": {
         "vscode:prepublish": "npm run build",
         "build": "tsc",
