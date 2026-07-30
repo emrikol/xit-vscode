@@ -154,7 +154,11 @@ describe('packaging', () => {
 
 		// .claude/settings.local.json was found inside a built vsix once. The
 		// only thing that caught it was packaging and reading the file list.
-		for (const pattern of ['.claude/**', 'src/**', 'test/**', 'node_modules/**', 'scripts/**', '**/*.map']) {
+		const required = [
+			'.claude/**', 'src/**', 'test/**', 'node_modules/**', 'scripts/**',
+			'demo/**', 'out/**', '.vscode-test.mjs', '**/*.map',
+		];
+		for (const pattern of required) {
 			assert.ok(ignored.includes(pattern), `.vscodeignore does not exclude ${pattern}`);
 		}
 	});

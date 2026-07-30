@@ -56,4 +56,21 @@ if ! npx --yes @vscode/vsce package --no-git-tag-version --out "$vsix" >/dev/nul
 	exit 1
 fi
 
-echo "pre-push: unit and integration tests pass, and the extension packages."
+# Packaging succeeding is not the same as packaging the right thing. Read the
+# file list back and refuse anything outside it. .vscodeignore is a deny list,
+# so a new file in the repo lands in the vsix by default; this is the allow
+# list that turns that around. It has already caught .claude/settings.local.json
+# and .vscode-test.mjs.
+unexpected=$(unzip -Z1 "$vsix" | grep -Ev \
+	'^(\[Content_Types\]\.xml|extension\.vsixmanifest|extension/(package\.json|readme\.md|changelog\.md|LICENSE\.txt|language-configuration\.json|snippets\.json|assets/[a-z-]+\.png|dist/([a-z]+/)?extension\.js|syntaxes/[A-Za-z.]+\.json))$' \
+	|| true)
+
+if [ -n "$unexpected" ]; then
+	echo >&2
+	echo "pre-push: unexpected files in the vsix, push aborted." >&2
+	echo "$unexpected" | sed 's/^/            /' >&2
+	echo "          add them to .vscodeignore, or to the allow list in this hook." >&2
+	exit 1
+fi
+
+echo "pre-push: unit and integration tests pass, and the extension packages clean."

@@ -17,6 +17,7 @@ assets/screenshots/**
 node_modules/**
 .gitignore
 .gitattributes
+.vscode-test.mjs
 vsc-extension-quickstart.md
 tsconfig.json
 package-lock.json
