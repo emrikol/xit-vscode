@@ -68,13 +68,87 @@ describe('manifest identity', () => {
 	});
 });
 
+describe('marketplace metadata', () => {
+	it('states its licence, and ships the file the field names', () => {
+		assert.equal(manifest.license, 'MIT');
+		assert.ok(existsSync(resolve(REPO_ROOT, 'LICENSE')));
+	});
+
+	it('describes the repository in object form', () => {
+		// vsce accepts the plain-string shorthand, but the documented form is
+		// an object, and the string form loses the type.
+		assert.equal(typeof manifest.repository, 'object');
+		assert.equal(manifest.repository.type, 'git');
+		assert.match(manifest.repository.url, /^https:\/\/github\.com\/emrikol\/xit-vscode\.git$/);
+	});
+
+	it('links its home page and its bug tracker', () => {
+		assert.match(manifest.homepage, /^https:\/\/github\.com\/emrikol\/xit-vscode/);
+		// Issues are disabled on the repository on purpose, so this points at
+		// the repository itself rather than at a page that 404s.
+		assert.equal(manifest.bugs.url, 'https://github.com/emrikol/xit-vscode');
+	});
+
+	it('turns off Marketplace Q&A', () => {
+		// Issues, Discussions and pull requests are all closed. Leaving Q&A
+		// open would reopen the one support channel that was shut on purpose.
+		assert.equal(manifest.qna, false);
+	});
+
+	it('carries keywords, within the documented limit', () => {
+		assert.ok(Array.isArray(manifest.keywords));
+		assert.ok(manifest.keywords.length > 0);
+		assert.ok(manifest.keywords.length <= 30, 'the Marketplace takes at most 30');
+	});
+
+	it('uses only categories the Marketplace recognises', () => {
+		const allowed = new Set([
+			'Programming Languages', 'Snippets', 'Linters', 'Themes', 'Debuggers',
+			'Formatters', 'Keymaps', 'SCM Providers', 'Other', 'Extension Packs',
+			'Language Packs', 'Data Science', 'Machine Learning', 'Visualization',
+			'Notebooks', 'Education', 'Testing', 'AI', 'Chat',
+		]);
+		for (const category of manifest.categories) {
+			assert.ok(allowed.has(category), `${category} is not a Marketplace category`);
+		}
+	});
+});
+
 describe('workspace capabilities', () => {
+	it('runs on either extension host, preferring the local one', () => {
+		// The commands only read and rewrite the active document, which works
+		// from either host. Preferring "ui" keeps the edits local in a remote
+		// or Codespaces window instead of round-tripping.
+		assert.deepEqual(manifest.extensionKind, ['ui', 'workspace']);
+	});
+
+	it('supports virtual workspaces', () => {
+		// Nothing here touches the file system. It works the same in a
+		// GitHub repository opened straight from the remote.
+		assert.equal(manifest.capabilities?.virtualWorkspaces, true);
+	});
+
 	it('supports untrusted workspaces', () => {
 		// The extension only reads and rewrites the active document. It runs
 		// nothing from the workspace, so Restricted Mode has no reason to
 		// disable it. Without this the extension is silently dead in any
 		// folder the user has not trusted.
 		assert.deepEqual(manifest.capabilities?.untrustedWorkspaces, { supported: true });
+	});
+});
+
+describe('packaging', () => {
+	it('keeps everything that is not shipped out of the vsix', () => {
+		const ignored = readFileSync(resolve(REPO_ROOT, '.vscodeignore'), 'utf8')
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line && !line.startsWith('#'));
+
+		// .claude/settings.local.json was found inside a built vsix once. The
+		// only thing that caught it was packaging and reading the file list.
+		for (const pattern of ['.claude/**', 'src/**', 'test/**', 'node_modules/**', 'scripts/**', '**/*.map']) {
+			assert.ok(ignored.includes(pattern), `.vscodeignore does not exclude ${pattern}`);
+		}
 	});
 });
 

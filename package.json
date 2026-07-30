@@ -4,8 +4,17 @@
     "description": "Language support for todo lists with xit syntax.",
     "version": "0.0.5",
     "publisher": "tscpp",
+    "license": "MIT",
     "icon": "assets/icon.png",
-    "repository": "https://github.com/emrikol/xit-vscode",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/emrikol/xit-vscode.git"
+    },
+    "homepage": "https://github.com/emrikol/xit-vscode#readme",
+    "bugs": {
+        "url": "https://github.com/emrikol/xit-vscode"
+    },
+    "qna": false,
     "engines": {
         "vscode": "^1.75.0"
     },
@@ -13,11 +22,24 @@
         "Programming Languages",
         "Snippets"
     ],
+    "keywords": [
+        "xit",
+        "todo",
+        "task list",
+        "checklist",
+        "plain text",
+        "productivity"
+    ],
     "main": "./dist/extension.js",
+    "extensionKind": [
+        "ui",
+        "workspace"
+    ],
     "capabilities": {
         "untrustedWorkspaces": {
             "supported": true
-        }
+        },
+        "virtualWorkspaces": true
     },
     "scripts": {
         "vscode:prepublish": "npm run build",
