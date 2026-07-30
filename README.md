@@ -99,21 +99,38 @@ format, so other [x]it! tools will not understand them. See
 ## Development
 
 ```sh
-npm install   # also installs the git hooks
-npm test      # build, then run the suite
+npm install            # also installs the git hooks
+npm test               # build, then run the unit tests
+npm run test:integration   # run the tests inside a real VS Code
+npm run open-web:demo  # serve a real VS Code in the browser, on demo/
+npm run icons          # re-render the icons from their SVG sources
 ```
 
 `npm install` points `core.hooksPath` at `.githooks`, so the hooks install
-themselves with no extra dependency. `pre-commit` runs the suite. `pre-push`
-runs the suite and confirms the extension still packages, which catches
-manifest mistakes that the tests cannot see. Both take `--no-verify` if you
-need to get past them.
+themselves with no extra dependency. `pre-commit` runs the unit tests.
+`pre-push` runs those, then the integration tests, then confirms the
+extension still packages, which catches manifest mistakes the tests cannot
+see. Both take `--no-verify` if you need to get past them.
 
 The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`,
 the same libraries VS Code uses, so they exercise the real Oniguruma engine
 rather than JavaScript's regular expressions. The conformance fixture is the
 reference `test.xit` from
 [jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
+
+The integration tests run inside an Extension Development Host with
+`@vscode/test-cli`, which downloads a real VS Code on first use and caches it
+in `.vscode-test/`.
+
+`npm run open-web` serves the conformance fixture and `npm run open-web:demo`
+serves `demo/showcase.xit`, both in a real VS Code in the browser with this
+extension loaded. That is the only way to check what the grammar actually
+looks like rather than what it ought to look like.
+
+The extension runs in both hosts: `dist/extension.js` for desktop and
+`dist/web/extension.js` for vscode.dev and github.dev. Both come from the
+same source. Nothing here imports from Node, and `test/bundle.test.mjs`
+keeps it that way.
 
 ## Shortcuts
 

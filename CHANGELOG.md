@@ -4,10 +4,25 @@ All notable changes to the "xit" extension will be documented in this file.
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.1.0] — not published yet
 
 ### Added
 
+- Web extension support. The extension now runs on vscode.dev and
+  github.dev. It had no `browser` entry point, and an extension without one
+  is ignored by the web extension host entirely.
+- An extension icon and a file icon for `.xit` files. The artwork is
+  deliberately generic; the [x]it! logo belongs to the official project.
+- Integration tests, run in a real Extension Development Host with
+  `@vscode/test-cli`, covering activation, command registration and the
+  edits themselves.
+- Manifest and bundle tests, so a contributed path that does not exist, a
+  keybinding for a command that was never contributed, or a Node builtin in
+  the web bundle fail on commit rather than at run time.
+- First-line detection, so an extensionless file that opens with a checkbox
+  is recognised without picking the language by hand.
+- `npm run open-web` and `npm run open-web:demo`, which serve a real VS Code
+  in the browser with the extension loaded.
 - Comments, written with `<!--` and `-->` on whole lines. These are a
   [fork](https://github.com/emrikol/xit) of the [x]it! specification and are
   not part of the official format.
@@ -21,6 +36,15 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Fixed
 
+- The extension was disabled in any folder the user had not trusted. It
+  reads and rewrites the active document and nothing else, so it now
+  declares support for untrusted workspaces.
+- Bracket pair colorization repainted `[` and `]` over the checkbox colour,
+  leaving every checkbox with blue ends and a coloured middle. `[~]` was the
+  only one that escaped, because its scope is a comment. The square brackets
+  are no longer declared as brackets.
+- The toggle and shuffle commands dropped the promise from `editor.edit`, so
+  a caller that awaited them saw the document before the edit landed.
 - Priority was not highlighted on in-question items (`[?] ! Task`). The v1.1
   change that added `[?]` did not update the priority pattern.
 - In-question checkboxes carried the ongoing scope. They now use
@@ -63,6 +87,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Removed the `onCommand:` activation events, which VS Code has inferred from
   contributed commands since 1.74.
 - `.claude` and source maps are no longer bundled into the extension.
-- Git hooks run the suite before a commit, and the suite plus a packaging
-  check before a push. They install themselves on `npm install` through
-  `core.hooksPath`, with no extra dependency.
+- Git hooks run the suite before a commit, and the suite, the integration
+  tests and a packaging check before a push. They install themselves on
+  `npm install` through `core.hooksPath`, with no extra dependency.
+- The extension is bundled with esbuild instead of shipped as raw `tsc`
+  output, so activation loads one file rather than one per module.
+- Manifest metadata the Marketplace uses: `license`, `keywords`, `homepage`,
+  `bugs`, the object form of `repository`, `extensionKind`, and
+  `capabilities.virtualWorkspaces`. Marketplace Q&A is turned off, because
+  Issues, Discussions and pull requests are all closed on purpose.
