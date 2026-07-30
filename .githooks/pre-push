@@ -13,10 +13,14 @@
 
 set -e
 
-vsix=$(mktemp -t xit-prepush).vsix
+# `mktemp -d` with no template is the one form both BSD and GNU mktemp
+# accept. `mktemp -t prefix` is not portable: GNU rejects a template with no
+# X's, and Homebrew's coreutils puts GNU mktemp ahead of the BSD one on PATH.
+tmpdir=$(mktemp -d)
+vsix="$tmpdir/xit.vsix"
 
 cleanup() {
-	rm -f "$vsix"
+	rm -rf "$tmpdir"
 }
 trap cleanup EXIT
 
