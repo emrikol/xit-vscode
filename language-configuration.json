@@ -3,10 +3,20 @@
     "comments": {
         "blockComment": ["<!--", "-->"]
     },
-    // symbols used as brackets
-    "brackets": [
-        ["[", "]"]
-    ],
+    // No brackets. In [x]it! the square brackets are one third of a checkbox,
+    // not a nesting construct.
+    //
+    // Declaring them made bracket pair colorization repaint "[" and "]" in
+    // its own blue, over whatever colour the theme gave the checkbox scope.
+    // The result was a checkbox with blue ends and a coloured middle, and the
+    // obsolete checkbox "[~]" was the only one that looked right, purely
+    // because its scope is a comment and VS Code leaves brackets in comments
+    // alone. Declaring none also stops a lone "[" in a description being
+    // flagged as an unclosed bracket.
+    //
+    // colorizedBracketPairs defaults to the contents of brackets, so an empty
+    // list here is enough; there is nothing left to colorize.
+    "brackets": [],
     // symbols that are auto closed when typing
     "autoClosingPairs": [
         ["{", "}"],

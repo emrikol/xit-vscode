@@ -193,6 +193,40 @@ describe('contributed files', () => {
 	});
 });
 
+describe('language configuration', () => {
+	// JSON with comments, which is what VS Code reads here.
+	const configuration = JSON.parse(
+		readFileSync(resolve(REPO_ROOT, manifest.contributes.languages[0].configuration), 'utf8')
+			.replace(/^\s*\/\/.*$/gm, ''),
+	);
+
+	it('declares no brackets', () => {
+		// Measured in a real editor: with ["[", "]"] declared, bracket pair
+		// colorization repainted both brackets in its own blue, over the
+		// colour the theme gave the checkbox scope. Every checkbox rendered
+		// blue-ends-coloured-middle except "[~]", which escaped only because
+		// its scope is a comment and VS Code leaves brackets in comments
+		// alone. Declaring none also stops a lone "[" in a description being
+		// flagged as an unclosed bracket.
+		assert.deepEqual(configuration.brackets, []);
+	});
+
+	it('still auto-closes and surrounds with brackets', () => {
+		// Those are separate settings, and typing "[" to get "[]" is the
+		// fastest way to start an item.
+		for (const key of ['autoClosingPairs', 'surroundingPairs']) {
+			assert.ok(
+				configuration[key].some(([open, close]) => open === '[' && close === ']'),
+				`${key} lost the square bracket pair`,
+			);
+		}
+	});
+
+	it('describes the comment syntax the fork adds', () => {
+		assert.deepEqual(configuration.comments.blockComment, ['<!--', '-->']);
+	});
+});
+
 describe('first-line detection', () => {
 	const firstLine = new RegExp(manifest.contributes.languages[0].firstLine);
 
