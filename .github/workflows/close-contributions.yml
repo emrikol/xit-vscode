@@ -38,3 +38,11 @@ jobs:
             await github.rest.pulls.update({
               owner, repo, pull_number: pr, state: 'closed'
             });
+
+            // Closing a pull request does not stop people commenting in it.
+            // Locking restricts the thread to collaborators, so the policy
+            // holds without relying on interaction limits, which GitHub caps
+            // at six months.
+            await github.rest.issues.lock({
+              owner, repo, issue_number: pr, lock_reason: 'resolved'
+            });
