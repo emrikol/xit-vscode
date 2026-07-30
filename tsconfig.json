@@ -4,6 +4,10 @@
 		"target": "ES2022",
 		"outDir": "out",
 		"lib": ["ES2022"],
+		// Explicit, so the extension source cannot reach for a Node global by
+		// accident: the web bundle runs in a worker, where they do not exist.
+		// The integration tests are the only thing here that needs them.
+		"types": ["node", "mocha"],
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,

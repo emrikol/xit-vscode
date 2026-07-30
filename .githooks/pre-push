@@ -1,13 +1,19 @@
 #!/bin/sh
 #
-# Last gate before anything leaves the machine: run the tests, then confirm
-# the extension still packages.
+# Last gate before anything leaves the machine: the unit tests, the
+# integration tests, then a packaging check.
 #
-# The packaging check earns its place. Manifest mistakes are invisible to the
-# test suite and to the compiler, and you only meet them at publish time. It
-# is what caught .claude/settings.local.json being bundled into the vsix.
+# The integration tests launch a real VS Code and take a few seconds, which is
+# why they are here and not on the pre-commit hook. They earn it: they caught
+# a test that assumed opening an xit file activates the extension, which it
+# does not and should not.
 #
-# Needs network the first time, to fetch vsce.
+# The packaging check earns its place too. Manifest mistakes are invisible to
+# the test suite and to the compiler, and you only meet them at publish time.
+# It is what caught .claude/settings.local.json being bundled into the vsix.
+#
+# Needs network the first time: vsce, and a ~300 MB VS Code download that is
+# then cached in .vscode-test/.
 #
 # Bypass with `git push --no-verify` when you need to.
 
@@ -33,6 +39,14 @@ if ! npm test >"$log" 2>&1; then
 	exit 1
 fi
 
+if ! npm run test:integration >"$log" 2>&1; then
+	cat "$log" >&2
+	echo >&2
+	echo "pre-push: integration tests failed, push aborted." >&2
+	echo "          fix them, or bypass with: git push --no-verify" >&2
+	exit 1
+fi
+
 if ! npx --yes @vscode/vsce package --no-git-tag-version --out "$vsix" >/dev/null; then
 	echo
 	echo "pre-push: the extension failed to package, push aborted." >&2
@@ -42,4 +56,4 @@ if ! npx --yes @vscode/vsce package --no-git-tag-version --out "$vsix" >/dev/nul
 	exit 1
 fi
 
-echo "pre-push: tests pass and the extension packages."
+echo "pre-push: unit and integration tests pass, and the extension packages."
