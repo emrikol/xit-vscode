@@ -1,0 +1,16 @@
+<!--
+  Extension icon source. Rendered to icon.png by `npm run icons`.
+
+  A plain checkbox with a check mark. It is deliberately generic. The [x]it!
+  logo is the format author's own artwork, and he has asked that it stay
+  unique to the official project so that every tool is recognised as standing
+  on its own. Nothing here is drawn from it.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+	<rect width="256" height="256" rx="52" fill="#22303c"/>
+	<rect x="56" y="56" width="144" height="144" rx="26"
+	      fill="none" stroke="#e8edf2" stroke-width="14"/>
+	<path d="M94 130 L120 156 L166 100"
+	      fill="none" stroke="#7fd1a0" stroke-width="20"
+	      stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

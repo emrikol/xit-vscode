@@ -1,0 +1,14 @@
+<!--
+  File icon for .xit files, for use with a dark colour theme, so the glyph is
+  light. Rendered to file-icon-dark.png by `npm run icons`.
+
+  Same generic checkbox as icon.svg, without the background plate. See the
+  note there about the [x]it! logo.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 256 256">
+	<rect x="24" y="24" width="208" height="208" rx="38"
+	      fill="none" stroke="#d4dce3" stroke-width="20"/>
+	<path d="M76 130 L114 168 L186 90"
+	      fill="none" stroke="#d4dce3" stroke-width="24"
+	      stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

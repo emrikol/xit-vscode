@@ -5,6 +5,10 @@
 .githooks/**
 src/**
 test/**
+scripts/**
+# the rendered PNGs ship; their SVG sources do not
+assets/*.svg
+assets/screenshots/**
 node_modules/**
 .gitignore
 .gitattributes

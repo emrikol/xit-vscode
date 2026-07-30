@@ -35,6 +35,13 @@ function contributedPath(path) {
 	return resolve(REPO_ROOT, path);
 }
 
+/** Width and height from a PNG's IHDR chunk, which always comes first. */
+function pngSize(path) {
+	const header = readFileSync(path).subarray(0, 24);
+	assert.equal(header.subarray(1, 4).toString('ascii'), 'PNG', `${path} is not a PNG`);
+	return { width: header.readUInt32BE(16), height: header.readUInt32BE(20) };
+}
+
 describe('manifest identity', () => {
 	it('declares an extension entry point that the build produces', () => {
 		assert.equal(manifest.main, './dist/extension.js');
@@ -101,6 +108,46 @@ describe('contributed files', () => {
 
 	it('claims the .xit file extension', () => {
 		assert.ok(manifest.contributes.languages[0].extensions.includes('.xit'));
+	});
+});
+
+describe('icons', () => {
+	it('ships an extension icon', () => {
+		assert.ok(manifest.icon, 'the Marketplace shows a placeholder without one');
+		assert.ok(existsSync(contributedPath(manifest.icon)), `${manifest.icon} does not exist`);
+	});
+
+	it('ships a file icon for both theme kinds', () => {
+		const icon = manifest.contributes.languages[0].icon;
+		assert.ok(icon, 'no file icon contributed');
+		for (const kind of ['light', 'dark']) {
+			assert.ok(icon[kind], `no ${kind} file icon`);
+			assert.ok(existsSync(contributedPath(icon[kind])), `${icon[kind]} does not exist`);
+		}
+	});
+
+	it('uses raster icons, which is all the Marketplace accepts', () => {
+		const icon = manifest.contributes.languages[0].icon;
+		for (const path of [manifest.icon, icon.light, icon.dark]) {
+			assert.match(path, /\.png$/, `${path} must be a PNG`);
+		}
+	});
+
+	it('renders the extension icon at least 128x128', () => {
+		// "at least 128x128 pixels (256x256 for Retina screens)", per the
+		// extension manifest reference.
+		const { width, height } = pngSize(contributedPath(manifest.icon));
+		assert.ok(width >= 128 && height >= 128, `${width}x${height} is too small`);
+	});
+
+	it('keeps an editable source beside every rendered icon', () => {
+		// The PNGs are committed, because the Marketplace needs raster and the
+		// renderer is not a dependency. `npm run icons` regenerates them.
+		for (const png of ['assets/icon.png', 'assets/file-icon-light.png', 'assets/file-icon-dark.png']) {
+			const svg = png.replace(/\.png$/, '.svg');
+			assert.ok(existsSync(contributedPath(png)), `${png} does not exist`);
+			assert.ok(existsSync(contributedPath(svg)), `${svg} does not exist`);
+		}
 	});
 });
 
