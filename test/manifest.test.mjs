@@ -48,6 +48,14 @@ describe('manifest identity', () => {
 		assert.ok(existsSync(contributedPath(manifest.main)), 'run `npm run build` first');
 	});
 
+	it('builds a production bundle before publishing', () => {
+		// vsce runs vscode:prepublish and ships whatever it finds. If that
+		// hook builds the development bundle, the vsix carries source maps
+		// that point at files it does not contain.
+		assert.match(manifest.scripts['vscode:prepublish'], /\bpackage\b/);
+		assert.match(manifest.scripts.package, /--production/);
+	});
+
 	it('pins the @types/vscode range to the engine floor', () => {
 		// npm writes the installed version's range on `npm install`, which
 		// silently lifts the types above the version the extension claims to

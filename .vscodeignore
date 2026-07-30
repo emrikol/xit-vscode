@@ -6,6 +6,8 @@
 src/**
 test/**
 scripts/**
+# tsc output, for type checking and the tests. dist/ is what ships.
+out/**
 # the rendered PNGs ship; their SVG sources do not
 assets/*.svg
 assets/screenshots/**

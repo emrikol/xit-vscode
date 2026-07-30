@@ -1,14 +1,14 @@
 /**
  * Tests for the checkbox command logic in src/checkbox.ts.
  *
- * These run against the compiled output in dist/, so `npm test` builds first.
+ * These run against the compiled output in out/, so `npm test` builds first.
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { readStatus, writeStatus, toggle, shuffle, STATUSES } = createRequire(import.meta.url)('../dist/checkbox.js');
+const { readStatus, writeStatus, toggle, shuffle, STATUSES } = createRequire(import.meta.url)('../out/checkbox.js');
 
 describe('readStatus', () => {
 	it('reads every valid status', () => {

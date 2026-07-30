@@ -42,9 +42,11 @@
         "virtualWorkspaces": true
     },
     "scripts": {
-        "vscode:prepublish": "npm run build",
-        "build": "tsc",
-        "watch": "tsc -w",
+        "vscode:prepublish": "npm run package",
+        "compile": "tsc",
+        "build": "npm run compile && node scripts/build.mjs",
+        "package": "npm run compile && node scripts/build.mjs --production",
+        "watch": "node scripts/build.mjs --watch",
         "icons": "sh scripts/render-icons.sh",
         "test": "npm run build && node --test \"test/**/*.test.mjs\"",
         "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
@@ -52,6 +54,7 @@
     "devDependencies": {
         "@types/node": "^20.19.43",
         "@types/vscode": "~1.75.0",
+        "esbuild": "^0.28.1",
         "typescript": "^7.0.2",
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2"

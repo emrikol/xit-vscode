@@ -6,7 +6,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { selectedLines } = createRequire(import.meta.url)('../dist/selection.js');
+const { selectedLines } = createRequire(import.meta.url)('../out/selection.js');
 
 /** Build the minimal shape the helper reads from a vscode.Selection. */
 const sel = (start, end = start) => ({ start: { line: start }, end: { line: end } });
