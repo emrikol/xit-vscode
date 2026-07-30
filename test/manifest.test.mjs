@@ -185,6 +185,47 @@ describe('contributed files', () => {
 	});
 });
 
+describe('first-line detection', () => {
+	const firstLine = new RegExp(manifest.contributes.languages[0].firstLine);
+
+	it('recognises a file that opens with any checkbox', () => {
+		for (const status of [' ', 'x', '@', '~', '?']) {
+			assert.match(`[${status}] An item`, firstLine, `[${status}] was not recognised`);
+			assert.match(`[${status}]`, firstLine, `a bare [${status}] was not recognised`);
+		}
+	});
+
+	it('recognises the first line of the reference fixture', () => {
+		const [first] = readFileSync(resolve(REPO_ROOT, 'test/fixtures/reference.xit'), 'utf8').split('\n');
+		assert.match(first, firstLine);
+	});
+
+	it('does not claim a Markdown task list', () => {
+		// This is the one that would actually bite. Markdown writes them with
+		// a list marker in front, so anchoring at the start of the line is
+		// enough to tell them apart.
+		for (const line of ['- [ ] A markdown task', '* [x] Another one', '  [ ] Indented']) {
+			assert.doesNotMatch(line, firstLine, `${line} was claimed`);
+		}
+	});
+
+	it('does not claim a file that opens with an HTML comment', () => {
+		// A .xit comment and an HTML document both start this way, and HTML
+		// is far more common.
+		assert.doesNotMatch('<!-- a comment -->', firstLine);
+	});
+
+	it('does not claim arbitrary bracketed text', () => {
+		for (const line of ['[INFO] a log line', '[]', '[ x ] spaced', '[TODO] a note']) {
+			assert.doesNotMatch(line, firstLine, `${line} was claimed`);
+		}
+	});
+
+	it('does not claim a plain title, which is indistinguishable from prose', () => {
+		assert.doesNotMatch('My TODO list', firstLine);
+	});
+});
+
 describe('icons', () => {
 	it('ships an extension icon', () => {
 		assert.ok(manifest.icon, 'the Marketplace shows a placeholder without one');
