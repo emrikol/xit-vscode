@@ -14,9 +14,19 @@
 
 set -e
 
-if ! npm test; then
-	echo
+# The suite is quiet on success. A passing run has nothing to say, and a
+# hundred lines of green before every commit hides the output that matters.
+tmpdir=$(mktemp -d)
+log="$tmpdir/test.log"
+cleanup() { rm -rf "$tmpdir"; }
+trap cleanup EXIT
+
+if ! npm test >"$log" 2>&1; then
+	cat "$log" >&2
+	echo >&2
 	echo "pre-commit: tests failed, commit aborted." >&2
 	echo "            fix them, or bypass with: git commit --no-verify" >&2
 	exit 1
 fi
+
+echo "pre-commit: tests passed."

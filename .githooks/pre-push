@@ -18,14 +18,16 @@ set -e
 # X's, and Homebrew's coreutils puts GNU mktemp ahead of the BSD one on PATH.
 tmpdir=$(mktemp -d)
 vsix="$tmpdir/xit.vsix"
+log="$tmpdir/test.log"
 
 cleanup() {
 	rm -rf "$tmpdir"
 }
 trap cleanup EXIT
 
-if ! npm test; then
-	echo
+if ! npm test >"$log" 2>&1; then
+	cat "$log" >&2
+	echo >&2
 	echo "pre-push: tests failed, push aborted." >&2
 	echo "          fix them, or bypass with: git push --no-verify" >&2
 	exit 1
