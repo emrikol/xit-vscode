@@ -15,6 +15,7 @@ const { directives } = require_('../out/directive.js');
 const { collect } = require_('../out/collect.js');
 const { archive } = require_('../out/archive.js');
 const { problems } = require_('../out/diagnostics.js');
+const { tagUsage, commonSpelling } = require_('../out/tag.js');
 
 describe('reading a directive', () => {
 	it('takes tags from a one-line comment', () => {
@@ -117,5 +118,34 @@ describe('a directive that does nothing', () => {
 
 	it('says nothing about an ordinary comment', () => {
 		assert.deepEqual(codes(['<!-- just a note -->', '<!--', 'parked', '-->']), []);
+	});
+});
+
+describe('a declared tag is offered by completion', () => {
+	it('counts as used, even where no item writes it', () => {
+		// Otherwise the tag on *every* item in a file is the one you cannot
+		// autocomplete, which is the wrong way round.
+		assert.deepEqual(
+			[...tagUsage(['<!-- xit: tags=work, client-acme -->', '[ ] Do this #urgent']).keys()].sort(),
+			['client-acme', 'urgent', 'work'],
+		);
+	});
+
+	it('loses to the spelling the items actually use', () => {
+		// Someone who has not read the directive will type it by hand, and
+		// should get whichever spelling the file already leans on.
+		const usage = tagUsage(['<!-- xit: tags=Work -->', '[ ] a #work', '[ ] b #work']);
+		assert.equal(commonSpelling(usage.get('work')), 'work');
+	});
+
+	it('does not invent values it was never given', () => {
+		assert.deepEqual([...tagUsage(['<!-- xit: tags=work -->']).get('work').values], []);
+	});
+
+	it('does not reach another file', () => {
+		// A directive is about its own file. The workspace index merges tags
+		// across files for completion, and this must not smuggle one file's
+		// declaration into another's.
+		assert.deepEqual([...tagUsage(['[ ] Elsewhere #other']).keys()], ['other']);
 	});
 });

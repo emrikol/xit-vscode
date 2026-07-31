@@ -331,7 +331,7 @@ A comment can carry a directive, and it applies to the whole file.
 
 | Key | What it does |
 | --- | --- |
-| `tags` | Every item in the file inherits these tags. A `work.xit` does not need `#work` on two hundred lines. |
+| `tags` | Every item in the file inherits these tags. A `work.xit` does not need `#work` on two hundred lines, and completion offers them like any other tag in the workspace. |
 | `archive` | Names the group finished items are archived under, beating `xit.archiveTitle`. The setting is one answer for every file; this is the file's answer for itself. |
 
 A comment is where this costs least. Comments are already a fork of the specification, so a file using them already reads wrong in other [x]it! tools and a directive inside one adds no new breakage. It also means the whole thing is invisible to the grammar, the outline and the diagnostics without any of them being taught about it — they already skip comments.

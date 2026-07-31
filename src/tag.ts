@@ -19,6 +19,7 @@
  */
 
 import { commentLines } from './comment';
+import { directives } from './directive';
 import { items } from './tree';
 
 export interface Tag {
@@ -228,6 +229,14 @@ export function tagUsage(lines: readonly string[]): Map<string, TagUsage> {
 	// Parked work is not work. Completion draws on this, and a `#secret` in a
 	// commented-out item was being offered as a tag to use.
 	const parked = commentLines(lines);
+
+	// A tag the file declares for itself counts as used. Otherwise the tag on
+	// *every* item in a file is the one you cannot autocomplete - and someone
+	// who has not read the directive will type it by hand anyway, so they
+	// should at least get the spelling the file already uses.
+	for (const name of directives(lines).tags) {
+		usage.set(name, { spellings: new Map([[name, 1]]), values: new Set<string>() });
+	}
 
 	for (const [at, line] of lines.entries()) {
 		if (parked.has(at)) continue;
