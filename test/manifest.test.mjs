@@ -75,6 +75,13 @@ describe('manifest identity', () => {
 		assert.equal(types, engine);
 	});
 
+	it('wakes on an xit file, because overdue dates need code', () => {
+		// Everything else the extension contributes is declarative and needs
+		// no activation at all. Colouring a date whose period has passed does
+		// need code, and it has to run without the user invoking anything.
+		assert.ok(manifest.activationEvents.includes(`onLanguage:${LANGUAGE_ID}`));
+	});
+
 	it('does not declare activation events for its commands', () => {
 		// VS Code has inferred onCommand activation from contributes.commands
 		// since 1.74. Declaring them again is redundant and drifts.
@@ -362,6 +369,44 @@ describe('icons', () => {
 			assert.ok(existsSync(contributedPath(png)), `${png} does not exist`);
 			assert.ok(existsSync(contributedPath(svg)), `${svg} does not exist`);
 		}
+	});
+});
+
+describe('overdue due dates', () => {
+	const COLOUR = 'xit.overdueDueDate';
+
+	it('contributes the colour the decoration asks for', () => {
+		// createTextEditorDecorationType takes a ThemeColor by id. An id that
+		// nothing contributes resolves to undefined, and the decoration then
+		// renders in the default foreground - invisible, with no error.
+		const colour = manifest.contributes.colors?.find((entry) => entry.id === COLOUR);
+		assert.ok(colour, `${COLOUR} is not contributed`);
+		assert.ok(colour.description?.length > 0);
+
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		assert.match(source, new RegExp(`ThemeColor\\('${COLOUR.replace('.', '\\.')}'\\)`));
+	});
+
+	it('gives the colour a default for every theme kind', () => {
+		// Without a default for a kind, the colour is unset in themes of that
+		// kind and the decoration silently does nothing there.
+		const colour = manifest.contributes.colors.find((entry) => entry.id === COLOUR);
+		for (const kind of ['dark', 'light', 'highContrast', 'highContrastLight']) {
+			assert.ok(colour.defaults?.[kind], `${COLOUR} has no default for ${kind} themes`);
+		}
+	});
+
+	it('can be turned off', () => {
+		const setting = manifest.contributes.configuration?.properties?.['xit.overdueDueDates'];
+		assert.ok(setting, 'no setting to disable overdue marking');
+		assert.equal(setting.type, 'boolean');
+		assert.equal(setting.default, true);
+		assert.ok(setting.description?.length > 0);
+	});
+
+	it('is read by the code that draws it', () => {
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		assert.match(source, /getConfiguration\(LANGUAGE\)\.get<boolean>\('overdueDueDates'/);
 	});
 });
 

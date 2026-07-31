@@ -74,7 +74,32 @@
         "vscode-oniguruma": "^2.0.1",
         "vscode-textmate": "^9.3.2"
     },
+    "activationEvents": [
+        "onLanguage:xit"
+    ],
     "contributes": {
+        "configuration": {
+            "title": "xit!",
+            "properties": {
+                "xit.overdueDueDates": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Mark due dates whose period has passed. A month, quarter, week or year counts as passed only once it has ended, so \"-> 2026\" is overdue on 1 January 2027."
+                }
+            }
+        },
+        "colors": [
+            {
+                "id": "xit.overdueDueDate",
+                "description": "Foreground colour of a due date whose period has passed.",
+                "defaults": {
+                    "dark": "editorWarning.foreground",
+                    "light": "editorWarning.foreground",
+                    "highContrast": "editorWarning.foreground",
+                    "highContrastLight": "editorWarning.foreground"
+                }
+            }
+        ],
         "languages": [
             {
                 "id": "xit",

@@ -32,14 +32,23 @@ describe('activation', () => {
 	});
 
 	it('activates on demand', async () => {
-		// Note what this does NOT assert: that opening an xit file activates
-		// the extension. It does not, and should not. The grammar, the
-		// snippets and the language configuration are all declarative, so
-		// nothing has to run to open a file. VS Code infers onCommand from
-		// contributes.commands, and that is the only thing that wakes it.
 		const extension = vscode.extensions.getExtension(EXTENSION_ID)!;
 		await extension.activate();
 		assert.ok(extension.isActive);
+	});
+
+	it('wakes when an xit file is opened', async () => {
+		// This used to assert the opposite, and the comment explaining why was
+		// right at the time: the grammar, the snippets and the language
+		// configuration are all declarative, so nothing had to run to open a
+		// file, and the only thing that woke the extension was a command.
+		//
+		// Overdue due dates changed that. Colouring a date that has passed
+		// needs to know what today is, so it needs code, so the extension now
+		// declares onLanguage:xit and is running whenever an xit file is open.
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Do this' });
+		await vscode.window.showTextDocument(document);
+		assert.ok(vscode.extensions.getExtension(EXTENSION_ID)!.isActive);
 	});
 
 	it('registers every command it contributes', async () => {
