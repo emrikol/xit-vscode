@@ -18,6 +18,7 @@
 
 import { STATUSES, STATUS_CLASS, readCheckbox } from './checkbox';
 import { commentLines } from './comment';
+import { directiveProblems } from './directive';
 import { parseEstimate } from './estimate';
 import { parseInterval } from './repeat';
 import { foldName, tagsOn } from './tag';
@@ -351,6 +352,23 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 				seen = true;
 			}
 		}
+	}
+
+	// A directive that does nothing. A known key that cannot use its value is
+	// the same failure as `#repeat=sometimes`; an unknown key is a hint,
+	// because ignoring it is deliberate and a typo is indistinguishable from a
+	// key a later version will understand.
+	for (const problem of directiveProblems(lines)) {
+		found.push({
+			line: problem.line,
+			start: problem.start,
+			end: problem.end,
+			severity: problem.kind === 'value' ? 'warning' : 'hint',
+			code: problem.kind === 'value' ? 'unrecognised-value' : 'unknown-directive',
+			message: problem.kind === 'value'
+				? `\`${problem.key}\` cannot use that value, so this directive does nothing.`
+				: `\`${problem.key}\` is not a directive this version understands, so it is ignored. That is deliberate - a directive written for a later version must not break an earlier one - but check the spelling.`,
+		});
 	}
 
 	// Broken links between items. Reported rather than repaired: a broken

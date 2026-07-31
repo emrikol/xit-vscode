@@ -336,7 +336,9 @@ A comment can carry a directive, and it applies to the whole file.
 
 A comment is where this costs least. Comments are already a fork of the specification, so a file using them already reads wrong in other [x]it! tools and a directive inside one adds no new breakage. It also means the whole thing is invisible to the grammar, the outline and the diagnostics without any of them being taught about it — they already skip comments.
 
-**An unknown key is ignored, in silence and on purpose.** A directive written for a later version must not break an earlier one, and reporting it would make every new key a breaking change for anyone who has not updated. A tag name the format could not express is ignored for the opposite reason: a directive must not be able to declare something you could not have written by hand.
+A known key that cannot use its value — `<!-- xit: tags=not a tag -->` — is reported as `unrecognised-value`, exactly like `#repeat=sometimes`. Same failure: you wrote it, the file kept it, nothing uses it.
+
+**An unknown key is ignored, and reported only as a hint.** A directive written for a later version must not break an earlier one, and *warning* about it would make every new key a breaking change for anyone who has not updated. But a typo is indistinguishable from a future key, so complete silence leaves you no way to tell them apart — a hint is visible if you look and fails nothing. A tag name the format could not express is ignored for the opposite reason: a directive must not be able to declare something you could not have written by hand.
 
 ## One Item Waiting on Another
 
@@ -486,6 +488,7 @@ Four rules quietly throw away what you wrote. Silent disregard is the worst prop
 | `dropped-tag-value` | A quoted tag value whose quote never closes, or closes with the other quote character. The guide's `tags/9`: "the value is disregarded altogether". |
 | `not-a-priority` | Exclamation marks with no space after them, or a second run right after the priority. The guide's `priority/5` and `priority/6`. |
 | `unrecognised-value` | A value one of this fork's own tags cannot read: `#repeat=sometimes`, `#est=2hrs`, `#done=notadate`. |
+| `unknown-directive` | A directive key this version does not understand. A **hint**, not a warning — see below. |
 | `extra-start-date` | A second `<- ` in an item. Only the first counts, exactly as with a due date. |
 
 `unrecognised-value` covers a hole this fork dug itself. The four rules above are the specification disregarding what you wrote; `#repeat=sometimes` never repeating and `#est=2hrs` being counted as unestimated were *our* features doing exactly the same thing, in silence, while `#after=` already reported an unknown id. The codebase disagreed with itself about its own rule.

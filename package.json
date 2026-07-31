@@ -148,7 +148,7 @@
                 "xit.diagnostics": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a line that is not an item, a title or a comment, an indent that cannot nest, a comment that is never closed, and the four places the format disregards what you wrote without saying so — a second due date, a tag value whose quote never closes, exclamation marks that do not form a priority, and a value one of this fork’s own tags cannot read."
+                    "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a line that is not an item, a title or a comment, an indent that cannot nest, a comment that is never closed, and the four places the format disregards what you wrote without saying so — a second due date, a tag value whose quote never closes, exclamation marks that do not form a priority, a value one of this fork’s own tags cannot read, and a directive that does nothing."
                 },
                 "xit.dueSoonWithinDays": {
                     "type": "number",

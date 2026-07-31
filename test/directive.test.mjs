@@ -14,6 +14,7 @@ const require_ = createRequire(import.meta.url);
 const { directives } = require_('../out/directive.js');
 const { collect } = require_('../out/collect.js');
 const { archive } = require_('../out/archive.js');
+const { problems } = require_('../out/diagnostics.js');
 
 describe('reading a directive', () => {
 	it('takes tags from a one-line comment', () => {
@@ -81,5 +82,40 @@ describe('what a directive changes', () => {
 		const { lines } = archive(['<!-- xit: archive=Done -->', '[x] Finished'], 'Archive');
 		assert.ok(lines.includes('# Done'), lines.join('\n'));
 		assert.ok(!lines.includes('# Archive'));
+	});
+});
+
+describe('a directive that does nothing', () => {
+	const codes = (lines) => problems(lines).map((problem) => `${problem.severity}:${problem.code}`);
+
+	it('reports a known key that cannot use its value', () => {
+		// The same failure as `#repeat=sometimes`: you wrote it, the file kept
+		// it, and nothing uses it.
+		assert.deepEqual(codes(['<!-- xit: tags=not a tag -->']), ['warning:unrecognised-value']);
+		assert.deepEqual(codes(['<!-- xit: archive= -->']), ['warning:unrecognised-value']);
+		assert.deepEqual(codes(['<!-- xit: tags= -->']), ['warning:unrecognised-value']);
+	});
+
+	it('hints at an unknown key rather than warning', () => {
+		// Ignoring an unknown key is deliberate - a directive written for a
+		// later version must not break an earlier one - but a typo is
+		// indistinguishable from a future key, so silence leaves no way to
+		// tell them apart. A hint is visible and fails nothing.
+		assert.deepEqual(codes(['<!-- xit: tgas=work -->']), ['hint:unknown-directive']);
+		assert.deepEqual(codes(['<!-- xit: colour=blue -->']), ['hint:unknown-directive']);
+	});
+
+	it('says nothing about a directive that works', () => {
+		assert.deepEqual(codes(['<!-- xit: tags=work, client-acme -->']), []);
+		assert.deepEqual(codes(['<!-- xit: archive=Done -->']), []);
+	});
+
+	it('reports only the unusable part of a partly usable list', () => {
+		// `ok` survives, so the directive does something and is not reported.
+		assert.deepEqual(codes(['<!-- xit: tags=not a tag, ok -->']), []);
+	});
+
+	it('says nothing about an ordinary comment', () => {
+		assert.deepEqual(codes(['<!-- just a note -->', '<!--', 'parked', '-->']), []);
 	});
 });

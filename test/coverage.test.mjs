@@ -89,8 +89,9 @@ const LEDGER = {
 	diagnostics: {
 		must: { priority: 'diagnostics.test.mjs', due: 'diagnostics.test.mjs', start: 'diagnostics.test.mjs',
 			tags: 'diagnostics.test.mjs', title: 'diagnostics.test.mjs', comment: 'diagnostics.test.mjs',
-			nesting: 'diagnostics.test.mjs', estimate: 'diagnostics.test.mjs', ids: 'link.test.mjs' },
-		gap: { directive: '#90' },
+			nesting: 'diagnostics.test.mjs', estimate: 'diagnostics.test.mjs', ids: 'link.test.mjs',
+			directive: 'directive.test.mjs' },
+		gap: {},
 		na: { status: 'a malformed checkbox is reported; a valid status has nothing to report' },
 	},
 	collect: {
