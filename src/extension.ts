@@ -10,6 +10,7 @@ import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
+import { archive } from './archive';
 import { registerWorkspaceView } from './workspaceView';
 import { WorkspaceIndex } from './workspaceIndex';
 import { commonSpelling, foldName, tagsOn } from './tag';
@@ -269,6 +270,34 @@ function registerCompletion(context: vscode.ExtensionContext, index: WorkspaceIn
 			});
 		},
 	}, '#', '='));
+}
+
+/**
+ * Move every finished item to a group at the end of the file.
+ *
+ * One edit in one document, so undo puts it back exactly. That is why it goes
+ * to the end of this file rather than to a separate `done.xit`: the file still
+ * grows, and in exchange nothing reaches a second document that the user
+ * cannot take back with a keystroke.
+ */
+async function archiveFinished(editor: vscode.TextEditor) {
+	if (editor.document.languageId !== LANGUAGE) return;
+
+	const configuration = vscode.workspace.getConfiguration(LANGUAGE);
+	const before = documentLines(editor.document);
+	const { lines: after, moved } = archive(before, configuration.get<string>('archiveTitle', 'Archive'));
+
+	if (moved === 0) {
+		void vscode.window.showInformationMessage('Nothing to archive: no finished items outside the archive.');
+		return;
+	}
+
+	const last = editor.document.lineCount - 1;
+	const whole = new vscode.Range(0, 0, last, editor.document.lineAt(last).text.length);
+	await editor.edit(builder => builder.replace(whole, after.join('\n')));
+
+	void vscode.window.showInformationMessage(
+		`Archived ${moved === 1 ? '1 item' : `${moved} items`}. Undo puts it back.`);
 }
 
 /**
@@ -712,6 +741,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerEditorCommand(context, 'xit.postpone', editor => postponeSelected(editor));
 
 	registerEditorCommand(context, 'xit.sortGroup', editor => sortGroupAtCursor(editor));
+
+	registerEditorCommand(context, 'xit.archive', editor => archiveFinished(editor));
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 

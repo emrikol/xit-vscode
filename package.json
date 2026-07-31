@@ -160,6 +160,11 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Show a count of overdue items in the status bar. It says nothing when nothing is overdue, so a quiet workspace costs no space."
+                },
+                "xit.archiveTitle": {
+                    "type": "string",
+                    "default": "Archive",
+                    "description": "Title of the group finished items are moved under, at the end of the file."
                 }
             }
         },
@@ -316,6 +321,10 @@
                 {
                     "command": "xit.sortGroup",
                     "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.archive",
+                    "when": "editorLangId == 'xit'"
                 }
             ],
             "view/title": [
@@ -369,6 +378,11 @@
             {
                 "command": "xit.sortGroup",
                 "title": "Sort Group",
+                "category": "xit!"
+            },
+            {
+                "command": "xit.archive",
+                "title": "Archive Finished Items",
                 "category": "xit!"
             }
         ],

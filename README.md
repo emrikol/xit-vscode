@@ -311,6 +311,21 @@ They come from **the whole workspace**, not just the open file, which is the poi
 
 Names fold case and values do not, because the specification says so — §Tag makes names case-insensitive and values case-sensitive. So a name written both `#Work` and `#work` is offered once, spelled whichever way you use more often, while `#size=S` and `#size=s` are two different values and both are offered. Ties in spelling are broken by code-unit order rather than by locale, so the same workspace suggests the same spelling on every machine.
 
+## Archiving Finished Items
+
+**xit!: Archive Finished Items** moves everything checked or obsolete to a group at the end of the file, under a title (`xit.archiveTitle`, default `Archive`).
+
+This is the specific reason a plain-text todo file rots: the completed work never leaves, so the file slowly becomes an archive nobody reads and the three things you actually have to do are somewhere in the middle of it.
+
+**It moves to the end of the same file, not to a separate `done.xit`,** and that trade is deliberate. The file still grows — which is a real cost, and the thing a separate file would fix. What it buys is the property every destructive command here has: one edit in one document, so the editor's own undo puts it back exactly. Nothing reaches a second document that you cannot take back with a keystroke.
+
+Two things it refuses to move:
+
+- **a checked parent with an open subtask** — whatever the parent's own checkbox says, filing it away would hide work. The auto-check exists to stop that state arising; this does not trust that it always did.
+- **a finished subtask of an unfinished parent** — it is part of work still in progress.
+
+Anything inside a comment is left alone, and running it twice does nothing the second time. New arrivals go directly under the title, so the most recently finished work is the easiest to find.
+
 ## Sorting a Group
 
 **xit!: Sort Group** reorders the group the cursor is in: higher priority first, then earlier due date, then the order you wrote them in.

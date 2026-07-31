@@ -512,3 +512,32 @@ describe('xit.sortGroup', () => {
 		assert.equal(editor.document.getText(), before);
 	});
 });
+
+describe('xit.archive', () => {
+	it('moves finished items to a group at the end', async () => {
+		const editor = await openXit('# Todos\n[ ] Open\n[x] Done ...\n    ... continued');
+		await vscode.commands.executeCommand('xit.archive');
+
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['# Todos', '[ ] Open', '', '# Archive', '[x] Done ...', '    ... continued'],
+		);
+	});
+
+	it('is one edit, so undo puts the file back', async () => {
+		const before = '[ ] Open\n[x] Done';
+		const editor = await openXit(before);
+		await vscode.commands.executeCommand('xit.archive');
+		assert.notEqual(editor.document.getText(), before);
+
+		await vscode.commands.executeCommand('undo');
+		assert.equal(editor.document.getText(), before);
+	});
+
+	it('changes nothing when there is nothing finished', async () => {
+		const before = '[ ] Open\n[@] Ongoing';
+		const editor = await openXit(before);
+		await vscode.commands.executeCommand('xit.archive');
+		assert.equal(editor.document.getText(), before);
+	});
+});
