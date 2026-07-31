@@ -21,6 +21,7 @@ const IN_QUESTION = 'task.checkbox.in-question';
 const PRIORITY = 'task.priority';
 const DATE = 'task.date';
 const TAG = 'task.tag';
+const TAG_VALUE = 'task.tag.value';
 const TITLE = 'task.title';
 const COMMENT = 'markup.other.comment';
 
@@ -102,10 +103,15 @@ describe('priority (spec §Priority)', () => {
 		await assertNoScope('[ ] !.! Invalid', PRIORITY);
 	});
 
-	it('requires at least one exclamation mark', async () => {
-		// Dots alone carry no meaning, so they are not a priority.
-		await assertNoScope('[ ] ... Not important', PRIORITY);
-		await assertNoScope('[ ] . Not important', PRIORITY);
+	it('accepts dots on their own', async () => {
+		// Spec: "It MUST contain any number of exclamation marks (`!`) and
+		// dots (`.`)." Any number includes none, so dots with no exclamation
+		// mark are a priority of zero importance rather than not a priority.
+		// The syntax guide shows "[ ] ... This is not important" with the dots
+		// marked as one, and jotaen's own Sublime rule is `((!*)(\.*)|(\.*)(!*))`,
+		// which matches them too. This test used to assert the opposite.
+		await assertScope('[ ] ... Not important', PRIORITY, '...');
+		await assertScope('[ ] . Not important', PRIORITY, '.');
 	});
 
 	it('allows additional spaces before it', async () => {
@@ -272,10 +278,17 @@ describe('tag (spec §Tag)', () => {
 		await assertScope('[ ] (#tag="bar")', TAG, '#tag="bar"');
 	});
 
-	it('treats a bare "=" as an absent value', async () => {
+	it('treats a bare "=" as an absent value, but keeps it in the tag', async () => {
 		// Spec: "An empty tag value (e.g. #tag= or #tag="") MUST be treated
 		// the same as an absent tag value (e.g. #tag)."
-		await assertScope('[ ] #tag=', TAG, '#tag');
+		//
+		// Absent in meaning, not absent from the tag. The "=" was left with no
+		// scope at all, which drew an uncoloured character in the middle of a
+		// coloured tag - the same defect the square brackets had. The syntax
+		// guide marks the whole of "#tag=" as the tag. There is still no value
+		// scope, because there is still no value.
+		await assertScope('[ ] #tag=', TAG, '#tag=');
+		await assertNoScope('[ ] #tag=', TAG_VALUE);
 	});
 
 	it('accepts explicitly empty quoted values', async () => {
@@ -285,14 +298,17 @@ describe('tag (spec §Tag)', () => {
 
 	it('treats an unterminated quoted value as absent', async () => {
 		// Spec: "In case no matching closing quote appears on the same line,
-		// the tag value MUST be treated as absent."
-		await assertScope('[ ] #tag="v a l u e', TAG, '#tag');
-		await assertScope('[ ] #tag="v a l u e\'', TAG, '#tag');
+		// the tag value MUST be treated as absent." The opening quote and
+		// everything after it fall back to description, which is what the
+		// syntax guide shows.
+		await assertScope('[ ] #tag="v a l u e', TAG, '#tag=');
+		await assertNoScope('[ ] #tag="v a l u e', TAG_VALUE);
+		await assertScope('[ ] #tag="v a l u e\'', TAG, '#tag=');
 	});
 
 	it('does not span lines', async () => {
 		const [first, second] = await tokenize('[ ] #tag="hello\n    World!"');
-		assert.equal(onlyScoped(first, TAG), '#tag');
+		assert.equal(onlyScoped(first, TAG), '#tag=');
 		assert.deepEqual(scoped(second, TAG), []);
 	});
 
