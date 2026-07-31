@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 
 import { type Collected, collect, isOpen } from './collect';
 import { type Reference, foldId, identities } from './link';
+import { dateTags, estimateTag } from './settings';
 import { type TagUsage, tagUsage } from './tag';
 
 export interface FileItems {
@@ -31,23 +32,9 @@ function beside(from: vscode.Uri, file: string): vscode.Uri {
 	return vscode.Uri.joinPath(from, '..', name);
 }
 
-/** The configured creation and completion tag names, read where the files are read. */
-function dateTags(): { creation: string; completion: string } {
-	const configuration = vscode.workspace.getConfiguration('xit');
-	return {
-		creation: configuration.get<string>('creationDateTag', 'created'),
-		completion: configuration.get<string>('completionDateTag', 'done'),
-	};
-}
-
 /** Ids declared in a document, folded, with the line each sits on. */
 function idsIn(lines: readonly string[]): Map<string, number> {
 	return new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
-}
-
-/** The configured estimate tag, read where the files are read. */
-function estimateTag(): string {
-	return vscode.workspace.getConfiguration('xit').get<string>('estimateTag', 'est');
 }
 
 /** How long to wait after a keystroke before re-reading a document. */

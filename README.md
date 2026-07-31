@@ -10,10 +10,10 @@ Files written for it still open anywhere. Files written for the official format 
 [Titles](#titles) · [Subtasks](#subtasks) · [Waiting](#waiting) · [Priority](#priority) · [Start Dates](#start-dates) · [Overdue Dates](#overdue-dates) · [Tag Values](#tag-values) · [Comments](#comments) · [Blank Lines Inside an Item](#blank-lines-inside-an-item) · [Links](#links) · [One Item Waiting on Another](#one-item-waiting-on-another) · [Time Estimates](#time-estimates) · [Completion Dates and Repeats](#completion-dates-and-repeats) · [What a File Says About Itself](#what-a-file-says-about-itself) · [In Markdown](#in-markdown)
 
 **Using it**  
-[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
+[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Pointing at a Checkbox](#pointing-at-a-checkbox) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
 
 **Reference**  
-[Development](#development) · [Lint and formatting](#lint-and-formatting) · [The two integration runs](#the-two-integration-runs) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
+[Development](#development) · [Installing your own build](#installing-your-own-build) · [Lint and formatting](#lint-and-formatting) · [The two integration runs](#the-two-integration-runs) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
 
 ## Titles
 
@@ -488,6 +488,36 @@ The count uses the same thresholds *and the same filter* as the sidebar and the 
 
 Where some of them are critically overdue, the count says so in its tooltip and takes a warning background. The number is in the text rather than only in the colour: a status bar background is one of two colours VS Code offers and a theme may override either, so colour cannot be the thing carrying the meaning.
 
+## Pointing at a Checkbox
+
+Hover a checkbox and the editor says why the item is where it is, and offers every status as a link.
+
+```
+**Ongoing** — Overdue by 11 days
+
+Water the plants #garden
+
+Due `2026-07-20` · Estimated 30m
+
+Waiting on Sign the contract
+─────────────────────────────
+[ ] Open  [x] Checked  [@] Ongoing  [~] Obsolete  [?] In question  [>] Waiting
+```
+
+The sidebar has always known an item's urgency, its estimate, how long it took and what is holding it up. The editor — where you actually do the work — showed none of it, and that is the half of this worth having. The status links ride along.
+
+It says **how late**, not merely that it is late: "Overdue by 11 days" and "Overdue by 3 months" are different problems, and a panel that groups can never tell you which. Dates are shown as written rather than reformatted, so what you read is what you could search the file for.
+
+Tags whose meaning is restated in words are cut from the description — `#est=30m` in the description with "Estimated 30m" two lines below it is the same fact twice in one popup. `#garden` stays, because that is a label you chose rather than something the tooling renders. The Outline lifts the date arrows out of an item's name for the same reason.
+
+The current status is shown but not linked. "Set this to what it already is" is not an offer, and leaving it in place keeps the row the same width whichever status you are looking at, so the one you want does not move between hovers.
+
+**The hover covers the checkbox and nothing else.** Covering the description would put a popup under the cursor for most of the width of most lines in a todo file.
+
+Clicking a status goes through exactly the same path as Toggle and Shuffle, so the parent still auto-checks, the completion date is still stamped, and a repeating item still spawns its next occurrence.
+
+**Why hover rather than click.** VS Code gives an extension no click handler for editor text — there is no "on click this range", and decorations are not clickable. A `DocumentLink` would work but needs Cmd+click and would underline every checkbox in the file. Hover is the only thing that answers a plain mouse.
+
 ## Outline and Folding
 
 Titles and items fill the Outline panel, with subtasks nested under their parents, which also gives Go to Symbol and breadcrumbs. Both arrows show beside each row — `<- 2026-09-01  -> 2026-09-30` — so the outline doubles as a schedule rather than repeating the dates in the item names.
@@ -612,6 +642,7 @@ One thing it deliberately does *not* do: a line like `- [ ] Buy milk` was read a
 ```sh
 npm install            # also installs the git hooks
 npm test               # build, then run the unit tests
+npm run install:local  # package the extension and install it into VS Code
 npm run lint           # Biome: lint and formatting, over src, test and scripts
 npm run lint:fix       # fix what can be fixed automatically
 npm run test:web       # run the integration tests in a headless browser
@@ -621,6 +652,12 @@ npm run icons          # re-render the icons from their SVG sources
 ```
 
 `npm install` points `core.hooksPath` at `.githooks`, so the hooks install themselves with no extra dependency. `pre-commit` runs the lint first, because it is instant and the test run is not, then the unit tests. `pre-push` runs those, then `test:web`, then confirms the extension still packages, which catches manifest mistakes the tests cannot see. Both take `--no-verify` if you need to get past them.
+
+### Installing your own build
+
+`npm run install:local` packages the extension and installs it, then prints the revision it installed. It is deliberately not part of `npm run build`: `build` is what `npm test` runs first, and `npm test` is what the pre-commit hook runs, so building and installing together would reinstall the extension tens of times a session — each one silently replacing what is running in the editor you have open, in the middle of unrelated work.
+
+The version in the manifest never changes, so VS Code has no reason to believe a build is new. Every install passes `--force`, and there is no version number to check afterwards — which is what the revision it prints is for.
 
 ### Lint and formatting
 

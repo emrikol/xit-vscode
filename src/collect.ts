@@ -124,6 +124,43 @@ export function collect(
 /** How urgent an item is, which is what the sidebar groups by. */
 export type Urgency = 'critical' | 'overdue' | 'soon' | 'later' | 'none' | 'waiting' | 'notYet' | 'blocked';
 
+/**
+ * The urgencies, worst first. The one order, used by everything that ranks.
+ *
+ * It lived twice - here in the shape the sidebar wanted, and again in
+ * src/sort.ts - with nothing checking the two agreed. Two orderings of the
+ * same eight values is the sidebar and Sort Group quietly disagreeing about
+ * which item is more urgent the moment one of them is edited.
+ *
+ * The last three are the ones you cannot act on, below everything you can.
+ * None is hidden: hiding would lose work, and ranking them by a due date you
+ * cannot work towards would put them above things you can. Waiting comes
+ * first of the three because someone else is holding it, which is worth
+ * seeing; not-yet-started is your own decision and can wait at the bottom.
+ */
+export const URGENCY_ORDER: readonly Urgency[] = [
+	'critical',
+	'overdue',
+	'soon',
+	'later',
+	'none',
+	'waiting',
+	'blocked',
+	'notYet',
+];
+
+/** What each urgency is called, wherever one is shown to a person. */
+export const URGENCY_LABEL: Record<Urgency, string> = {
+	critical: 'Critically overdue',
+	overdue: 'Overdue',
+	soon: 'Due soon',
+	later: 'Later',
+	none: 'No due date',
+	waiting: 'Waiting on someone else',
+	blocked: 'Blocked by another item',
+	notYet: 'Not started yet',
+};
+
 export interface Thresholds {
 	today: Day;
 	/** Days past the end of a period before it counts as critical. 0 disables the tier. */

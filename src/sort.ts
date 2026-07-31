@@ -11,7 +11,7 @@
 
 import { priorityOf } from './checkbox';
 import { commentLines } from './comment';
-import { type Collected, type Thresholds, collect, urgencyOf, type Urgency } from './collect';
+import { URGENCY_ORDER, type Collected, type Thresholds, collect, urgencyOf } from './collect';
 import type { Day } from './dueDate';
 import { type Item, items } from './tree';
 
@@ -39,7 +39,6 @@ export function groupAround(lines: readonly string[], line: number): { start: nu
  * How urgent a group of items is, worst first - the same order the workspace
  * view uses, so the two cannot disagree about what belongs at the top.
  */
-const ORDER: Urgency[] = ['critical', 'overdue', 'soon', 'later', 'none', 'waiting', 'blocked', 'notYet'];
 
 /**
  * How an item ranks. Most urgent first, so a higher priority sorts earlier and
@@ -57,7 +56,7 @@ const ORDER: Urgency[] = ['critical', 'overdue', 'soon', 'later', 'none', 'waiti
  */
 function rank(collected: Map<number, Collected>, item: Item, thresholds: Thresholds): [number, number, Day] {
 	const found = collected.get(item.line);
-	const urgency = found ? ORDER.indexOf(urgencyOf(found, thresholds)) : ORDER.length;
+	const urgency = found ? URGENCY_ORDER.indexOf(urgencyOf(found, thresholds)) : URGENCY_ORDER.length;
 	const due = found?.due;
 
 	// From the raw line, not from `description`, which has the checkbox cut

@@ -11,7 +11,9 @@ import { problems, type Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
 import { alignments } from './align';
-import { collect, isOpen, urgencyOf } from './collect';
+import { type Collected, collect, isOpen, urgencyOf } from './collect';
+import { type Blocker, hoverMarkdown } from './hover';
+import { dateTags, estimateTag, thresholds } from './settings';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
 import { registerWorkspaceView } from './workspaceView';
@@ -40,7 +42,20 @@ function editSettings() {
 	};
 }
 
-function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: Status) => Status) {
+/**
+ * Rewrite the status on some lines, with every consequence that follows.
+ *
+ * `lines` defaults to the selection, which is what Toggle and Shuffle want.
+ * The checkbox hover passes the one line it was pointing at instead: the
+ * cascade, the completion date and the repeat all have to happen there too,
+ * and a second implementation of them beside this one is how three of the four
+ * came to disagree with each other before.
+ */
+function editSelectedCheckboxes(
+	editor: vscode.TextEditor,
+	replacer: (status: Status) => Status,
+	lines?: Iterable<number>,
+) {
 	const document = editor.document;
 	const settings = editSettings();
 
@@ -67,7 +82,7 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 	// other three did not, so the extension disagreed with itself.
 	const parked = commentLines(before);
 
-	for (const line of selectedLines(editor.selections)) {
+	for (const line of lines ?? selectedLines(editor.selections)) {
 		const checkbox = readCheckbox(after[line]);
 		if (!checkbox) continue;
 		after[line] = writeStatus(after[line], replacer(checkbox.status));
@@ -386,6 +401,115 @@ function nullable<T, R>(value: T | undefined, then: (value: T) => R): R | null {
 	return value === undefined ? null : then(value);
 }
 
+/** Where the caller of `xit.setStatus` says the checkbox is. */
+interface StatusTarget {
+	uri: string;
+	line: number;
+	status: Status;
+}
+
+/**
+ * The checkbox hover, and the command its status links invoke.
+ *
+ * The hover covers the checkbox and nothing else. Covering the description
+ * would put a popup under the cursor for most of the width of most lines in a
+ * todo file, which is the fastest way to make a useful hover unbearable.
+ */
+function registerHover(context: vscode.ExtensionContext, index: WorkspaceIndex) {
+	context.subscriptions.push(
+		vscode.languages.registerHoverProvider(LANGUAGE, {
+			provideHover(document, position) {
+				const text = document.lineAt(position.line).text;
+				const checkbox = readCheckbox(text);
+				if (!checkbox) return null;
+
+				// The three characters of the checkbox, and no more.
+				const range = new vscode.Range(position.line, checkbox.column, position.line, checkbox.column + 3);
+				if (!range.contains(position)) return null;
+
+				const lines = documentLines(document);
+				const item = collect(lines, estimateTag(), dateTags()).find((each) => each.line === position.line);
+				if (!item) return null;
+
+				const markdown = new vscode.MarkdownString(
+					hoverMarkdown({
+						item,
+						urgency: urgencyOf(item, thresholds()),
+						today: todayFrom(new Date()),
+						blockers: blockersOf(document, item, index),
+						target: { uri: document.uri.toString(), line: position.line },
+						// The tags the panel restates in words below. Read from
+						// the settings, because every one of them is renameable.
+						explained: [estimateTag(), ID_TAG, AFTER_TAG, dateTags().creation, dateTags().completion],
+						id: nullable(
+							tagsOn(text).find((tag) => tag.key === ID_TAG),
+							(tag) => tag.value,
+						),
+					}),
+				);
+				// What makes the `command:` links live. Everything interpolated
+				// into the Markdown is escaped in src/hover.ts, because trusted
+				// means a description could otherwise carry a command of its own.
+				markdown.isTrusted = { enabledCommands: ['xit.setStatus'] };
+
+				return new vscode.Hover(markdown, range);
+			},
+		}),
+
+		vscode.commands.registerCommand('xit.setStatus', async (target: StatusTarget) => {
+			const editor = vscode.window.activeTextEditor;
+			// The hover belongs to a document, and the command arrives with no
+			// editor of its own. Refusing when the active one is something else
+			// is safer than guessing, since the payload names a line number and
+			// a stale one would rewrite the wrong line of the wrong file.
+			if (!editor || editor.document.uri.toString() !== target.uri) return;
+			if (target.line >= editor.document.lineCount) return;
+			if (!readCheckbox(editor.document.lineAt(target.line).text)) return;
+
+			await editSelectedCheckboxes(editor, () => target.status, [target.line]);
+		}),
+	);
+}
+
+/**
+ * What an item waits on, resolved for the hover.
+ *
+ * Same resolution the DocumentLink provider does, and for the same reason it
+ * is done here rather than in src/hover.ts: only the index knows what other
+ * files exist.
+ */
+function blockersOf(document: vscode.TextDocument, item: Collected, index: WorkspaceIndex): Blocker[] {
+	const lines = documentLines(document);
+	const here = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
+
+	// This document is read from the buffer rather than from the index, which
+	// may be a keystroke behind it. Another file can only come from the index.
+	const inThisDocument = collect(lines, estimateTag(), dateTags());
+	const itemsIn = (uri: vscode.Uri): Collected[] =>
+		uri.toString() === document.uri.toString()
+			? inThisDocument
+			: (index.all().find((file) => file.uri.toString() === uri.toString())?.items ?? []);
+
+	return item.waitingOn.map((reference) => {
+		const target =
+			reference.file === null
+				? nullable(here.get(foldId(reference.id)), (line) => ({ uri: document.uri, line }))
+				: index.resolve(document.uri, reference);
+
+		// An unresolved reference is already reported as a problem. The hover
+		// says what it can - the id you wrote - rather than staying silent.
+		if (!target) return { label: reference.id, target: null, open: true };
+
+		const found = itemsIn(target.uri).find((each) => each.line === target.line);
+
+		return {
+			label: found?.description || reference.id,
+			target: { uri: target.uri.toString(), line: target.line },
+			open: found ? isOpen(found) : true,
+		};
+	});
+}
+
 /**
  * Problems a single document cannot see: a reference to another file.
  *
@@ -452,13 +576,8 @@ async function sortGroupAtCursor(editor: vscode.TextEditor) {
 
 	// The same thresholds the sidebar, the status bar and the decorations use,
 	// so all four agree about which items sink to the bottom of a group.
-	const configuration = vscode.workspace.getConfiguration(LANGUAGE);
 	const before = documentLines(editor.document);
-	const after = sortGroup(before, editor.selection.active.line, {
-		today: todayFrom(new Date()),
-		criticalAfterDays: configuration.get<number>('criticallyOverdueAfterDays', 14),
-		soonWithinDays: configuration.get<number>('dueSoonWithinDays', 7),
-	});
+	const after = sortGroup(before, editor.selection.active.line, thresholds());
 
 	if (after.every((text, line) => text === before[line])) {
 		void vscode.window.showInformationMessage('This group is already in order.');
@@ -979,6 +1098,7 @@ export function activate(context: vscode.ExtensionContext) {
 	const index = registerWorkspaceView(context);
 	registerCompletion(context, index);
 	registerLinks(context, index);
+	registerHover(context, index);
 	registerDiagnostics(context, index);
 	registerCreationDate(context);
 

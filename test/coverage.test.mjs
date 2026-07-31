@@ -7,8 +7,8 @@
  * hole was found by hand: alignment padding across nesting levels, a group
  * with a comment in it never sorting, parked tags leaking into completion.
  *
- * This is the ledger that closes it. Fifteen readers by eleven elements is
- * 165 cells, and every one must be declared:
+ * This is the ledger that closes it. Sixteen readers by eleven elements is
+ * 176 cells, and every one must be declared:
  *
  *   must  the reader has to understand this, and a named test exercises it
  *   gap   it does not, and a task says so
@@ -46,6 +46,7 @@ const { dueDatesOn } = require_('../out/dueDate.js');
 const { tagUsage } = require_('../out/tag.js');
 const { directives } = require_('../out/directive.js');
 const { tagChoices } = require_('../out/filter.js');
+const { hoverMarkdown } = require_('../out/hover.js');
 
 /** How to recognise a document exercising each element, in a test's source. */
 const ELEMENTS = {
@@ -301,6 +302,24 @@ const LEDGER = {
 			estimate: 'not a directive key',
 		},
 	},
+	hover: {
+		must: {
+			status: 'hover.test.mjs',
+			due: 'hover.test.mjs',
+			start: 'hover.test.mjs',
+			tags: 'hover.test.mjs',
+			estimate: 'hover.test.mjs',
+			ids: 'hover.test.mjs',
+		},
+		gap: {},
+		na: {
+			priority: 'stays in the description, which the hover shows as written',
+			title: 'has no checkbox, so there is nothing to point at',
+			comment: 'collect filters parked items before the hover sees them',
+			nesting: 'a hover is about one item, at whatever depth it sits',
+			directive: "its tags reach the item through collect, and show as the item's own",
+		},
+	},
 	filter: {
 		must: { tags: 'filter.test.mjs', comment: 'filter.test.mjs', directive: 'filter.test.mjs' },
 		gap: {},
@@ -341,6 +360,23 @@ const BEHAVIOUR = {
 	estimate: (lines) => collect(lines).map((item) => item.estimate),
 	directive: (lines) => directives(lines),
 	filter: (lines) => tagChoices(collect(lines), (item) => item.tags),
+	// The description is blanked, for the reason outline's projection leaves the
+	// name out: the hover prints it verbatim, so priority marks and tags
+	// appearing in it are not the hover *interpreting* them. What is left is
+	// everything the hover derives - the urgency sentence, the facts row, the
+	// blockers and the status links.
+	hover: (lines) =>
+		collect(lines).map((item) =>
+			hoverMarkdown({
+				item: { ...item, description: '' },
+				urgency: urgencyOf(item, THRESHOLDS),
+				today: THRESHOLDS.today,
+				blockers: [],
+				target: { uri: 'file:///probe.xit', line: item.line },
+				explained: ['est', 'id', 'after', 'created', 'done'],
+				id: null,
+			}),
+		),
 };
 
 /** Two documents differing only in what the named element means. */
@@ -477,6 +513,7 @@ describe('every reader is classified against every element', () => {
 			'estimate',
 			'filter',
 			'folding',
+			'hover',
 			'link',
 			'migrate',
 			'outline',

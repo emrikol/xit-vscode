@@ -332,6 +332,91 @@ describe('diagnostics', () => {
 	});
 });
 
+describe('the checkbox hover', () => {
+	it('answers on the checkbox and nowhere else', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit',
+			content: '[@] Water the plants -> 2020-01-01 #est=30m',
+		});
+		await vscode.window.showTextDocument(document);
+
+		const onBox = await vscode.commands.executeCommand<vscode.Hover[]>(
+			'vscode.executeHoverProvider',
+			document.uri,
+			new vscode.Position(0, 1),
+		);
+		assert.ok(onBox.length > 0, 'no hover on the checkbox');
+
+		const text = onBox
+			.flatMap((hover) => hover.contents)
+			.map((part) => (typeof part === 'string' ? part : part.value))
+			.join('\n');
+		assert.match(text, /Ongoing/);
+		assert.match(text, /overdue by \d+ days/i);
+		assert.match(text, /Estimated 30m/);
+		assert.match(text, /command:xit\.setStatus/);
+
+		// The description is most of the width of most lines in a todo file.
+		// A hover there would be a popup under the cursor all day.
+		const onDescription = await vscode.commands.executeCommand<vscode.Hover[]>(
+			'vscode.executeHoverProvider',
+			document.uri,
+			new vscode.Position(0, 10),
+		);
+		assert.equal(onDescription.length, 0, 'the hover reached past the checkbox');
+	});
+
+	it('sets the status from the link payload, not from the cursor', async () => {
+		// The hover fires where the mouse is; the cursor is somewhere else.
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit',
+			content: '[ ] First\n[ ] Second',
+		});
+		const editor = await vscode.window.showTextDocument(document);
+		editor.selection = new vscode.Selection(0, 0, 0, 0);
+
+		await vscode.commands.executeCommand('xit.setStatus', {
+			uri: document.uri.toString(),
+			line: 1,
+			status: '@',
+		});
+
+		assert.equal(document.lineAt(0).text, '[ ] First', 'the cursor line was rewritten');
+		assert.equal(document.lineAt(1).text, '[@] Second');
+	});
+
+	it('refuses a payload for a document that is not in front', async () => {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Here' });
+		await vscode.window.showTextDocument(document);
+
+		await vscode.commands.executeCommand('xit.setStatus', {
+			uri: 'file:///somewhere/else.xit',
+			line: 0,
+			status: 'x',
+		});
+
+		assert.equal(document.lineAt(0).text, '[ ] Here');
+	});
+
+	it('cascades to a parent, like every other way of setting a status', async () => {
+		// The whole reason it goes through editSelectedCheckboxes rather than
+		// writing the line itself.
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit',
+			content: '[ ] Parent\n\t[ ] Only child',
+		});
+		await vscode.window.showTextDocument(document);
+
+		await vscode.commands.executeCommand('xit.setStatus', {
+			uri: document.uri.toString(),
+			line: 1,
+			status: 'x',
+		});
+
+		assert.equal(document.lineAt(0).text, '[x] Parent');
+	});
+});
+
 describe('the workspace view', () => {
 	it('registers its commands', async () => {
 		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();

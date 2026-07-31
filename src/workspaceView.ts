@@ -9,27 +9,24 @@
 
 import * as vscode from 'vscode';
 
-import { type Collected, type Urgency, isOpen, overdueCount, totalEstimate, urgencyOf } from './collect';
+import {
+	URGENCY_ORDER,
+	URGENCY_LABEL,
+	type Collected,
+	type Urgency,
+	isOpen,
+	overdueCount,
+	totalEstimate,
+	urgencyOf,
+} from './collect';
 import { formatCycleTime } from './cycle';
 import { formatEstimate } from './estimate';
-import { todayFrom } from './dueDate';
 import { type Grouping, type TagChoice, UNTAGGED, byTag, describeSelection, matchesTags, tagChoices } from './filter';
+import { thresholds } from './settings';
 import { WorkspaceIndex } from './workspaceIndex';
 
 /** Groups, in the order they appear. Worst first: that is the question being asked. */
-const GROUPS: { urgency: Urgency; label: string }[] = [
-	{ urgency: 'critical', label: 'Critically overdue' },
-	{ urgency: 'overdue', label: 'Overdue' },
-	{ urgency: 'soon', label: 'Due soon' },
-	{ urgency: 'later', label: 'Later' },
-	{ urgency: 'none', label: 'No due date' },
-	// The two you cannot act on, below everything you can. Neither is hidden:
-	// hiding would lose work, and ranking them by a due date you cannot work
-	// towards would put them above things you can.
-	{ urgency: 'waiting', label: 'Waiting on someone else' },
-	{ urgency: 'blocked', label: 'Blocked by another item' },
-	{ urgency: 'notYet', label: 'Not started yet' },
-];
+const GROUPS = URGENCY_ORDER.map((urgency) => ({ urgency, label: URGENCY_LABEL[urgency] }));
 
 /** Where each urgency sits, so rows can be ranked when the top level is not urgency. */
 const RANK = new Map(GROUPS.map((group, at) => [group.urgency, at]));
@@ -169,20 +166,14 @@ class Provider implements vscode.TreeDataProvider<Element> {
 	 * `#home` would no longer be on the list to switch back to.
 	 */
 	private rows(applyFilter: boolean): Row[] {
-		const configuration = vscode.workspace.getConfiguration('xit');
-		const thresholds = {
-			today: todayFrom(new Date()),
-			criticalAfterDays: configuration.get<number>('criticallyOverdueAfterDays', 14),
-			soonWithinDays: configuration.get<number>('dueSoonWithinDays', 7),
-		};
-
+		const limits = thresholds();
 		const found: Row[] = [];
 
 		for (const file of this.index.all()) {
 			for (const item of file.items) {
 				if (!this.showDone && !isOpen(item)) continue;
 				if (applyFilter && !matchesTags(item.tags, this.filter)) continue;
-				found.push(new Row(file.uri, item, urgencyOf(item, thresholds)));
+				found.push(new Row(file.uri, item, urgencyOf(item, limits)));
 			}
 		}
 
@@ -233,11 +224,7 @@ function registerStatusBar(context: vscode.ExtensionContext, index: WorkspaceInd
 
 	const update = () => {
 		const configuration = vscode.workspace.getConfiguration('xit');
-		const { overdue, critical } = overdueCount(index.all(), {
-			today: todayFrom(new Date()),
-			criticalAfterDays: configuration.get<number>('criticallyOverdueAfterDays', 14),
-			soonWithinDays: configuration.get<number>('dueSoonWithinDays', 7),
-		});
+		const { overdue, critical } = overdueCount(index.all(), thresholds());
 
 		if (!configuration.get<boolean>('overdueInStatusBar', true) || overdue === 0) {
 			status.hide();

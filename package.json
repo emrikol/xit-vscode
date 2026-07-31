@@ -52,6 +52,7 @@
         "package": "npm run compile && node scripts/build.mjs --production",
         "watch": "node scripts/build.mjs --watch",
         "icons": "sh scripts/render-icons.sh",
+        "install:local": "node scripts/install-local.mjs",
         "verify:injection": "node scripts/verify-markdown-injection.mjs",
         "corpus": "node scripts/fetch-corpus.mjs",
         "corpus:check": "node scripts/fetch-corpus.mjs --check",
@@ -322,6 +323,10 @@
                     "when": "false"
                 },
                 {
+                    "command": "xit.setStatus",
+                    "when": "false"
+                },
+                {
                     "command": "xit.toggle",
                     "when": "editorLangId == 'xit'"
                 },
@@ -422,6 +427,11 @@
                 "title": "Show Completed Items",
                 "category": "xit!",
                 "icon": "$(check-all)"
+            },
+            {
+                "command": "xit.setStatus",
+                "title": "Set Checkbox Status",
+                "category": "xit!"
             },
             {
                 "command": "xit.filterItemsByTag",
