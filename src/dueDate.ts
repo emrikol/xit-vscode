@@ -33,6 +33,38 @@ export interface DueDate {
 	 * in March 2026; it is overdue on 1 January 2027.
 	 */
 	endOfPeriod: Day;
+	/**
+	 * The date as written, in pieces.
+	 *
+	 * Kept because a repeating item has to advance the date without changing
+	 * what kind of date it is: `-> 2026-01` repeated monthly is `-> 2026-02`,
+	 * a month, not some day in February. endOfPeriod cannot answer that - it
+	 * flattens every pattern to a single day on purpose.
+	 */
+	parts: Parts;
+}
+
+/** A due date as written: whichever of the five patterns it used. */
+export interface Parts {
+	year: number;
+	month?: number;
+	date?: number;
+	week?: number;
+	quarter?: number;
+	/** `-` or `/`, whichever the date used. The spec allows either, not both. */
+	separator: string;
+}
+
+/** A due date written back out, `-> ` included. */
+export function renderDueDate(parts: Parts): string {
+	const gap = parts.separator;
+	const pad = (value: number) => String(value).padStart(2, '0');
+
+	if (parts.date !== undefined) return `-> ${parts.year}${gap}${pad(parts.month!)}${gap}${pad(parts.date)}`;
+	if (parts.month !== undefined) return `-> ${parts.year}${gap}${pad(parts.month)}`;
+	if (parts.week !== undefined) return `-> ${parts.year}${gap}W${pad(parts.week)}`;
+	if (parts.quarter !== undefined) return `-> ${parts.year}${gap}Q${parts.quarter}`;
+	return `-> ${parts.year}`;
 }
 
 /**
@@ -113,6 +145,18 @@ function endOfIsoWeek(year: number, week: number): Day {
 	return day(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate());
 }
 
+/** The pieces of a matched due date. */
+function partsOf(groups: Record<string, string | undefined>): Parts {
+	return {
+		year: Number(groups.year),
+		month: groups.month === undefined ? undefined : Number(groups.month),
+		date: groups.date === undefined ? undefined : Number(groups.date),
+		week: groups.week === undefined ? undefined : Number(groups.week),
+		quarter: groups.quarter === undefined ? undefined : Number(groups.quarter),
+		separator: groups.sep ?? '-',
+	};
+}
+
 /** The last day of the period a matched due date names. */
 function endOfPeriod(groups: Record<string, string | undefined>): Day {
 	const year = Number(groups.year);
@@ -152,6 +196,7 @@ export function dueDatesOn(line: string): DueDate[] {
 			end: match.index + match[0].length,
 			text: match[0],
 			endOfPeriod: endOfPeriod(match.groups ?? {}),
+			parts: partsOf(match.groups ?? {}),
 		});
 	}
 

@@ -274,3 +274,30 @@ describe('completion dates', () => {
 		});
 	});
 });
+
+describe('repeating items', () => {
+	it('inserts the next occurrence when a repeating item is checked', async () => {
+		const editor = await openXit('[ ] Water the plants -> 2026-08-03 #repeat=weekly');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.toggle');
+
+		assert.deepEqual(editor.document.getText().split('\n'), [
+			'[x] Water the plants -> 2026-08-03 #repeat=weekly',
+			'[ ] Water the plants -> 2026-08-10 #repeat=weekly',
+		]);
+	});
+
+	it('leaves an item with no repeat tag alone', async () => {
+		const editor = await openXit('[ ] Do this -> 2026-08-03');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.equal(editor.document.getText(), '[x] Do this -> 2026-08-03');
+	});
+
+	it('does not repeat again when an already-checked item is shuffled', async () => {
+		const editor = await openXit('[x] Water -> 2026-08-03 #repeat=weekly');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.shuffle');
+		assert.equal(editor.document.lineCount, 1);
+	});
+});

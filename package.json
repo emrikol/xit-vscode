@@ -123,6 +123,16 @@
                     "type": "string",
                     "default": "done",
                     "description": "Name of the tag used to record a completion date. Must be a valid tag name: letters, digits, underscore or hyphen."
+                },
+                "xit.repeatItems": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "When a checked item carries a repeat tag, insert its next occurrence below. The tag is the opt-in, so this only affects items that have one."
+                },
+                "xit.repeatTag": {
+                    "type": "string",
+                    "default": "repeat",
+                    "description": "Name of the tag that marks a repeating item. Its value is an interval: daily, weekly, monthly, quarterly, yearly, or a count such as 3d, 2w or 6m."
                 }
             }
         },

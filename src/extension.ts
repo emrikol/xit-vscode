@@ -5,6 +5,8 @@ import { cascade } from './tree';
 import { outline, Node } from './outline';
 import { folds } from './folding';
 import { stamp, isTagName } from './stamp';
+import { nextOccurrence } from './repeat';
+import { dueDatesOn } from './dueDate';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -16,6 +18,8 @@ function editSettings() {
 
 	return {
 		autoCheckParents: configuration.get<boolean>('autoCheckParents', true),
+		repeatItems: configuration.get<boolean>('repeatItems', true),
+		repeatTag: isTagName(configuration.get<string>('repeatTag', 'repeat')) ? configuration.get<string>('repeatTag', 'repeat') : 'repeat',
 		stampCompletionDate: configuration.get<boolean>('stampCompletionDate', false),
 		// Fall back rather than write a tag the format cannot express. A
 		// hand-edited setting should not be able to corrupt the file.
@@ -51,6 +55,21 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 		}
 	}
 
+	// Worked out before stamping, so the new occurrence does not inherit a
+	// completion date for work nobody has done yet.
+	const repeats = new Map<number, string>();
+
+	if (settings.repeatItems) {
+		for (const line of edited) {
+			if (readCheckbox(before[line])?.status === 'x') continue;
+			if (readCheckbox(after[line])?.status !== 'x') continue;
+
+			const [due] = dueDatesOn(after[line]);
+			const next = nextOccurrence(after[line], settings.repeatTag, due ?? null);
+			if (next) repeats.set(line, next);
+		}
+	}
+
 	if (settings.stampCompletionDate) {
 		const today = todayFrom(new Date());
 
@@ -73,6 +92,12 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 		for (const line of new Set(edited)) {
 			if (after[line] === before[line]) continue;
 			builder.replace(document.lineAt(line).range, after[line]);
+		}
+
+		// Positions are all against the document as it is now, which is what
+		// TextEditorEdit expects, so inserting does not disturb the replaces.
+		for (const [line, text] of repeats) {
+			builder.insert(document.lineAt(line).range.end, `\n${text}`);
 		}
 	});
 }
