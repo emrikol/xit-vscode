@@ -598,3 +598,21 @@ describe('scope hygiene', () => {
 		}
 	});
 });
+
+describe('title after a closed item', () => {
+	it('is not swallowed as struck-through description', async () => {
+		// Regression. The strikethrough rule ended only at a checkbox line, so
+		// after a closed item it ran past the blank line and painted the next
+		// title as description. TextMate only tests the end of the innermost
+		// rule on the stack, so relying on the item to pop it was not enough.
+		const lines = await tokenize('[x] Done\n\nA new title\n[ ] Next');
+		assert.deepEqual(scoped(lines[2], TITLE), ['A new title']);
+		assert.deepEqual(scoped(lines[2], STRIKETHROUGH), []);
+		assert.deepEqual(scoped(lines[1], STRIKETHROUGH), [], 'the blank line is not part of the item');
+	});
+
+	it('still strikes a real continuation of a closed item', async () => {
+		const lines = await tokenize('[x] Done ...\n    ... and struck');
+		assert.ok(scoped(lines[1], STRIKETHROUGH).length > 0);
+	});
+});

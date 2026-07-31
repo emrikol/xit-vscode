@@ -137,9 +137,9 @@
 			]
 		},
 		"closed-body": {
-			"comment": "The struck-through part of a closed item: its description, and not its subtasks. This used to be a contentName on closed-item itself, which painted the whole begin/end region - and a subtask lives inside that region, so an open subtask under a checked parent rendered as though it were done. TextMate scopes are additive, so the subtask could not undo it. Ending at any line that starts with a checkbox hands those lines back to closed-item, which matches them with #subitem instead. After the subtask closes, this rule starts again for whatever description follows.",
+			"comment": "The struck-through part of a closed item: its description, and not its subtasks. This used to be a contentName on closed-item itself, which painted the whole begin/end region - and a subtask lives inside that region, so an open subtask under a checked parent rendered as though it were done. TextMate scopes are additive, so the subtask could not undo it. Ending at any line that starts with a checkbox hands those lines back to closed-item, which matches them with #subitem instead. After the subtask closes, this rule starts again for whatever description follows. Its end has to cover the end of the item as well as a subtask, because TextMate only tests the end of the innermost rule on the stack - relying on the enclosing item to pop this one let it run past a blank line and swallow the next title as struck-through description. So it ends at a line holding a checkbox, at a blank line, and at any line starting in column zero.",
 			"begin": "(?=[^\\n])",
-			"end": "^(?=[^\\S\\n]*\\[[ x@~?]\\](?=[^\\S\\n]|$))",
+			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?]\\](?=[^\\S\\n]|$))|(?![^\\S\\n]*\\S)|(?=\\S))",
 			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
 			"patterns": [
 				{

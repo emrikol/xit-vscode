@@ -113,6 +113,28 @@ const KNOWN = {
 	// passes, and the fork keeps the specification's rule everywhere a parent
 	// is absent.
 	'description/8:4#extra-checkbox@4': 'this fork reads an indented checkbox as a subtask (discussion #2)',
+
+	// The fourth place the guide is stricter than the specification, found
+	// only once this suite started comparing headlines at all.
+	//
+	// The guide: "A headline must be separated by a blank line from a
+	// preceding item", so the middle line here is invalid:
+	//
+	//   [ ] Do this
+	//   Todos
+	//   [ ] Do this
+	//
+	// The spec says no such thing. Its entire rule for a title is "a single
+	// line of text that MUST NOT start with a blank character or the opening
+	// square bracket character `[`". By that text this is a title, and the
+	// same reasoning covers a failed continuation that lost its indentation -
+	// "invalid (no space)" is, read literally, a title too.
+	//
+	// Following the guide would need the grammar to know what came before a
+	// line, which is exactly the kind of context TextMate makes expensive, in
+	// service of a rule the normative document does not contain.
+	'groups/6:1#extra-headline': 'spec §Title has no blank-line rule; the guide adds one',
+	'description/7:1#extra-headline': 'spec §Title has no blank-line rule; an unindented line is a title',
 };
 
 /** Character offsets on a line that carry `scope`. */
@@ -204,7 +226,16 @@ async function survey() {
 				}
 			}
 
-			// The checkbox status itself, not just that something is a checkbox.
+			// What the line as a whole is: which checkbox status, or a headline.
+			//
+			// This used to run only on lines that had a checkbox span, which
+			// meant every headline in the guide fell straight through - four
+			// of them, never compared, in a suite that looked complete. Both
+			// directions now, and for headlines as well as items.
+			// A checkbox status is only ever scoped on the checkbox itself, so
+			// this asks only of lines that have one. The guide gives a
+			// continuation line the status of the item it belongs to, which
+			// is about styling the description, not about a second checkbox.
 			const checkbox = expected.spans.find((span) => span.token === 'checkbox');
 			if (checkbox && expected.status in STATUS_SCOPE) {
 				const scope = STATUS_SCOPE[expected.status];
@@ -213,10 +244,36 @@ async function survey() {
 						key: `${aspect.id}:${index}#status`,
 						kind: 'wrong-status',
 						text: expected.text,
-						want: expected.status,
+						want: `${expected.status}, i.e. ${scope}`,
 						rule: aspect.rule,
 					});
 				}
+			}
+
+			// Headlines, which have no checkbox and so were never compared at
+			// all until now - four of them in the guide, falling straight
+			// through a suite that looked complete. Both directions, because
+			// drawing a headline where the guide has none is the half that
+			// matters: it is how a line the format calls invalid gets quietly
+			// coloured as a title.
+			const headline = offsetsWithScope(actual, STATUS_SCOPE.headline).size > 0;
+			if (expected.status === 'headline' && !headline) {
+				findings.push({
+					key: `${aspect.id}:${index}#missing-headline`,
+					kind: 'missing',
+					text: expected.text,
+					want: 'a headline',
+					rule: aspect.rule,
+				});
+			}
+			if (expected.status !== 'headline' && headline) {
+				findings.push({
+					key: `${aspect.id}:${index}#extra-headline`,
+					kind: 'not-in-the-guide',
+					text: expected.text,
+					want: `not a headline; the guide calls this ${expected.status ?? 'a blank line'}`,
+					rule: aspect.rule,
+				});
 			}
 		}
 	}
