@@ -357,8 +357,76 @@ describe('description (spec §Description)', () => {
 	});
 
 	it('does not mistake bracketed text for a checkbox', async () => {
-		const [, second] = await tokenize('[ ] The next line is ...\n    [ ] all description text');
-		assert.deepEqual(scoped(second, CHECKBOX), []);
+		// Mid-line brackets are description, always.
+		await assertScope('[ ] A math formula: f[x]=x', CHECKBOX, '[ ]');
+		await assertScope('[ ] [ ] Description text [ ]', CHECKBOX, '[ ]');
+	});
+});
+
+describe('subtasks (fork, discussion #2)', () => {
+	// Not in the specification. The syntax guide is explicit that an indented
+	// checkbox is description text - "Square brackets in the description (even
+	// at the beginning of subsequent lines) are not recognised as checkboxes" -
+	// and this fork overrules that. See KNOWN in test/conformance.test.mjs.
+
+	it('recognises an item indented from its parent', async () => {
+		const lines = await tokenize('[ ] Parent\n  [ ] Child');
+		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
+	});
+
+	it('takes two spaces, or a tab', async () => {
+		for (const indent of ['  ', '   ', '        ', '\t', '\t\t']) {
+			const lines = await tokenize(`[ ] Parent\n${indent}[x] Child`);
+			assert.deepEqual(scoped(lines[1], CHECKED), ['[x]'], `indent ${JSON.stringify(indent)}`);
+		}
+	});
+
+	it('does not take one space', async () => {
+		// Spec §Checkbox still holds below two: the guide's "The checkbox
+		// cannot be preceded by whitespace" is only relaxed for real nesting.
+		const lines = await tokenize('[ ] Parent\n [x] Not a child');
+		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
+	});
+
+	it('needs a parent, so an orphan stays invalid', async () => {
+		const lines = await tokenize('A title\n\n  [ ] Indented with nothing above it');
+		assert.deepEqual(scoped(lines[2], CHECKBOX), []);
+	});
+
+	it('nests to any depth', async () => {
+		const lines = await tokenize('[ ] One\n  [ ] Two\n    [ ] Three\n      [ ] Four\n        [ ] Five');
+		for (const line of lines) assert.deepEqual(scoped(line, OPEN), ['[ ]']);
+	});
+
+	it('tells a subtask from a description continuation', async () => {
+		const lines = await tokenize('[ ] Parent ...\n    ... continued\n    [ ] but this is a subtask');
+		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
+		assert.deepEqual(scoped(lines[2], OPEN), ['[ ]']);
+	});
+
+	it('gives a subtask its own due date', async () => {
+		// The parent already has one, and "any additional due dates MUST be
+		// disregarded" applies within an item - a subtask is a different item.
+		const lines = await tokenize('[ ] Parent -> 2026-01-01\n  [ ] Child -> 2026-02-02');
+		assert.deepEqual(scoped(lines[0], DATE), ['-> 2026-01-01']);
+		assert.deepEqual(scoped(lines[1], DATE), ['-> 2026-02-02']);
+	});
+
+	it('still disregards a second date within one subtask', async () => {
+		const lines = await tokenize('[ ] Parent\n  [ ] Child -> 2026-02-02 -> 2026-03-03');
+		assert.deepEqual(scoped(lines[1], DATE), ['-> 2026-02-02']);
+	});
+
+	it('ends the whole nest at a blank line', async () => {
+		// Spec §Item: "The item MUST NOT contain any blank lines."
+		const lines = await tokenize('[ ] Parent\n  [ ] Child\n\n  [ ] Orphan');
+		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
+		assert.deepEqual(scoped(lines[3], CHECKBOX), []);
+	});
+
+	it('carries the closed styling into a subtask', async () => {
+		const lines = await tokenize('[ ] Parent\n  [x] Done child');
+		assert.deepEqual(scoped(lines[1], CHECKED), ['[x]']);
 	});
 });
 

@@ -140,3 +140,42 @@ describe('commands with no editor', () => {
 		await vscode.commands.executeCommand('xit.suggest');
 	});
 });
+
+describe('subtasks', () => {
+	it('toggles an indented checkbox without losing its indentation', async () => {
+		const editor = await openXit('[ ] Parent\n  [ ] Child');
+		editor.selection = at(1);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.equal(editor.document.lineAt(1).text, '  [x] Child');
+	});
+
+	it('checks the parent once its last child is checked', async () => {
+		const editor = await openXit('[ ] Parent\n  [x] One\n  [ ] Two');
+		editor.selection = at(2);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['[x] Parent', '  [x] One', '  [x] Two'],
+		);
+	});
+
+	it('reopens the parent when a child is unchecked', async () => {
+		const editor = await openXit('[x] Parent\n  [x] One\n  [x] Two');
+		editor.selection = at(2);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['[ ] Parent', '  [x] One', '  [ ] Two'],
+		);
+	});
+
+	it('cascades more than one level in a single edit', async () => {
+		const editor = await openXit('[ ] A\n  [ ] B\n    [ ] C');
+		editor.selection = at(2);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['[x] A', '  [x] B', '    [x] C'],
+		);
+	});
+});

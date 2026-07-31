@@ -1,24 +1,54 @@
 import * as vscode from 'vscode';
-import { readStatus, writeStatus, toggle, shuffle, Status } from './checkbox';
+import { readCheckbox, readStatus, writeStatus, toggle, shuffle, Status } from './checkbox';
 import { selectedLines } from './selection';
+import { cascade } from './tree';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
 
+/** Replace the status of the checkbox on `line`, keeping its indentation. */
+function setStatus(builder: vscode.TextEditorEdit, document: vscode.TextDocument, line: number, status: Status) {
+	const checkbox = readCheckbox(document.lineAt(line).text);
+	if (!checkbox) return;
+
+	// Anchored on the checkbox rather than on column zero, so a subtask keeps
+	// the indentation that makes it one.
+	const { column } = checkbox;
+	builder.replace(new vscode.Range(line, column, line, column + 3), `[${status}]`);
+}
+
 function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: Status) => Status) {
+	const document = editor.document;
 	const lines = selectedLines(editor.selections);
+	const edited: number[] = [];
+
+	// The document as it will read once the selection is applied, which is
+	// what the cascade has to reason about - asking about the text on disk
+	// would decide against the change the user just made.
+	const after: string[] = [];
+	for (let line = 0; line < document.lineCount; line++) after.push(document.lineAt(line).text);
+
+	for (const line of lines) {
+		const checkbox = readCheckbox(after[line]);
+		if (!checkbox) continue;
+		after[line] = writeStatus(after[line], replacer(checkbox.status));
+		edited.push(line);
+	}
+
+	const parents = vscode.workspace.getConfiguration(LANGUAGE).get<boolean>('autoCheckParents', true)
+		? cascade(after, edited)
+		: new Map<number, Status>();
 
 	// Returned, not fired and forgotten. `editor.edit` is asynchronous, so a
 	// caller that awaits the command would otherwise see the document before
 	// the edit landed.
+	//
+	// One edit for the selection and the whole cascade together. Applying them
+	// separately would fire a document change per step, and each of those
+	// would set the question again from a half-applied document.
 	return editor.edit(builder => {
-		for (const line of lines) {
-			const text = editor.document.lineAt(line).text;
-			const status = readStatus(text);
-			if (status === null) continue;
-			const range = new vscode.Range(line, 0, line, 3);
-			builder.replace(range, writeStatus(text, replacer(status)).slice(0, 3));
-		}
+		for (const line of edited) setStatus(builder, document, line, readCheckbox(after[line])!.status);
+		for (const [line, status] of parents) setStatus(builder, document, line, status);
 	});
 }
 

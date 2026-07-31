@@ -108,6 +108,11 @@
                     "default": 14,
                     "minimum": 0,
                     "description": "Days past the end of its period before a due date is marked critically overdue, in a second colour. Set to 0 to use one colour for everything."
+                },
+                "xit.autoCheckParents": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Check an item automatically once all of its subtasks are checked, and uncheck it again when one is reopened. Only moves an item between open and checked; an ongoing, obsolete or in-question item is left as it is."
                 }
             }
         },

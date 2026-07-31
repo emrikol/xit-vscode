@@ -94,6 +94,25 @@ const KNOWN = {
 	// still typing the priority, which is the opposite of useful.
 	'priority/4:0#extra-checkbox@0': 'a malformed priority does not invalidate the checkbox',
 	'priority/4:1#extra-checkbox@0': 'a malformed priority does not invalidate the checkbox',
+
+	// This one is not a disagreement about the specification, it is a fork of
+	// it. The guide is unambiguous - "Square brackets in the description (even
+	// at the beginning of subsequent lines) are not recognised as checkboxes" -
+	// and this fork overrules it, because an indented checkbox is a subtask.
+	//
+	// Discussion #2 is the most-upvoted open request on the format, at 21, and
+	// the syntax it proposes is exactly this. jotaen has not adopted it, and
+	// his stated hesitation in #16 is whether editors can implement it at all:
+	// "This would require the highlighter to be recursive, which e.g. in the
+	// case of the Sublime Text engine turns out to be a bit tricky."
+	//
+	// The price is written down here so it is a decision rather than a
+	// surprise: you can no longer begin a description continuation with a
+	// literal "[ ]". Nothing else in the corpus changes - an indented checkbox
+	// with no item above it is still invalid, which is why status/3 still
+	// passes, and the fork keeps the specification's rule everywhere a parent
+	// is absent.
+	'description/8:4#extra-checkbox@4': 'this fork reads an indented checkbox as a subtask (discussion #2)',
 };
 
 /** Character offsets on a line that carry `scope`. */

@@ -1,0 +1,155 @@
+/**
+ * The nesting a document's indentation implies.
+ *
+ * Kept free of the `vscode` module so it can be unit tested, like checkbox.ts
+ * and dueDate.ts.
+ *
+ * Subtasks are this fork's addition — discussion #2, the most-upvoted open
+ * request on the format, which jotaen has not adopted. The grammar highlights
+ * them without knowing their depth, because every level looks the same and
+ * TextMate cannot count indentation anyway. This is where depth actually
+ * matters, and here it is easy: this is ordinary code and can count.
+ */
+
+import { readCheckbox, Status } from './checkbox';
+
+export interface Item {
+	readonly line: number;
+	/**
+	 * The whitespace before the checkbox, as written.
+	 *
+	 * Kept as text rather than as a width, and compared as a prefix, because a
+	 * width cannot answer the question when tabs and spaces are mixed: four
+	 * tabs is four characters and six spaces is six, so the deeper-looking
+	 * line measures as the shallower one. The grammar has the same problem and
+	 * solves it the same way, by back-referencing the parent's exact
+	 * indentation, so the two agree by construction.
+	 *
+	 * The consequence, which is the honest one: a nest indented with tabs and
+	 * a nest indented with spaces do not nest inside each other. Pick one.
+	 */
+	readonly indent: string;
+	readonly status: Status;
+	/** Line number of the enclosing item, or null at the top level. */
+	readonly parent: number | null;
+	readonly children: number[];
+}
+
+/**
+ * Whether an item counts as finished for the purpose of closing its parent.
+ *
+ * Only `[x]`. Obsolete (`[~]`) is arguable — an item nobody will ever do is
+ * not outstanding, so a parent whose children are all done-or-abandoned could
+ * fairly be called done. It is left out because the conservative reading is
+ * the one that never surprises: nothing here should tick a box the user did
+ * not tick, on the strength of a judgement call about what abandoned means.
+ */
+function isDone(status: Status): boolean {
+	return status === 'x';
+}
+
+/** Whether `inner` is nested inside `outer`, by indentation. */
+function isDeeper(inner: string, outer: string): boolean {
+	return inner.length > outer.length && inner.startsWith(outer);
+}
+
+/**
+ * Every item in the document, with its parent and children resolved.
+ *
+ * A blank line ends the nest entirely, per spec §Item ("The item MUST NOT
+ * contain any blank lines"), so items on either side of one are unrelated
+ * however they are indented.
+ */
+export function items(lines: readonly string[]): Map<number, Item> {
+	const found = new Map<number, Item>();
+
+	// Items still open above the current line, shallowest first.
+	let ancestors: Item[] = [];
+
+	for (const [line, text] of lines.entries()) {
+		if (text.trim() === '') {
+			ancestors = [];
+			continue;
+		}
+
+		const checkbox = readCheckbox(text);
+		if (!checkbox) continue;
+
+		// The parent is the nearest item above whose indentation is a proper
+		// prefix of this line's. Anything else is a sibling or a cousin, and is
+		// finished as far as this line is concerned.
+		const indent = text.slice(0, checkbox.column);
+		while (ancestors.length && !isDeeper(indent, ancestors[ancestors.length - 1].indent)) ancestors.pop();
+
+		const parent = ancestors[ancestors.length - 1] ?? null;
+		const item: Item = {
+			line,
+			indent,
+			status: checkbox.status,
+			parent: parent ? parent.line : null,
+			children: [],
+		};
+
+		parent?.children.push(line);
+		found.set(line, item);
+		ancestors.push(item);
+	}
+
+	return found;
+}
+
+/**
+ * Ancestors that should close because every child of theirs is now done, and
+ * ancestors that should reopen because one is not.
+ *
+ * Both directions, though only the first was asked for. A parent left ticked
+ * above an unticked child states something false, and the pair is what makes
+ * the feature coherent rather than a one-way trapdoor.
+ *
+ * Returned rather than applied, so the caller can make every change in one
+ * edit. Applying them one at a time would fire a document change per step,
+ * and each of those would ask this question again.
+ *
+ * @param lines the document
+ * @param changed lines the user just edited
+ */
+export function cascade(lines: readonly string[], changed: readonly number[]): Map<number, Status> {
+	const all = items(lines);
+	const updates = new Map<number, Status>();
+
+	/** The status a line will have once everything decided so far is applied. */
+	const statusOf = (line: number) => updates.get(line) ?? all.get(line)!.status;
+
+	// Walk from the deepest line upward, so a grandparent sees the decision
+	// already made about its child rather than the status on disk.
+	const queue = [...new Set(changed)]
+		.filter((line) => all.has(line))
+		.map((line) => all.get(line)!.parent)
+		.filter((line): line is number => line !== null);
+
+	const seen = new Set<number>();
+
+	while (queue.length) {
+		// Deepest first. A parent cannot be judged until its own children are.
+		queue.sort((a, b) => all.get(b)!.indent.length - all.get(a)!.indent.length);
+		const line = queue.shift()!;
+		if (seen.has(line)) continue;
+		seen.add(line);
+
+		const item = all.get(line)!;
+		if (!item.children.length) continue;
+
+		const allDone = item.children.every((child) => isDone(statusOf(child)));
+		const wanted: Status = allDone ? 'x' : ' ';
+
+		// Only ever move between open and checked. An ongoing, obsolete or
+		// in-question parent was set deliberately, and a child being ticked is
+		// not a reason to overrule that.
+		if (statusOf(line) !== wanted && (statusOf(line) === 'x' || statusOf(line) === ' ')) {
+			updates.set(line, wanted);
+			if (item.parent !== null) queue.push(item.parent);
+		}
+	}
+
+	return updates;
+}

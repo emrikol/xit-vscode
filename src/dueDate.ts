@@ -62,11 +62,22 @@ const DUE_DATE = new RegExp(
 	'gu',
 );
 
-/** A continuation line: spec §Description, "a sequence of four space characters". */
-const CONTINUATION = /^ {4}(?=.*\S)/;
+/**
+ * A line that continues the item above it.
+ *
+ * Spec §Description says four spaces. Any indentation is accepted here,
+ * because with subtasks the depth varies and what this needs to know is only
+ * which item a date belongs to - the nearest checkbox above it. A blank line
+ * still ends the item, as the spec requires.
+ */
+const CONTINUATION = /^[^\S\n]+(?=.*\S)/;
 
-/** Checkbox at the start of a line, from checkbox.ts. Repeated to keep this module standalone. */
-const CHECKBOX = /^\[[ x@~?]\](?=[^\S\n]|$)/;
+/**
+ * A checkbox, indented or not. Repeated from checkbox.ts to keep this module
+ * standalone. A subtask starts an item of its own, which is what stops its due
+ * date being read as a second date belonging to its parent and disregarded.
+ */
+const CHECKBOX = /^[^\S\n]*\[[ x@~?]\](?=[^\S\n]|$)/;
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 

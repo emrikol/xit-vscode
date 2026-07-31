@@ -36,40 +36,103 @@
 			]
 		},
 		"open-item": {
-			"comment": "Spec §Checkbox: exactly 3 characters, followed by a space or the end of the line. This is a begin/end rule rather than begin/while so that the context survives across continuation lines, which is what lets #due-date apply the \"first due date only\" rule to the whole description. The end is a zero-width match on the first line that does not continue the item: per spec §Description a continuation line is indented by exactly four spaces, and per spec §Item plus the glossary a line of only blank characters is blank and so ends the item, which is what the `(?=.*\\S)` guard enforces. #due-date repeats this same end pattern so that the nested context pops together with its item.",
-			"begin": "^(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
+			"comment": "Spec §Item: an item starts at the beginning of a line. The empty capture group is there only so the end pattern can be written once and shared with the nested form, where it back-references the parent's indentation.",
+			"begin": "^()(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
-				"1": {
+				"2": {
 					"name": "variable.function.xit markup.other.task.checkbox.open.xit"
 				},
-				"2": {
+				"3": {
 					"name": "storage.type.xit markup.other.task.checkbox.ongoing.xit"
 				},
-				"3": {
+				"4": {
 					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
 				}
 			},
-			"end": "^(?!    (?=.*\\S))",
+			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
+				{
+					"include": "#subitem"
+				},
 				{
 					"include": "#item-description"
 				}
 			]
 		},
 		"closed-item": {
-			"comment": "Checked and obsolete items render their whole description as struck-through.",
-			"begin": "^(?:(\\[x\\])|(\\[~\\]))(?=[^\\S\\n]|$)",
+			"comment": "Spec §Item: an item starts at the beginning of a line. The empty capture group is there only so the end pattern can be written once and shared with the nested form, where it back-references the parent's indentation.",
+			"begin": "^()(?:(\\[x\\])|(\\[~\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
-				"1": {
+				"2": {
 					"name": "markup.inserted.xit markup.other.task.checkbox.checked.xit"
 				},
-				"2": {
+				"3": {
 					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"end": "^(?!    (?=.*\\S))",
+			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
 			"patterns": [
+				{
+					"include": "#subitem"
+				},
+				{
+					"include": "#item-description"
+				}
+			]
+		},
+		"subitem": {
+			"comment": "Nested items. Included from inside an item only, never at the top level.",
+			"patterns": [
+				{
+					"include": "#open-subitem"
+				},
+				{
+					"include": "#closed-subitem"
+				}
+			]
+		},
+		"open-subitem": {
+			"comment": "A subtask: an item indented from its parent by two or more spaces, or by one tab. This rule is reachable only from inside another item, which is what stops an indented checkbox with nothing above it from counting - the specification says a checkbox cannot be preceded by whitespace, and outside a parent that still holds. The end pattern back-references the parent's indentation, which is the only way a nested rule can find its parent's edge: TextMate cannot count indentation, but it can compare a line against the exact prefix that was matched. Nesting is a fork of the specification, which has none - see discussion #2.",
+			"begin": "^([ ]{2,}|\\t+)(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
+			"beginCaptures": {
+				"2": {
+					"name": "variable.function.xit markup.other.task.checkbox.open.xit"
+				},
+				"3": {
+					"name": "storage.type.xit markup.other.task.checkbox.ongoing.xit"
+				},
+				"4": {
+					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
+				}
+			},
+			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"patterns": [
+				{
+					"include": "#subitem"
+				},
+				{
+					"include": "#item-description"
+				}
+			]
+		},
+		"closed-subitem": {
+			"comment": "A subtask: an item indented from its parent by two or more spaces, or by one tab. This rule is reachable only from inside another item, which is what stops an indented checkbox with nothing above it from counting - the specification says a checkbox cannot be preceded by whitespace, and outside a parent that still holds. The end pattern back-references the parent's indentation, which is the only way a nested rule can find its parent's edge: TextMate cannot count indentation, but it can compare a line against the exact prefix that was matched. Nesting is a fork of the specification, which has none - see discussion #2.",
+			"begin": "^([ ]{2,}|\\t+)(?:(\\[x\\])|(\\[~\\]))(?=[^\\S\\n]|$)",
+			"beginCaptures": {
+				"2": {
+					"name": "markup.inserted.xit markup.other.task.checkbox.checked.xit"
+				},
+				"3": {
+					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
+				}
+			},
+			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
+			"patterns": [
+				{
+					"include": "#subitem"
+				},
 				{
 					"include": "#item-description"
 				}
@@ -98,14 +161,14 @@
 			}
 		},
 		"due-date": {
-			"comment": "Spec §Due Date: `-> ` followed by yyyy, yyyy-mm, yyyy-mm-dd, yyyy-Www or yyyy-Qq, with `-` or `/` as separator. The two lookbehinds are the left-hand boundary the syntax guide describes as \"Due dates can be surrounded by a space or punctuation (apart from a hyphen or slash)\": the first rejects a letter or digit before the arrow, so `Due-> 2022-01-31` is not a date, and the second rejects a hyphen or slash, so `---> 2022-01-31` is not one either. Both are negative, so a date at the very start of a description still matches. The backreference to group 5 forces one separator style per date. Trailing junk is rejected, but calendar validity beyond simple ranges cannot be checked here. This is a begin/end rule rather than a plain match so that the remainder of the item is tokenized without the due-date pattern: that is how \"any additional due dates MUST be disregarded\" is enforced. Its end is the end of the enclosing item, so the rule holds across continuation lines too.",
+			"comment": "Spec §Due Date: `-> ` followed by yyyy, yyyy-mm, yyyy-mm-dd, yyyy-Www or yyyy-Qq, with `-` or `/` as separator. The two lookbehinds are the left-hand boundary the syntax guide describes as \"Due dates can be surrounded by a space or punctuation (apart from a hyphen or slash)\": the first rejects a letter or digit before the arrow, so `Due-> 2022-01-31` is not a date, and the second rejects a hyphen or slash, so `---> 2022-01-31` is not one either. Both are negative, so a date at the very start of a description still matches. The backreference to group 5 forces one separator style per date. Trailing junk is rejected, but calendar validity beyond simple ranges cannot be checked here. This is a begin/end rule rather than a plain match so that the remainder of the item is tokenized without the due-date pattern: that is how \"any additional due dates MUST be disregarded\" is enforced. Its end is the end of the enclosing item, so the rule holds across continuation lines too. It also ends at any line holding a checkbox, because a subtask starts a new item and gets a due date of its own.",
 			"begin": "(?<![^\\s\\p{P}])(?<![-/])-> ((\\d{4})((([-/])(0[1-9]|1[0-2])(\\5(0[1-9]|[1-2]\\d|3[0-1])?)?)|([-/](W(0[1-9]|[1-4]\\d|5[0-3])|Q[1-4])))?)(?![-/])(?=[\\p{P} ]|$)",
 			"beginCaptures": {
 				"0": {
 					"name": "constant.other.xit markup.other.task.date.xit"
 				}
 			},
-			"end": "^(?!    (?=.*\\S))",
+			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?]\\](?=[^\\S\\n]|$))|(?!    (?=.*\\S)))",
 			"patterns": [
 				{
 					"include": "#tag"

@@ -104,6 +104,25 @@ Follow-ups
 
 This is the format author's own suggestion for keeping a list inside a larger document, from [discussion #10](https://github.com/jotaen/xit/discussions/10). Nothing about the fence is special to this extension: ` ``` ` and `~~~` both work, the language name is case-insensitive, and the block is ordinary Markdown everywhere else.
 
+## Subtasks
+
+An item indented under another is a subtask. Indent by two spaces or more, or by one tab.
+
+```
+[ ] Ship the release
+  [x] Write the notes
+  [x] Tag the commit
+  [ ] Publish
+```
+
+Check the last outstanding subtask and the parent checks itself, all the way up the nest. Uncheck one and the parent reopens, because a ticked parent above an unticked child states something false. Turn it off with `xit.autoCheckParents`. It only ever moves an item between open and checked — an ongoing, obsolete or in-question parent was set deliberately and is left alone.
+
+Depth is compared as a prefix, not as a width, so a tab-indented nest and a space-indented one do not nest inside each other. Pick one. Four tabs is four characters and six spaces is six, so measuring by width would make the deeper-looking line the shallower one.
+
+**This is a fork of the format.** [Discussion #2](https://github.com/jotaen/xit/discussions/2) is the most-upvoted open request on [x]it!, at 21, and jotaen has not adopted it — his stated hesitation is whether editors can implement it at all. Other xit tools will read a subtask as the parent's description text, which still reads correctly to a person, but the nesting is ours alone.
+
+The one thing it costs: a description continuation can no longer begin with a literal `[ ]`, because that is now a subtask. The syntax guide has an example of exactly that, and `test/conformance.test.mjs` records the divergence.
+
 ## Overdue Dates
 
 A due date whose period has passed is marked, and one more than a fortnight past is marked again in a second colour.
