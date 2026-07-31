@@ -18,6 +18,9 @@
 
 import { STATUSES, STATUS_CLASS, readCheckbox } from './checkbox';
 import { commentLines } from './comment';
+import { parseEstimate } from './estimate';
+import { parseInterval } from './repeat';
+import { foldName, tagsOn } from './tag';
 import { dueDatesOn } from './dueDate';
 import { MARKER, isTitle } from './title';
 import { linkProblems } from './link';
@@ -33,6 +36,15 @@ export interface Problem {
 	message: string;
 	/** Short, stable, and greppable. Shown beside the message in the Problems panel. */
 	code: string;
+}
+
+/** A date as `stamp` writes one, and as the calendar allows. */
+function isDay(value: string | null): boolean {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+	if (!match) return false;
+
+	const [, year, month, date] = match.map(Number);
+	return month >= 1 && month <= 12 && date >= 1 && date <= lastDayOfMonth(year, month);
 }
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -97,8 +109,54 @@ function cannotNest(indent: string): boolean {
 	return indent.length < 4;
 }
 
+/**
+ * The tags this fork gives meaning to, by their configured names.
+ *
+ * Passed in rather than read from settings, so this module stays pure and so a
+ * renamed tag is still checked. Defaults match the manifest.
+ */
+export interface KnownTags {
+	repeat: string;
+	estimate: string;
+	completion: string;
+	creation: string;
+}
+
+export const DEFAULT_TAGS: KnownTags = {
+	repeat: 'repeat', estimate: 'est', completion: 'done', creation: 'created',
+};
+
+/**
+ * A value this fork gives meaning to, and cannot make sense of.
+ *
+ * The whole point of the four reports above is that silent disregard is the
+ * worst property a plain-text format can have. These features were built with
+ * exactly that flaw: `#repeat=sometimes` never repeats and `#est=2hrs` is
+ * counted as unestimated, both without a word. `#after=` already reported an
+ * unknown id, so the codebase disagreed with itself about this.
+ *
+ * A warning rather than an error. The file still means something; the tag just
+ * does not do what it looks like it does.
+ */
+function unrecognisedValue(text: string, name: string, valid: (value: string | null) => boolean, expected: string): Problem[] {
+	const key = foldName(name);
+
+	return tagsOn(text)
+		// An absent value is an absent tag - spec §Tag - so `#repeat` on its
+		// own is someone writing a plain tag, not a broken interval.
+		.filter((tag) => tag.key === key && tag.value !== null && !valid(tag.value))
+		.map((tag) => ({
+			line: 0,
+			start: tag.start,
+			end: tag.end,
+			severity: 'warning' as const,
+			code: 'unrecognised-value',
+			message: `\`${tag.value}\` is not something \`#${name}\` understands, so it does nothing. ${expected}`,
+		}));
+}
+
 /** Everything worth reporting about a document. */
-export function problems(lines: readonly string[]): Problem[] {
+export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TAGS): Problem[] {
 	const found: Problem[] = [];
 	const parked = commentLines(lines);
 	const all = items(lines);
@@ -154,6 +212,21 @@ export function problems(lines: readonly string[]): Problem[] {
 				message: `A checkbox is exactly three characters: \`[\`, one of \`${STATUSES.join('')}\`, then \`]\`, followed by a space or the end of the line.`,
 			});
 			continue;
+		}
+
+		// A value this fork gives meaning to and cannot read. Built with the
+		// very flaw the reports above exist to remove.
+		for (const [name, valid, expected] of [
+			[known.repeat, (value: string | null) => parseInterval(value) !== null,
+				'Intervals are daily, weekly, monthly, quarterly, yearly, weekdays, a named day such as monday, or a count such as 3d, 2w or 6m, optionally prefixed with + to count from when it was checked.'],
+			[known.estimate, (value: string | null) => parseEstimate(value) !== null,
+				'An estimate is a number and a unit: 30m, 2h, 1.5h, 1d or 1w.'],
+			[known.completion, isDay, 'A date is written YYYY-MM-DD.'],
+			[known.creation, isDay, 'A date is written YYYY-MM-DD.'],
+		] as [string, (value: string | null) => boolean, string][]) {
+			for (const problem of unrecognisedValue(text, name, valid, expected)) {
+				found.push({ ...problem, line });
+			}
 		}
 
 		// A tag value opened with a quote and never closed. Spec §Tag, and the

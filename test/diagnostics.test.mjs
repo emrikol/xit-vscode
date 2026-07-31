@@ -273,3 +273,47 @@ describe('a paragraph break inside an item', () => {
 		assert.equal(items(lines).get(0).endLine, 3);
 	});
 });
+
+describe('a value one of our own tags cannot read', () => {
+	it('reports an interval that means nothing', () => {
+		// The flaw these reports exist to remove, built straight into the
+		// features that were added after them: this item never repeats, and
+		// nothing said so.
+		assert.deepEqual(codes(['[ ] Water #repeat=sometimes']), ['unrecognised-value@0']);
+		assert.deepEqual(codes(['[ ] Water #repeat=0d']), ['unrecognised-value@0']);
+	});
+
+	it('reports an estimate that means nothing', () => {
+		// Worse than doing nothing: the item is counted as unestimated and
+		// quietly widens the "+ 4" on its group.
+		assert.deepEqual(codes(['[ ] Write #est=2hrs']), ['unrecognised-value@0']);
+	});
+
+	it('reports a stamped date that is not one', () => {
+		assert.deepEqual(codes(['[x] Done #done=notadate']), ['unrecognised-value@0']);
+		assert.deepEqual(codes(['[x] Done #done=2026-02-31']), ['unrecognised-value@0'], 'and one the calendar lacks');
+	});
+
+	it('says nothing about a value it understands', () => {
+		for (const text of ['[ ] x #repeat=weekly', '[ ] x #repeat=+3d', '[ ] x #est=1.5h', '[x] x #done=2026-08-01']) {
+			assert.deepEqual(codes([text]), [], text);
+		}
+	});
+
+	it('says nothing about the tag with no value at all', () => {
+		// Spec §Tag: an empty value and an absent one are the same thing, so
+		// `#repeat` on its own is a plain tag, not a broken interval.
+		assert.deepEqual(codes(['[ ] x #repeat', '[ ] x #est=']), []);
+	});
+
+	it('follows the configured tag name', () => {
+		const renamed = { repeat: 'every', estimate: 'est', completion: 'done', creation: 'created' };
+		assert.deepEqual(problems(['[ ] x #every=sometimes'], renamed).map((one) => one.code), ['unrecognised-value']);
+		assert.deepEqual(problems(['[ ] x #repeat=sometimes'], renamed).map((one) => one.code), [], 'the old name is just a tag now');
+	});
+
+	it('points at the tag, not the line', () => {
+		const [problem] = problems(['[ ] Water #repeat=sometimes']);
+		assert.equal('[ ] Water #repeat=sometimes'.slice(problem.start, problem.end), '#repeat=sometimes');
+	});
+});

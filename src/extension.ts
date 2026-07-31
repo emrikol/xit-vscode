@@ -800,7 +800,16 @@ function registerDiagnostics(context: vscode.ExtensionContext, index: WorkspaceI
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
 
-		const found = problems(lines).map((problem) => {
+		// The configured names, so a renamed tag is still checked.
+		const configuration = vscode.workspace.getConfiguration(LANGUAGE);
+		const known = {
+			repeat: configuration.get<string>('repeatTag', 'repeat'),
+			estimate: configuration.get<string>('estimateTag', 'est'),
+			completion: configuration.get<string>('completionDateTag', 'done'),
+			creation: configuration.get<string>('creationDateTag', 'created'),
+		};
+
+		const found = problems(lines, known).map((problem) => {
 			const diagnostic = new vscode.Diagnostic(
 				new vscode.Range(problem.line, problem.start, problem.line, problem.end),
 				problem.message,

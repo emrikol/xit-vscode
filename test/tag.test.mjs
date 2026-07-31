@@ -215,7 +215,7 @@ describe('what completion draws on', () => {
 	});
 });
 
-describe('a plus in a value, which is a fork', () => {
+describe('a plus and a dot in a value, which is a fork', () => {
 	it('is read as part of the value', () => {
 		// Spec §Tag allows only letters, digits, `_` and `-` unquoted, so this
 		// parsed as `#repeat=` with no value at all - silently. A whole
@@ -231,6 +231,19 @@ describe('a plus in a value, which is a fork', () => {
 
 	it('leaves names alone, where a leading plus reads as nothing anyone wants', () => {
 		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
+	});
+
+	it('reads a dot as part of the value too', () => {
+		// `#est=1.5h` parsed as `#est=1`, so a decimal estimate was documented
+		// and never worked. The unit test exercised the parser directly and
+		// never went through a real tag, which is how it survived.
+		assert.equal(tagsOn('[ ] x #est=1.5h')[0].value, '1.5h');
+		assert.equal(tagsOn('[ ] x #v=1.2.3')[0].value, '1.2.3');
+	});
+
+	it('leaves a name terminated at a dot, which the corpus requires', () => {
+		// tags/2: "[ ] This is a #tag." expects `#tag`, not `#tag.`.
+		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
 	});
 
 	it('still terminates a value at anything else', () => {

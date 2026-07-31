@@ -25,6 +25,14 @@ describe('reading an estimate', () => {
 		assert.equal(parseEstimate('1.5h'), 90);
 	});
 
+	it('takes a decimal through a real tag, which is the test that was missing', () => {
+		// parseEstimate('1.5h') passed all along. `#est=1.5h` parsed as
+		// `#est=1`, because `.` was not a legal unquoted tag value character,
+		// so the documented decimal never worked and the unit test could not
+		// see it. Exercising the parser is not exercising the feature.
+		assert.equal(estimateOn('[ ] Write #est=1.5h', 'est'), 90);
+	});
+
 	it('is not case sensitive about the unit', () => {
 		assert.equal(parseEstimate('2H'), 120);
 	});

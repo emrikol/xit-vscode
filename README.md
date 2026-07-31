@@ -434,6 +434,9 @@ Four rules quietly throw away what you wrote. Silent disregard is the worst prop
 | `extra-due-date` | A second due date in an item. Spec §Description: any others "MUST be disregarded". |
 | `dropped-tag-value` | A quoted tag value whose quote never closes, or closes with the other quote character. The guide's `tags/9`: "the value is disregarded altogether". |
 | `not-a-priority` | Exclamation marks with no space after them, or a second run right after the priority. The guide's `priority/5` and `priority/6`. |
+| `unrecognised-value` | A value one of this fork's own tags cannot read: `#repeat=sometimes`, `#est=2hrs`, `#done=notadate`. |
+
+`unrecognised-value` covers a hole this fork dug itself. The four rules above are the specification disregarding what you wrote; `#repeat=sometimes` never repeating and `#est=2hrs` being counted as unestimated were *our* features doing exactly the same thing, in silence, while `#after=` already reported an unknown id. The codebase disagreed with itself about its own rule.
 
 `not-a-priority` deliberately ignores any later `!` in a description. "Finish this today!" is a sentence, and a diagnostic that fires on prose is a diagnostic you turn off.
 
@@ -475,7 +478,7 @@ A leading `+` counts from the day the item was checked rather than from its due 
 | `#repeat=7d` | Seven days after it was **due**. Late payment does not move the next rent day. |
 | `#repeat=+7d` | Seven days after you **checked it**. Water the plants three days late and the next watering is seven days from then, not four days away. |
 
-**`+` is a legal tag value character in this fork,** and it had to become one for this to work at all. Spec §Tag allows only letters, digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parsed as `#repeat=` with no value — silently, which is the format doing exactly what the Problems panel now reports elsewhere. It costs nothing: no example in the conformance corpus has an unquoted `+`, and `tags/7`'s `#tag='v!a.l?u+e'` is quoted, which always worked. Tag *names* are unchanged.
+**`+` and `.` are legal tag value characters in this fork,** and `+` had to become one for this to work at all. Spec §Tag allows only letters, digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parsed as `#repeat=` with no value — silently, which is the format doing exactly what the Problems panel now reports elsewhere. `.` came from the same hole: `#est=1.5h` parsed as `#est=1`, so the decimal estimate this README documents never worked. Both cost nothing — no corpus example has an unquoted `+`, or a `.` in or after an unquoted value, and `tags/7`'s `#tag='v!a.l?u+e'` is quoted, which always worked. Tag *names* are unchanged, so `[ ] This is a #tag.` still ends at the `#tag`.
 
 ## Outline and Folding
 
