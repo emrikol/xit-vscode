@@ -615,15 +615,21 @@ There is a second reason to keep tags cheap. Adding one character to the status 
 
 The conformance suite proves every format element is *understood*. It says nothing about whether every element is understood by every *feature*, and that cross-product is where almost every bug in this fork has lived: the outline lifted a due date and not a start date, a repeating item kept its old start date, a checked item stayed painted overdue.
 
-Two checks guard it, and they cover different halves.
+Four checks guard it, and each covers something the others cannot.
 
 `test/parity.test.mjs` compares **sibling elements**. For each pair that ought to behave alike — `due`/`start`, `done`/`created`, `checked`/`obsolete`, every pairing of the four open statuses — it rewrites a document from one into the other and compares each reader's output, with the sibling's own spelling normalised out so `extra-due-date` against `extra-start-date` does not read as a difference. Deliberate asymmetries live in an allowlist with reasons.
 
 `test/coverage.test.mjs` classifies **all 154 reader-element cells**. Each is `must` with a named test that exercises it, `gap` with the task number tracking it, or `n/a` with the reason. An unclassified cell fails, so adding a format element forces someone to say what every reader does with it.
 
-Neither can tell you a reader is *correct* about an element, only that something exercises it. Two stronger designs were tried and rejected, and the reasons are in `test/parity.test.mjs` so nobody rebuilds them: scanning imports has false negatives, and a generic probe matrix over all 154 cells produced almost nothing but noise.
+`test/drift.test.mjs` compares the **two implementations of the same rule**. The grammar cannot import TypeScript and VS Code offers no way to read TextMate tokens from an extension, so titles, comments, the invalid rule and nesting each exist twice. The conformance corpus cannot reach any of them — it holds no `#` title, no `<!--`, and one tab-indented line — so they get a fixture of their own. It found a real bug on its first run: a four-space `[ ]` is description to the grammar and was a task to the tooling.
 
-**Adding an element or a reader means feeding both files.** A new element is caught automatically by the ledger; a new *reader* is caught only by the hard-coded list at the end of it.
+`test/invariants.test.mjs` holds the **commands that move text** — sort, archive, migrate — to properties over 126 generated documents: nothing lost, nothing invented, idempotent, references still resolving, parked work untouched, nesting preserved.
+
+None of them can tell you a reader is *correct* about an element, only that something exercises it. Two stronger designs were tried and rejected, and the reasons are in `test/parity.test.mjs` so nobody rebuilds them: scanning imports has false negatives, and a generic probe matrix over all 154 cells produced almost nothing but noise.
+
+**Adding an element or a reader means feeding these by hand.** A new element is caught automatically by the ledger, which fails on an unclassified cell. A new *reader* is caught only by the hard-coded list at the end of it. A new *sibling* — a third date arrow, a seventh status — has to be added to `parity.test.mjs`, or that check silently covers less than it appears to.
+
+Every one of these was confirmed to fail by breaking the code on purpose before being trusted. That step is not optional: a generative test that cannot fail reads as proof and is worse than nothing.
 
 ### Divergences from upstream, on purpose
 
