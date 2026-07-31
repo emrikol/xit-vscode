@@ -16,6 +16,7 @@
  * nice-to-have." A todo list that shouts at you is a worse todo list.
  */
 
+import { STATUSES } from './checkbox';
 import { commentLines } from './comment';
 import { dueDatesOn } from './dueDate';
 import { items } from './tree';
@@ -90,7 +91,7 @@ export function problems(lines: readonly string[]): Problem[] {
 				end: match.length,
 				severity: 'warning',
 				code: 'malformed-checkbox',
-				message: 'A checkbox is exactly three characters: `[`, one of ` x@~?`, then `]`, followed by a space or the end of the line.',
+				message: `A checkbox is exactly three characters: \`[\`, one of \`${STATUSES.join('')}\`, then \`]\`, followed by a space or the end of the line.`,
 			});
 		}
 	}

@@ -9,13 +9,17 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { items, cascade } = createRequire(import.meta.url)('../out/tree.js');
+const require_ = createRequire(import.meta.url);
+const { items, cascade } = require_('../out/tree.js');
+const { STATUS_CLASS } = require_('../out/checkbox.js');
+
+const ANY_CHECKBOX = new RegExp(`\\[[${STATUS_CLASS}]\\]`);
 
 /** Apply a cascade to a document, so a test can assert on the result. */
 function applied(lines, changed) {
 	const updates = cascade(lines, changed);
 	return lines.map((text, line) =>
-		updates.has(line) ? text.replace(/\[[ x@~?]\]/, `[${updates.get(line)}]`) : text);
+		updates.has(line) ? text.replace(ANY_CHECKBOX, `[${updates.get(line)}]`) : text);
 }
 
 describe('reading the nesting', () => {

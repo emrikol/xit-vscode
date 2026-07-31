@@ -7,8 +7,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 
-const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES } = createRequire(import.meta.url)('../out/checkbox.js');
+const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS } = createRequire(import.meta.url)('../out/checkbox.js');
+
+const GRAMMAR = JSON.parse(readFileSync(new URL('../syntaxes/xit.tmLanguage.json', import.meta.url), 'utf8'));
 
 describe('readStatus', () => {
 	it('reads every valid status', () => {
@@ -117,5 +120,87 @@ describe('shuffle', () => {
 			reached.add(status);
 		}
 		assert.deepEqual([...reached].sort(), [...STATUSES].sort());
+	});
+});
+
+describe('the grammar and STATUSES agree', () => {
+	// The drift detector. The TypeScript now builds every status pattern from
+	// STATUSES, but the grammar is static JSON and cannot import it, so seven
+	// copies of the set live there as literals. This is what stops them
+	// parting company. Same house pattern as the due-date and tag detectors:
+	// the duplication cannot be removed, so it is detected instead.
+	//
+	// It reads begin/end/match only. The `comment` fields are prose and
+	// discuss the syntax, so scanning them would match documentation.
+	//
+	// Gathered per repository rule rather than over the whole file, because
+	// the union across every rule hides the likeliest mistake: giving a new
+	// status a scope in open-item and forgetting open-subitem, which leaves
+	// it unhighlighted at every depth but the first while the totals still
+	// add up.
+	function patternsOf(node, into = []) {
+		if (!node || typeof node !== 'object') return into;
+		for (const [key, value] of Object.entries(node)) {
+			if (typeof value === 'string') {
+				if (key === 'begin' || key === 'end' || key === 'match') into.push(value);
+			} else patternsOf(value, into);
+		}
+		return into;
+	}
+
+	// `\[[ x@~?]\]` — a checkbox matching any status.
+	const CLASS = /\\\[\[([^\]]*)\]\\\]/g;
+	// `\[x\]` — a checkbox matching exactly one, which is how the grammar
+	// splits open from closed to give each its own scope.
+	const SINGLE = /\\\[(\\?.)\\\]/g;
+
+	const classes = [];
+	const singlesByRule = new Map();
+
+	for (const [name, rule] of Object.entries(GRAMMAR.repository)) {
+		const singles = new Set();
+		for (const pattern of patternsOf(rule)) {
+			for (const [, body] of pattern.matchAll(CLASS)) classes.push({ name, body });
+			// Character classes first, so their brackets cannot be read as a
+			// single-status checkbox.
+			for (const [, char] of pattern.replace(CLASS, '').matchAll(SINGLE)) {
+				singles.add(char.startsWith('\\') ? char.slice(1) : char);
+			}
+		}
+		if (singles.size > 0) singlesByRule.set(name, [...singles].sort().join(''));
+	}
+
+	it('spells the same set in every character class', () => {
+		assert.ok(classes.length >= 7, `only ${classes.length} status classes found in the grammar`);
+
+		const expected = [...STATUSES].sort().join('');
+		for (const { name, body } of classes) {
+			// Unescaped for comparison: the grammar may escape a character
+			// this does not, and vice versa. The set is what must match.
+			const found = [...body.replace(/\\(.)/g, '$1')].sort().join('');
+			assert.equal(found, expected,
+				`${name} has a checkbox class of [${body}]; STATUSES is [${STATUS_CLASS}]`);
+		}
+	});
+
+	it('gives every status a scope of its own', () => {
+		// Catches the other half of the failure: a status added to the classes
+		// but never given a begin alternative highlights as nothing.
+		const everywhere = [...new Set([...singlesByRule.values()].join(''))].sort();
+		assert.deepEqual(everywhere, [...STATUSES].sort());
+	});
+
+	it('scopes the same statuses at the top level and nested', () => {
+		// A subtask is an item. Any status one can hold, the other must.
+		assert.equal(singlesByRule.get('open-item'), singlesByRule.get('open-subitem'));
+		assert.equal(singlesByRule.get('closed-item'), singlesByRule.get('closed-subitem'));
+	});
+
+	it('puts each status on exactly one side of the open/closed split', () => {
+		const open = new Set(singlesByRule.get('open-item'));
+		const closed = new Set(singlesByRule.get('closed-item'));
+		const both = [...open].filter((status) => closed.has(status));
+		assert.deepEqual(both, [], 'a status cannot be both open and closed');
+		assert.equal(open.size + closed.size, STATUSES.length);
 	});
 });

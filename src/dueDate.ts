@@ -15,6 +15,8 @@
  * disagree about a single character.
  */
 
+import { STATUS_CLASS } from './checkbox';
+
 /** A local calendar day, as YYYYMMDD, which compares correctly as a number. */
 export type Day = number;
 
@@ -105,11 +107,16 @@ const DUE_DATE = new RegExp(
 const CONTINUATION = /^[^\S\n]+(?=.*\S)/;
 
 /**
- * A checkbox, indented or not. Repeated from checkbox.ts to keep this module
- * standalone. A subtask starts an item of its own, which is what stops its due
- * date being read as a second date belonging to its parent and disregarded.
+ * A checkbox, indented or not. A subtask starts an item of its own, which is
+ * what stops its due date being read as a second date belonging to its parent
+ * and disregarded.
+ *
+ * The status set comes from checkbox.ts rather than being written out again.
+ * It was repeated here to keep the module standalone, and standalone was not
+ * worth what it cost: the set was spelled out in eleven places with nothing
+ * checking they agreed.
  */
-const CHECKBOX = /^[^\S\n]*\[[ x@~?]\](?=[^\S\n]|$)/;
+const CHECKBOX = new RegExp(`^[^\\S\\n]*\\[[${STATUS_CLASS}]\\](?=[^\\S\\n]|$)`);
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 

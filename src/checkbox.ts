@@ -11,6 +11,24 @@ export type Status = ' ' | 'x' | '@' | '~' | '?';
 export const STATUSES: readonly Status[] = [' ', 'x', '@', '~', '?'];
 
 /**
+ * The statuses as the body of a regular-expression character class.
+ *
+ * This is the source of truth for every status pattern in the TypeScript. It
+ * used to be written out by hand in four places here and seven more in the
+ * grammar, with nothing checking that the eleven agreed, which made adding a
+ * status an eleven-file edit whose failure mode was silent and partial: a
+ * status the grammar knew and repeat.ts did not.
+ *
+ * The grammar is static JSON and cannot import this, so those seven stay
+ * literal and test/checkbox.test.mjs compares them against STATUSES instead -
+ * the house pattern for duplication that cannot be removed.
+ *
+ * Escaped for the characters a class treats specially, none of which is a
+ * status today. That is the point: it stays correct if one becomes one.
+ */
+export const STATUS_CLASS = STATUSES.map((status) => status.replace(/[\\\]^-]/g, '\\$&')).join('');
+
+/**
  * A checkbox, with whatever indentation precedes it.
  *
  * The trailing lookahead matters: `[ ]foo` is not an item, because the spec
@@ -23,7 +41,7 @@ export const STATUSES: readonly Status[] = [' ', 'x', '@', '~', '?'];
  * toggling a checkbox the grammar declined to colour is harmless, and
  * refusing to would be baffling.
  */
-const CHECKBOX = /^([^\S\n]*)\[([ x@~?])\](?=[^\S\n]|$)/;
+const CHECKBOX = new RegExp(`^([^\\S\\n]*)\\[([${STATUS_CLASS}])\\](?=[^\\S\\n]|$)`);
 
 export interface Checkbox {
 	/** Column the `[` sits at, which is the width of the indentation before it. */

@@ -16,6 +16,7 @@
  * reschedule anything there.
  */
 
+import { STATUS_CLASS } from './checkbox';
 import { Parts, renderDueDate } from './dueDate';
 import { tagsOn } from './tag';
 
@@ -36,6 +37,13 @@ const WORDS: Record<string, Unit> = {
 };
 
 const LETTERS: Record<string, Unit> = { d: 'day', w: 'week', m: 'month', q: 'quarter', y: 'year' };
+
+/**
+ * The first checkbox on a line, whatever its status. Built from the status set
+ * in checkbox.ts rather than written out again, so a new status reopens
+ * correctly here without anyone remembering this line exists.
+ */
+const ANY_CHECKBOX = new RegExp(`\\[[${STATUS_CLASS}]\\]`);
 
 /**
  * An interval, or null if the value is not one.
@@ -190,7 +198,7 @@ export function nextOccurrence(text: string, tagName: string, dueDate: { start: 
 	const interval = intervalOn(text, tagName);
 	if (!interval) return null;
 
-	const opened = text.replace(/\[[ x@~?]\]/, '[ ]');
+	const opened = text.replace(ANY_CHECKBOX, '[ ]');
 	if (!dueDate) return opened;
 
 	const moved = renderDueDate(advance(dueDate.parts, interval));
