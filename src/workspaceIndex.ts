@@ -31,6 +31,15 @@ function beside(from: vscode.Uri, file: string): vscode.Uri {
 	return vscode.Uri.joinPath(from, '..', name);
 }
 
+/** The configured creation and completion tag names, read where the files are read. */
+function dateTags(): { creation: string; completion: string } {
+	const configuration = vscode.workspace.getConfiguration('xit');
+	return {
+		creation: configuration.get<string>('creationDateTag', 'created'),
+		completion: configuration.get<string>('completionDateTag', 'done'),
+	};
+}
+
 /** Ids declared in a document, folded, with the line each sits on. */
 function idsIn(lines: readonly string[]): Map<string, number> {
 	return new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
@@ -184,7 +193,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private fromDocument(document: vscode.TextDocument) {
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
-		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines, estimateTag()), tags: tagUsage(lines), ids: idsIn(lines) });
+		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines, estimateTag(), dateTags()), tags: tagUsage(lines), ids: idsIn(lines) });
 	}
 
 	private async read(uri: vscode.Uri): Promise<void> {
@@ -198,7 +207,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 		try {
 			const bytes = await vscode.workspace.fs.readFile(uri);
 			const lines = new TextDecoder().decode(bytes).split(/\r?\n/);
-			this.files.set(uri.toString(), { uri, items: collect(lines, estimateTag()), tags: tagUsage(lines), ids: idsIn(lines) });
+			this.files.set(uri.toString(), { uri, items: collect(lines, estimateTag(), dateTags()), tags: tagUsage(lines), ids: idsIn(lines) });
 		} catch {
 			// Deleted between being found and being read, or unreadable. Not
 			// worth a message: the watcher will bring it back if it returns.

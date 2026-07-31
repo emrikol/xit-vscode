@@ -16,6 +16,7 @@ import { Status } from './checkbox';
 import { commentLines } from './comment';
 import { directives } from './directive';
 import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
+import { cycleTime } from './cycle';
 import { estimateOn } from './estimate';
 import { Reference, blocked as blockedLines, dependencies } from './link';
 import { tags } from './tag';
@@ -46,6 +47,8 @@ export interface Collected {
 	blocked: boolean;
 	/** What it waits on, unresolved. The index needs these to look across files. */
 	waitingOn: Reference[];
+	/** Whole days from creation to completion, where both were recorded. */
+	took: number | null;
 	parent: number | null;
 	children: number[];
 }
@@ -56,7 +59,7 @@ export interface Collected {
  * Items inside a comment are left out. Parked work is not outstanding work,
  * and a list of what is outstanding should not carry it.
  */
-export function collect(lines: readonly string[], estimateTag = 'est'): Collected[] {
+export function collect(lines: readonly string[], estimateTag = 'est', dateTags = { creation: 'created', completion: 'done' }): Collected[] {
 	const parked = commentLines(lines);
 	// Tags the file declares about itself, which every item inherits. See
 	// src/directive.ts: a work.xit should not need `#work` on every line.
@@ -105,6 +108,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 				tags: [...new Set([...inherited, ...allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key)])],
 				estimate: estimateOn(text, estimateTag),
 				blocked: waiting.has(item.line),
+				took: cycleTime(text, dateTags.creation, dateTags.completion),
 				waitingOn: waitingOn.filter((each) => each.line === item.line).map((each) => each.on),
 				parent: item.parent,
 				children: item.children,

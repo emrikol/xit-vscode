@@ -10,6 +10,7 @@ import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
+import { alignments } from './align';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
 import { registerWorkspaceView } from './workspaceView';
@@ -608,6 +609,58 @@ function renderOptions(style: Style, tier: Tier): vscode.DecorationRenderOptions
 	return options;
 }
 
+/**
+ * Line up the priority marks in a column, without putting spaces in the file.
+ *
+ * The specification pads a priority with dots to do this. That is presentation
+ * stored in the document, and three of the syntax guide's seven priority rules
+ * existed only to police it, so the dots are gone and this draws the column
+ * instead. Nothing is inserted: the padding is a `before` decoration, so the
+ * text on disk is unchanged and it disappears with the setting.
+ *
+ * **Off by default**, and the reason is worth keeping rather than burying.
+ * Sort Group answers "which of these is most urgent" definitively; a column
+ * only helps you eyeball it. The dots existed because plain text had no
+ * alternative, and the alternative turned out to be sorting rather than
+ * drawing. This is here for reading a list you do not want to reorder.
+ *
+ * One honest cost: inline decoration content is not in the document, so the
+ * cursor steps over the gap rather than through it. VS Code's own inlay hints
+ * behave the same way, which is why this is offered at all rather than not.
+ */
+function registerPriorityAlignment(context: vscode.ExtensionContext) {
+	const padding = vscode.window.createTextEditorDecorationType({});
+	context.subscriptions.push(padding);
+
+	function draw(editor: vscode.TextEditor | undefined) {
+		if (!editor || editor.document.languageId !== LANGUAGE) return;
+
+		if (!vscode.workspace.getConfiguration(LANGUAGE).get<boolean>('alignPriorities', false)) {
+			editor.setDecorations(padding, []);
+			return;
+		}
+
+		editor.setDecorations(padding, alignments(documentLines(editor.document)).map((each) => ({
+			range: new vscode.Range(each.line, each.column, each.line, each.column),
+			// A non-breaking space, because a run of ordinary spaces in inline
+			// decoration content gets collapsed the way HTML collapses it.
+			renderOptions: { before: { contentText: '\u00a0'.repeat(each.pad) } },
+		})));
+	}
+
+	context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(draw),
+		vscode.workspace.onDidChangeTextDocument((event) => {
+			if (event.document === vscode.window.activeTextEditor?.document) draw(vscode.window.activeTextEditor);
+		}),
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration(LANGUAGE)) draw(vscode.window.activeTextEditor);
+		}),
+	);
+
+	draw(vscode.window.activeTextEditor);
+}
+
 function registerOverdueDecoration(context: vscode.ExtensionContext) {
 	let decorations: Record<Tier, vscode.TextEditorDecorationType> | null = null;
 	let drawnWith: Style | null = null;
@@ -849,6 +902,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCreationDate(context);
 
 	registerOverdueDecoration(context);
+	registerPriorityAlignment(context);
 	registerOutline(context);
 	registerFolding(context);
 

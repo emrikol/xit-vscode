@@ -170,6 +170,11 @@
                     "type": "string",
                     "default": "est",
                     "description": "Name of the tag that carries a time estimate. Its value is a number and a unit: 30m, 2h, 1.5h, 1d or 1w. A day is eight hours and a week is five days, which only affects how totals read."
+                },
+                "xit.alignPriorities": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Draw priority marks in a column, aligned within each group. Nothing is inserted into the file — the padding is a decoration, so it disappears with this setting. Off by default: Sort Group answers \"which is most urgent\" definitively, and a column only helps you eyeball it."
                 }
             }
         },

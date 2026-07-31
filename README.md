@@ -154,7 +154,16 @@ Priority is exclamation marks. `[ ] !!! Ship it` is more urgent than `[ ] ! Ship
 
 That is visual presentation stored in the document, and it is not cheap: three of the guide's seven priority rules exist only to police the padding, and two of the divergences this fork already carried were arguments about it. Alignment is a rendering concern, and an editor can draw a column with a decoration without putting a character in the file.
 
-To be clear about what is built: the dots are no longer read, and **no alignment decoration is drawn yet**. If you want the column back, that is a decoration to write, not a change to the format.
+**If you want the column back, `xit.alignPriorities` draws it** — off by default:
+
+```
+[ ] ..! Low        ← what the specification stores in the file
+[ ]   ! Low        ← what this draws, with the file unchanged
+```
+
+Nothing is inserted. The padding is a decoration, so the text on disk is untouched and it vanishes with the setting. It aligns within each group, because aligning across a file would let one urgent item indent everything below it.
+
+Off by default on purpose: **Sort Group** answers "which of these is most urgent" definitively, and a column only helps you eyeball it. The dots existed because plain text had no alternative; the alternative turned out to be sorting rather than drawing. One honest cost — inline decoration content is not in the document, so the cursor steps over the gap rather than through it, the same way VS Code's own inlay hints behave.
 
 One thing falls out for free. `[ ] !!. Do this` has no priority at all rather than a priority of `!!`, and no new rule was needed to say so — the guide already has "If the space between priority and description is missing, the exclamation mark is treated as part of the description", and with the dots gone a dot after the marks is exactly that missing space.
 
@@ -495,6 +504,10 @@ Its trigger is deliberately narrow, because a wrong date is worse than no date. 
 - **a pasted block is not stamped** — a paste is one change carrying several lines, and today is not when that work was created;
 - **undo and redo do not stamp** — those are you putting the file back, not writing an item;
 - typing in a description does not stamp, only finishing a checkbox does.
+
+With both tags on an item, the workspace view shows **how long it took** — on the row when you toggle completed items into view, and in the tooltip. That is the report the two tags were always being recorded for.
+
+A cycle time of zero reads as "same day", which is an answer rather than a gap. A negative one is shown as written, with a note that the dates disagree, rather than quietly clamped to zero — silent tidying is the thing this fork keeps removing.
 
 Neither is git a substitute for these tags, and the reason is worth knowing. Sorting a group and archiving finished items both rewrite lines, so after either runs once `git blame` records when you *sorted*, not when you *wrote*. Once a format gains reordering, it has to carry its own dates.
 

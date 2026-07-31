@@ -10,6 +10,7 @@
 import * as vscode from 'vscode';
 
 import { Collected, Urgency, isOpen, overdueCount, totalEstimate, urgencyOf } from './collect';
+import { formatCycleTime } from './cycle';
 import { formatEstimate } from './estimate';
 import { todayFrom } from './dueDate';
 import { WorkspaceIndex } from './workspaceIndex';
@@ -85,11 +86,16 @@ class Provider implements vscode.TreeDataProvider<Element> {
 		// The start date is shown only where it is the reason the row is
 		// where it is; elsewhere the due date is the useful one.
 		const when = item.start && element.urgency === 'notYet' ? item.start.text : item.due?.text;
-		row.description = [when, file].filter(Boolean).join('  ');
+		// A finished item has no useful due date left, so its row carries how
+		// long it took instead - which is the only thing #created= and #done=
+		// were ever recorded for.
+		const shown = !isOpen(item) && item.took !== null ? formatCycleTime(item.took) : when;
+		row.description = [shown, file].filter(Boolean).join('  ');
 		row.tooltip = new vscode.MarkdownString(
 			`${item.description || '_no description_'}\n\n`
 			+ (item.start ? `Not before \`${item.start.text.slice(3)}\`\n\n` : '')
 			+ (item.due ? `Due \`${item.due.text.slice(3)}\`\n\n` : '')
+			+ (item.took !== null ? `Took ${formatCycleTime(item.took)}\n\n` : '')
 			+ `${uri.path}:${item.line + 1}`,
 		);
 		row.resourceUri = uri;
