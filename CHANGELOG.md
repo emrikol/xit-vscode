@@ -8,13 +8,30 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+- **Marked titles.** A title is now written `# Groceries`. The specification defined a title by what it is *not*, which left the format with no invalid state for a line: `- [ ] Buy milk` read as a heading and the task disappeared from every list. Anything unmarked is now an error you can see. A fork.
+- **A sixth status, `[>]` waiting** - the item should happen, you cannot act on it, and someone else holds it. None of the five covered that. A fork, and the first whose failure mode in another [x]it! tool is a lost task rather than a mis-rendered line.
+- **Start dates,** `<- 2026-09-01`: the earliest day an item can be worked on, and the one real gap in the format. The same date patterns as the due date, read from the first day of the period rather than the last.
+- **One item waiting on another,** with `#id=` and `#after=`. Ids are generated rather than derived, because sorting and archiving rewrite lines. `#after=` is clickable; a blocked item gets its own group; an unknown id, a duplicate, a cycle and waiting on something finished are all reported.
+- **Priority without dots.** The dots were alignment padding, which is presentation stored in the document, and three of the guide's seven priority rules existed only to police them. A fork.
+- **Time estimates,** `#est=2h`, totalled per group in the sidebar. A group with unestimated items shows `6h + 4`, because a total that quietly leaves things out is a number that lies.
+- **Creation dates,** off by default, recorded as you finish typing a checkbox. Deliberately narrow: a pasted block is not stamped, and neither is undo.
+- **File-level directives** in a comment - `<!-- xit: tags=work -->` and `<!-- xit: archive=Done -->`. An unknown key is ignored in silence, so a directive written for a later version cannot break an earlier one.
+- **Sort Group**, by priority then due date, moving whole items rather than lines.
+- **Archive Finished Items**, to a group at the end of the same file. One edit in one document, so undo puts it back.
+- **Postpone**, pushing the due date forward - counted from today, because that is what postponing means.
+- **Migrate to the Current Format**, applying every breaking change in one pass. Idempotent, and one edit so undo takes it back.
+- **Tag completion** for names and values, drawn from the whole workspace.
+- **An overdue count in the status bar**, silent when nothing is overdue.
+- **URLs are highlighted,** and a `#fragment` in one is no longer read as a tag.
+- A drift detector for the status set, which was written out by hand in eleven places with nothing checking they agreed, and another for priority.
+
 - A workspace view: every outstanding item across every `.xit` file, grouped by urgency, in a sidebar. The hole three people filled outside VS Code first - a shell script ([#12](https://github.com/jotaen/xit/discussions/12)), an HTML view ([#7](https://github.com/jotaen/xit/discussions/7)) and a terminal UI ([#38](https://github.com/jotaen/xit/discussions/38)).
-- Problems for the rules the grammar cannot express, including one specification MUST it can never enforce: a due date the calendar does not have, such as `-> 2026-02-31`. Also a malformed checkbox, an unterminated comment, and a second due date in an item. `xit.diagnostics`.
-- Completion dates, off by default, recorded as a tag so other tools still read the file. `xit.stampCompletionDate`. The format author's own suggestion in [#59](https://github.com/jotaen/xit/discussions/59).
-- Repeating items, via a `#repeat=` tag. Checking one inserts its next occurrence below, with the due date advanced and its pattern kept. [Discussion #5](https://github.com/jotaen/xit/discussions/5).
+- Problems for the rules the grammar cannot express, including one specification MUST it can never enforce: a due date the calendar does not have, such as `-> 2026-02-31`. Also a malformed checkbox, an unterminated comment, a line that is not an item, a title or a comment, an indent that cannot nest, a broken link between items, and the places the format disregards what you wrote without saying so. `xit.diagnostics`.
+- Completion dates, off by default, recorded as a tag rather than new syntax - syntax is for what you author, tags are for what the editor records. `xit.stampCompletionDate`. The format author's own suggestion in [#59](https://github.com/jotaen/xit/discussions/59).
+- Repeating items, via a `#repeat=` tag. Checking one inserts its next occurrence below, with the due date advanced and its pattern kept. Intervals include `weekdays`, a named day such as `monday`, and an `-after` suffix that counts from the day it was checked rather than from the due date. [Discussion #5](https://github.com/jotaen/xit/discussions/5).
 - The Outline panel, Go to Symbol and breadcrumbs, with subtasks nested under their parents and due dates shown beside each row.
 - Folding for items with subtasks, groups under their title, and comment blocks.
-- Subtasks. An item indented under another by two spaces or more, or by a tab, is a subtask, to any depth. Checking the last outstanding subtask checks the parent, all the way up; unchecking one reopens it. `xit.autoCheckParents` turns that off. This is a fork of the format - [discussion #2](https://github.com/jotaen/xit/discussions/2) is the most-upvoted open request on [x]it! and is not adopted upstream, so other tools will read a subtask as the parent's description text. A tab also continues a description, which the spec does not allow either - without that, Tab would nest a subtask but break a continuation. `.xit` files default to `editor.insertSpaces: false`. It costs one thing: a description continuation can no longer begin with a literal `[ ]`.
+- Subtasks. An item indented under another by one tab per level is a subtask, to any depth. Checking the last outstanding subtask checks the parent, all the way up; unchecking one reopens it. `xit.autoCheckParents` turns that off. This is a fork of the format - [discussion #2](https://github.com/jotaen/xit/discussions/2) is the most-upvoted open request on [x]it! and is not adopted upstream, so other tools will read a subtask as the parent's description text. A tab also continues a description, which the spec does not allow either - without that, Tab would nest a subtask but break a continuation. `.xit` files default to `editor.insertSpaces: false`. It costs one thing: a description continuation at a tab indent can no longer begin with a literal `[ ]`.
 - Due dates whose period has passed are marked, and ones more than a fortnight past are marked again in a second colour. A due date names a period rather than always a day, so it counts as passed only once the period has ended: `-> 2026` becomes overdue on 1 January 2027, not in March. Weeks follow ISO 8601. Four styles (`border-and-background`, `background`, `border`, `underline`), a configurable threshold for the second tier, six contributed theme colours, and an off switch. This is the only thing here that a grammar cannot do, because it needs to know what today is; it is drawn as a decoration rather than through semantic tokens, so it adds a rule the grammar lacks instead of restating one it has.
 - Highlighting for ```` ```xit ```` fenced code blocks in Markdown, so a list can live inside a larger document. This is the format author's own suggestion in [discussion #10](https://github.com/jotaen/xit/discussions/10), the most-upvoted open request on the format.
 - A conformance suite built from the author's own [syntax guide](https://xit.jotaen.net/syntax-guide). Every example on that page is marked up with the token it is expected to be, which makes it an oracle; it found four defects that the hand-written tests did not.
@@ -28,6 +45,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Unit tests. The grammar is tokenized through `vscode-textmate` and `vscode-oniguruma`, so tests run on the same engine VS Code uses. The conformance fixture is the reference test file from `jotaen/xit-sublime`.
 - Scopes `markup.other.task.tag.name.xit`, `markup.other.task.tag.value.xit` and `markup.other.comment.xit`.
 - `markup.other.task.description.closed.xit`, which the README documented but the grammar never emitted.
+
+### Changed
+
+- **Nesting is one tab per level; spaces no longer nest.** The old rule was our own and too loose - a three-space line became a child of a two-space one, so a stray space created a level in silence. A space-indented item is not lost, only unnested, and is reported as `cannot-nest`.
+- A second due date in an item is a warning rather than a hint. Silent disregard is the worst property a plain-text format can have, and a hint is not visible enough to say "this does nothing".
+- `xit.refreshItems` returns its promise, so awaiting the command actually awaits the refresh.
 
 ### Fixed
 
