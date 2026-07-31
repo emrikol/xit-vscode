@@ -462,7 +462,9 @@ The sort is stable and idempotent, so running it twice changes nothing the secon
 
 **xit!: Postpone** pushes the due date of the selected items forward — tomorrow, in three days, next week, next Monday, or next month.
 
-It counts from **today**, not from the due date, because that is what postponing means: "not until next week" is next week from now, not a week after a deadline that has already gone by.
+It counts from **today, or from the due date if that is later** — whichever moves the item further out. "Not until next week" means next week from now for something already overdue, and a week past its deadline for something already scheduled ahead. Postponing can never make an item *more* urgent, which counting from today alone did: `-> 2026-08-20` postponed a week on 31 July became `-> 2026-08-07`, thirteen days closer.
+
+The start date is left where it is. Postponing a deadline is not saying you may begin later — and that is only safe now that postponing cannot push a due date behind its own start date and invent an incoherent window.
 
 The arithmetic is the same code that reschedules a repeating item, so a date keeps whichever pattern it was written in. `-> 2026-01` postponed by a week becomes `-> 2026-08`, the next month, rather than a day inside one.
 

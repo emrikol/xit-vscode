@@ -313,6 +313,21 @@ function withStartMoved(text: string, interval: Interval): string {
 	return text.slice(0, start.start) + moved + text.slice(start.end);
 }
 
+/** Whichever of two same-precision dates falls later. */
+function laterOf(a: Parts, b: Parts): Parts {
+	const rank = (parts: Parts) => [
+		parts.year,
+		parts.quarter ?? parts.month ?? parts.week ?? 0,
+		parts.date ?? 0,
+	];
+
+	const [first, second] = [rank(a), rank(b)];
+	for (const [at, value] of first.entries()) {
+		if (value !== second[at]) return value > second[at] ? a : b;
+	}
+	return a;
+}
+
 /**
  * `day` expressed at the same precision as `like`.
  *
@@ -366,7 +381,12 @@ export function postpone(text: string, interval: Interval, today: Day): string |
 	const [due] = dueDatesOn(text);
 	if (!due) return null;
 
-	const from = atPrecisionOf(today, due.parts);
+	// From today, or from the due date if that is later. Counting from today
+	// alone was wrong for anything already scheduled ahead: postponing
+	// `-> 2026-08-20` by a week on 31 July produced `-> 2026-08-07`, which
+	// moved the deadline thirteen days *closer*. Postponing must never make an
+	// item more urgent, whatever it was given.
+	const from = laterOf(atPrecisionOf(today, due.parts), due.parts);
 	const moved = renderDueDate(advance(from, interval));
 	if (moved === due.text) return null;
 

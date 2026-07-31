@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
-const { parseInterval, advance, nextOccurrence } = require_('../out/repeat.js');
+const { parseInterval, advance, nextOccurrence, postpone } = require_('../out/repeat.js');
 const { dueDatesOn, renderDueDate } = require_('../out/dueDate.js');
 const { tagsOn } = require_('../out/tag.js');
 
@@ -255,14 +255,18 @@ describe('the next occurrence of an item', () => {
 });
 
 describe('postponing', () => {
-	const { postpone } = require_('../out/repeat.js');
 	const later = (line, interval, today = 20260731) => postpone(line, parseInterval(interval), today);
 
-	it('counts from today, not from the due date', () => {
+	it('counts from today when the deadline has already gone by', () => {
 		// "Not until next week" means next week from now, not a week after a
-		// deadline that has already gone by.
+		// deadline that has already passed.
 		assert.equal(later('[ ] Do it -> 2020-01-01', '1w'), '[ ] Do it -> 2026-08-07');
-		assert.equal(later('[ ] Do it -> 2026-12-25', '1d'), '[ ] Do it -> 2026-08-01');
+	});
+
+	it('counts from the due date when that is still ahead', () => {
+		// This assertion used to expect `-> 2026-08-01`, which moved a
+		// deadline in December back to August. The test was asserting the bug.
+		assert.equal(later('[ ] Do it -> 2026-12-25', '1d'), '[ ] Do it -> 2026-12-26');
 	});
 
 	it('keeps the pattern the date was written in', () => {
@@ -338,5 +342,44 @@ describe('a repeating item inside a comment', () => {
 			next('[x] Water -> 2026-01-01 #repeat=weekly'),
 			'[ ] Water -> 2026-01-08 #repeat=weekly',
 		);
+	});
+});
+
+describe('postponing never makes an item more urgent', () => {
+	const at = (line, interval = '1w') => postpone(line, parseInterval(interval), 20260731);
+
+	it('counts from the due date when that is later than today', () => {
+		// Counting from today alone moved a deadline already scheduled ahead
+		// thirteen days *closer*: `-> 2026-08-20` postponed a week on 31 July
+		// became `-> 2026-08-07`. Postponing must never do that.
+		assert.equal(at('[ ] Scheduled -> 2026-08-20'), '[ ] Scheduled -> 2026-08-27');
+		assert.equal(at('[ ] Far off -> 2027-06-01'), '[ ] Far off -> 2027-06-08');
+	});
+
+	it('counts from today when the due date has passed', () => {
+		// "Not until next week" means next week from now, not a week after a
+		// deadline that has already gone by.
+		assert.equal(at('[ ] Overdue -> 2020-01-01'), '[ ] Overdue -> 2026-08-07');
+	});
+
+	it('holds for every date pattern, not just days', () => {
+		assert.equal(at('[ ] Month -> 2026-12'), '[ ] Month -> 2027-01');
+		assert.equal(at('[ ] Quarter -> 2027-Q1'), '[ ] Quarter -> 2027-Q2');
+		assert.equal(at('[ ] Week -> 2026-W40'), '[ ] Week -> 2026-W41');
+	});
+
+	it('cannot put a due date before a start date it was given coherently', () => {
+		// The case that exposed the backwards move: a window a fortnight out,
+		// postponed a week, used to land its deadline five days before its own
+		// start date.
+		const after = at('[ ] Window <- 2026-08-15 -> 2026-08-20');
+		assert.equal(after, '[ ] Window <- 2026-08-15 -> 2026-08-27');
+	});
+
+	it('leaves the start date where it is, which is now safe', () => {
+		// Postponing a deadline is not saying you may begin later. That was
+		// only defensible once postponing could no longer move the due date
+		// behind the start date and create an incoherent window itself.
+		assert.match(at('[ ] Window <- 2026-08-15 -> 2026-08-20'), /<- 2026-08-15/);
 	});
 });
