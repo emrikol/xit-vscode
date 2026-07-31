@@ -8,6 +8,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+- Due dates whose period has passed are marked. A due date names a period
+  rather than always a day, so it counts as passed only once the period has
+  ended: `-> 2026` becomes overdue on 1 January 2027, not in March. Weeks
+  follow ISO 8601. Turn it off with `xit.overdueDueDates`, recolour it with
+  the `xit.overdueDueDate` theme colour. This is the only thing here that a
+  grammar cannot do, because it needs to know what today is; it is drawn as a
+  decoration rather than through semantic tokens, so it adds a rule the
+  grammar lacks instead of restating one it has.
 - Highlighting for ```` ```xit ```` fenced code blocks in Markdown, so a list
   can live inside a larger document. This is the format author's own
   suggestion in [discussion #10](https://github.com/jotaen/xit/discussions/10),
@@ -94,7 +102,18 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   and the stricter `noUnusedLocals`, `noUnusedParameters`,
   `noImplicitOverride` and `noFallthroughCasesInSwitch` checks.
 - Removed the `onCommand:` activation events, which VS Code has inferred from
-  contributed commands since 1.74.
+  contributed commands since 1.74. The extension now declares
+  `onLanguage:xit` instead, so it runs whenever an xit file is open rather
+  than waking on the first command. Marking overdue dates needs code, and it
+  has to run without the user invoking anything.
+- Dot-only priorities such as `[ ] ... Not important` are highlighted. Spec
+  §Priority: "any number of exclamation marks (`!`) and dots (`.`)", and any
+  number includes none. A test asserted the opposite on purpose.
+- The `=` of a valueless tag is part of the tag. `#tag=` left it uncoloured
+  in the middle of a coloured tag, the same defect the square brackets had.
+- `[ ] ---> 2022-01-31` and `[ ] Due-> 2022-01-31` no longer highlight a due
+  date. The guide: "Due dates can be surrounded by a space or punctuation
+  (apart from a hyphen or slash)."
 - `.claude` and source maps are no longer bundled into the extension.
 - Publisher changed from `tscpp` to `emrikol`, so the extension identity is
   `emrikol.xit` rather than `tscpp.xit`. The publisher is a Marketplace

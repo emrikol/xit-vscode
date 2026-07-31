@@ -116,6 +116,30 @@ Nothing about the fence is special to this extension: ` ``` ` and `~~~` both
 work, the language name is case-insensitive, and the block is ordinary
 Markdown everywhere else.
 
+## Overdue Dates
+
+A due date whose period has passed is marked. Turn it off with
+`xit.overdueDueDates`, and recolour it with the `xit.overdueDueDate` theme
+colour, which defaults to whatever your theme uses for warnings.
+
+A due date names a period, not always a day, so it counts as passed only once
+the whole period has ended:
+
+| Written | Overdue from |
+| --- | --- |
+| `-> 2026-01-31` | 1 February 2026 |
+| `-> 2026-01` | 1 February 2026 |
+| `-> 2026-Q1` | 1 April 2026 |
+| `-> 2026-W01` | 5 January 2026 |
+| `-> 2026` | 1 January 2027 |
+
+Weeks follow ISO 8601, so week 1 is the one containing the first Thursday of
+the year, and a week can end in the following year: `-> 2022-W52` runs out on
+1 January 2023.
+
+Only the first due date of an item counts, as the specification requires, and
+this only applies to `.xit` files — not to xit inside a Markdown fence.
+
 ## Development
 
 ```sh
@@ -175,6 +199,63 @@ Two things about the web run are easy to get wrong:
 Neither host may see Node. The tests read no files and call no `require`; the
 handful of manifest values they need are literals in `src/test/manifest.ts`,
 checked against `package.json` by the unit suite.
+
+### How the highlighting is put together
+
+One structural implementation, one oracle, and code only where a grammar
+cannot reach.
+
+**The grammar does everything structural.** `syntaxes/xit.tmLanguage.json` is
+the only place that knows what an item, a priority, a due date or a tag looks
+like.
+
+**The conformance suite is the oracle.** The author's
+[syntax guide](https://xit.jotaen.net/syntax-guide) marks up every example
+with the token it is expected to be, which makes the page an expected-output
+corpus. `npm run corpus` rebuilds `test/fixtures/syntax-guide.json` from it;
+`test/conformance.test.mjs` compares, in both directions, and lists the
+handful of deliberate divergences with a reason for each. It is not on any
+hook, because a push should not fail because a website was edited.
+
+**There is deliberately no semantic token provider.** It is the obvious idea,
+another fork does it, and the format author has said VS Code's engine is one
+of the better ones for it. The reason not to is not activation cost, which is
+negligible. It is that semantic highlighting is opt-in per theme and can be
+switched off, so the grammar has to stay correct on its own regardless. A
+provider therefore never replaces the grammar, it duplicates it — and the
+copy that is not the fallback is the one that silently falls behind.
+
+**Date arithmetic is the exception**, because no grammar can know what today
+is. That is `src/dueDate.ts`, drawn with a decoration rather than a semantic
+token, so it adds a rule the grammar does not have instead of restating one
+it does.
+
+**Where duplication is forced, it is detected rather than avoided.** The
+decoration has to find due dates itself, and VS Code exposes no API for
+reading TextMate tokens from an extension, so there is no shared source to be
+had. `test/dueDate.test.mjs` runs the whole corpus through both the grammar
+and the TypeScript matcher and fails on one character of disagreement. Two
+other things in this repo are held the same way: the manifest literals in
+`src/test/manifest.ts` against `package.json`, and the test-file list in
+`src/test/index.ts` against `src/test/*.test.ts`.
+
+### Divergences from upstream, on purpose
+
+Kept here so they are not silently "fixed". Each is also recorded where it
+lives, with the discussion it came from.
+
+- **A tag must follow a space or punctuation**, so `a#tag` holds no tag. The
+  spec is silent, and jotaen answered
+  [#51](https://github.com/jotaen/xit/discussions/51) with "Currently, yes" —
+  but his own `xit-sublime` rule carries the same lookbehind, so the
+  reference implementation disagrees with the answer.
+- **Additional spaces before a priority are allowed.** Spec §Item: "Additional
+  space characters MAY appear." The syntax guide says the opposite and marks
+  the line invalid.
+- **A malformed priority does not invalidate the checkbox.** The guide drops
+  all highlighting from `[ ] .!. Invalid`; nothing in the spec says a bad
+  priority unmakes a checkbox, and `xit-sublime` agrees with us here.
+- **Comments** (`<!--` … `-->`) are a fork of the format, not part of it.
 
 `npm run open-web` serves the conformance fixture and `npm run open-web:demo`
 serves `demo/showcase.xit`, both in a real VS Code in the browser with this
