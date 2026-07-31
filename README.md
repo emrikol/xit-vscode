@@ -541,6 +541,26 @@ The syntax highlighting cannot check everything the specification asks for, and 
 
 No regular expression counts the days in February, so `-> 2026-02-31` highlights as a perfectly good due date. It is now reported as a problem instead. So are a checkbox that was clearly meant to be one and is not, a comment that is never closed and so silently swallows the rest of the file, and a second due date in an item — legal, and disregarded, which is the part nobody expects.
 
+Every code, so one you meet in the panel can be looked up:
+
+| Code | | |
+| --- | --- | --- |
+| `impossible-date` | error | A day the calendar does not have, such as `-> 2026-02-31`. The one specification MUST a grammar can never enforce. |
+| `unrecognised-line` | error | Not an item, a title or a comment. Only possible because titles are marked. |
+| `cycle` | error | Items waiting on each other, so none of them can ever start. |
+| `malformed-checkbox` | warning | Something clearly meant to be a checkbox and is not. |
+| `cannot-nest` | warning | An indent that neither nests nor continues: one to three spaces, or tabs mixed with spaces. |
+| `unterminated-comment` | warning | A comment that is never closed, so it swallows the rest of the file. |
+| `unknown-id` | warning | An `#after=` naming an id nothing has. |
+| `duplicate-id` | warning | One id on two items, so a reference to it is ambiguous. |
+| `already-finished` | warning | Waiting on something already done. Not blocked. |
+| `starts-after-due` | warning | An item that cannot begin until after it is due. |
+| `extra-due-date`, `extra-start-date` | warning | A second arrow of the same kind. Only the first counts. |
+| `dropped-tag-value` | warning | A quoted value whose quote never closes, so the whole value is disregarded. |
+| `not-a-priority` | warning | Exclamation marks that read as description rather than priority. |
+| `unrecognised-value` | warning | A value one of this fork's own tags cannot read. |
+| `unknown-directive` | hint | A directive key this version does not understand. |
+
 ### Things the format disregards without telling you
 
 Four rules quietly throw away what you wrote. Silent disregard is the worst property a plain-text format can have, because nothing compiles it: you wrote a due date, the file kept it, and nothing uses it. All four are now reported.

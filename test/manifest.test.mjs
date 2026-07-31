@@ -644,4 +644,14 @@ describe('the README keeps up with what is contributed', () => {
 
 		assert.deepEqual(missing, [], `sections missing from the contents: ${missing.join(', ')}`);
 	});
+	it('names every diagnostic code it can report', () => {
+		// You meet a code in the Problems panel and want to look it up. Six
+		// were described in prose and never named, which is not lookupable.
+		const sources = ['src/diagnostics.ts', 'src/link.ts']
+			.map((file) => readFileSync(resolve(REPO_ROOT, file), 'utf8')).join('\n');
+		const codes = new Set([...sources.matchAll(/(?:code|kind): '([a-z-]+)'/g)].map(([, code]) => code));
+
+		const missing = [...codes].filter((code) => !readme.includes(`\`${code}\``));
+		assert.deepEqual(missing, [], `diagnostic codes nobody documented: ${missing.join(', ')}`);
+	});
 });
