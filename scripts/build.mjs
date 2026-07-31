@@ -31,6 +31,16 @@ const common = {
 	logLevel: 'warning',
 };
 
+/** Shared by everything that runs in the web extension host's worker. */
+const WEB = {
+	platform: 'browser',
+	target: 'es2022',
+	format: 'cjs',
+	// So esbuild picks the browser build of a package that ships both. mocha
+	// is the one that matters: its node entry loads fs and child_process.
+	mainFields: ['browser', 'module', 'main'],
+};
+
 const targets = [
 	{
 		...common,
@@ -46,10 +56,27 @@ const targets = [
 		// is no module loader and no importScripts, so a single file is not
 		// an optimisation there, it is the only thing that loads. `vscode`
 		// stays external because the host intercepts that one require.
-		platform: 'browser',
-		target: 'es2022',
-		format: 'cjs',
+		...WEB,
 		outfile: 'dist/web/extension.js',
+	},
+	{
+		...common,
+		...WEB,
+		// The integration tests, bundled for the same worker, so they can run
+		// headless in a browser instead of in a windowed Electron. Mocha and
+		// the assert shim come along: there is nothing to require them from.
+		entryPoints: ['src/test/index.ts'],
+		outfile: 'dist/web/test/index.js',
+		// Never minified, even for a release build. Nothing here ships, and a
+		// minified stack trace from a failing assertion is worthless. The
+		// vsix excludes dist/web/test; the pre-push hook checks that it did.
+		minify: false,
+		sourcemap: true,
+		// mocha's browser entry starts by assigning to process.stdout, and
+		// the assert shim reaches for process.env. Neither exists in a
+		// worker. webpack's ProvidePlugin does this in the official sample;
+		// inject is esbuild's equivalent.
+		inject: ['scripts/process-shim.mjs'],
 	},
 ];
 

@@ -11,6 +11,9 @@ demo/**
 .vscode-test/**
 # tsc output, for type checking and the tests. dist/ is what ships.
 out/**
+# the web test bundle: the tests, plus all of mocha. Built beside the
+# extension bundle, and three quarters of a megabyte of it.
+dist/web/test/**
 # the rendered PNGs ship; their SVG sources do not
 assets/*.svg
 assets/screenshots/**
