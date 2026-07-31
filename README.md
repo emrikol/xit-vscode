@@ -72,6 +72,16 @@ If closed tasks (completed/obsolete) are not striketroughed, then you may want t
 }
 ```
 
+## Migrating an Older File
+
+Three forks changed what an existing `.xit` file means: nesting became one tab per level, titles became marked, and priority lost its dots. **xit!: Migrate to the Current Format** applies all three in one pass, because three passes over the same files would be worse than any of the changes.
+
+It works on the open file and writes one edit, so the editor's own undo puts the document back exactly as it was. That is the safety here — nothing reaches disk that you cannot take back with a keystroke. There is no whole-workspace version for the same reason.
+
+Every transform is idempotent, so running it twice does nothing the second time and you do not have to remember which files you have already done.
+
+One thing it deliberately does *not* do: a line like `- [ ] Buy milk` was read as a title before, and the migration leaves it alone rather than writing `# ` in front of it. Marking it would preserve the bug that marked titles exist to remove. Left as it is, it becomes an `unrecognised-line` error the next time you open the file, which is the point.
+
 ## Titles
 
 A title is marked with `#` and a space.

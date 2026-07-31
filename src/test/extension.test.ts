@@ -357,3 +357,37 @@ describe('the workspace view', () => {
 		assert.ok(found.length > 0, 'no .xit files in the test workspace');
 	});
 });
+
+describe('xit.migrate', () => {
+	it('brings an older file up to the current rules', async () => {
+		// All three breaking changes in one document: two-space nesting, an
+		// unmarked title, and a dot-padded priority.
+		const editor = await openXit('Groceries\n[ ] ..! Milk\n  [x] Bread');
+		await vscode.commands.executeCommand('xit.migrate');
+
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['# Groceries', '[ ] ! Milk', '\t[x] Bread'],
+		);
+	});
+
+	it('is one edit, so undo puts the file back exactly', async () => {
+		// The safety property. Nothing is written that cannot be taken back
+		// with a keystroke, which is why this works on the open file rather
+		// than the whole workspace.
+		const before = 'Groceries\n[ ] ..! Milk\n  [x] Bread';
+		const editor = await openXit(before);
+		await vscode.commands.executeCommand('xit.migrate');
+		assert.notEqual(editor.document.getText(), before);
+
+		await vscode.commands.executeCommand('undo');
+		assert.equal(editor.document.getText(), before);
+	});
+
+	it('changes nothing in a file that is already current', async () => {
+		const current = '# Groceries\n[ ] ! Milk\n\t[x] Bread';
+		const editor = await openXit(current);
+		await vscode.commands.executeCommand('xit.migrate');
+		assert.equal(editor.document.getText(), current);
+	});
+});

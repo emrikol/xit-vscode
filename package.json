@@ -289,6 +289,10 @@
                 {
                     "command": "xit.toggleDoneItems",
                     "when": "xit.hasItems"
+                },
+                {
+                    "command": "xit.migrate",
+                    "when": "editorLangId == 'xit'"
                 }
             ],
             "view/title": [
@@ -328,6 +332,11 @@
                 "title": "Show Completed Items",
                 "category": "xit!",
                 "icon": "$(check-all)"
+            },
+            {
+                "title": "Migrate to the Current Format",
+                "command": "xit.migrate",
+                "category": "xit!"
             }
         ],
         "snippets": [

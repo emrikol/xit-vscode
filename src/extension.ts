@@ -8,6 +8,7 @@ import { stamp, isTagName } from './stamp';
 import { nextOccurrence } from './repeat';
 import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
+import { migrate } from './migrate';
 import { registerWorkspaceView } from './workspaceView';
 import { overdue, todayFrom } from './dueDate';
 
@@ -129,6 +130,47 @@ function registerEditorCommand(
 		if (!editor) return;
 		return run(editor);
 	}));
+}
+
+/**
+ * Bring the open document up to the current rules.
+ *
+ * Three forks changed what an existing file means - tab nesting, marked
+ * titles, priority without dots - and this applies all three at once, because
+ * three passes over the same files would be worse than any of them.
+ *
+ * One `edit` for the whole document, so the editor's own undo puts it back
+ * exactly as it was. That is the safety here: nothing is written to disk that
+ * the user cannot take back with a keystroke, which is why this works on the
+ * active file rather than the whole workspace.
+ *
+ * The transforms are in src/migrate.ts, and every one of them is idempotent -
+ * running this twice does nothing the second time.
+ */
+async function migrateDocument(editor: vscode.TextEditor) {
+	if (editor.document.languageId !== 'xit') return;
+
+	const before: string[] = [];
+	for (let line = 0; line < editor.document.lineCount; line++) before.push(editor.document.lineAt(line).text);
+
+	const { lines, changes } = migrate(before);
+	if (changes.length === 0) {
+		void vscode.window.showInformationMessage('This file already uses the current rules.');
+		return;
+	}
+
+	const whole = new vscode.Range(0, 0, editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
+	const written = await editor.edit(builder => builder.replace(whole, lines.join('\n')));
+
+	if (!written) {
+		void vscode.window.showWarningMessage('Nothing was changed: the document could not be edited.');
+		return;
+	}
+
+	// Say what happened. A migration that reports nothing is one you have to
+	// diff to trust.
+	const count = changes.length === 1 ? '1 line' : `${changes.length} lines`;
+	void vscode.window.showInformationMessage(`Migrated ${count}. Undo puts it back.`);
 }
 
 /**
@@ -443,6 +485,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);
+
+	registerEditorCommand(context, 'xit.migrate', editor => migrateDocument(editor));
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 
