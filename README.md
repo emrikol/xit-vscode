@@ -70,6 +70,8 @@ A closed parent strikes through its own description, but not its subtasks: an op
 
 The one thing it costs: a description continuation indented with a tab can no longer begin with a literal `[ ]`, because that is a subtask. At four spaces it can, which is why the guide's own example of exactly that agrees with this grammar.
 
+**A four-space `[ ]` is description everywhere, not just in the highlighting.** It is not an item, so it does not appear in the workspace view, does not count towards its parent's auto-check, and is not moved by sorting or archiving. That was not always true — the tooling read it as a task while the grammar read it as prose, so it turned up in the sidebar as work you had never written.
+
 ## Waiting
 
 `[>]` means the item should happen, you cannot act on it, and someone or something else holds it.
@@ -458,7 +460,7 @@ A sidebar listing every outstanding item across every `.xit` file in the workspa
 
 The thresholds are the same ones the editor decorations use, so the sidebar and the file never disagree about what is late. `xit.dueSoonWithinDays` sets the window for "due soon", default 7.
 
-Checked and obsolete items are hidden; the toolbar toggles them back. Both count as finished, for opposite reasons — one was done, the other never will be — and neither is outstanding.
+Checked and obsolete items are hidden; the toolbar toggles them back. Anything inside a comment never appears at all — parked work is not outstanding work, and that holds for its tags too, so a `#secret` in a commented-out item is not offered by completion. Both count as finished, for opposite reasons — one was done, the other never will be — and neither is outstanding.
 
 This is the part that makes a plain-text todo list bearable across more than one file. Three people built it outside VS Code before this existed: a shell script in [#12](https://github.com/jotaen/xit/discussions/12), an HTML view in [#7](https://github.com/jotaen/xit/discussions/7), and a whole terminal UI in [#38](https://github.com/jotaen/xit/discussions/38), whose author described his todos as "littered with undone, forgotten `[ ] things`".
 
@@ -474,7 +476,7 @@ Where some of them are critically overdue, the count says so in its tooltip and 
 
 ## Outline and Folding
 
-Titles and items fill the Outline panel, with subtasks nested under their parents, which also gives Go to Symbol and breadcrumbs. Due dates show beside each row, so the outline doubles as a due-date list.
+Titles and items fill the Outline panel, with subtasks nested under their parents, which also gives Go to Symbol and breadcrumbs. Both arrows show beside each row — `<- 2026-09-01  -> 2026-09-30` — so the outline doubles as a schedule rather than repeating the dates in the item names.
 
 Items fold with their subtasks and continuations, groups fold under their title, and comment blocks fold. VS Code folds by indentation without any of this, and folds this format wrong: it cannot tell a description continuation from a subtask, and does not know that a blank line ends an item.
 
