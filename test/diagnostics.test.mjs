@@ -317,3 +317,27 @@ describe('a value one of our own tags cannot read', () => {
 		assert.equal('[ ] Water #repeat=sometimes'.slice(problem.start, problem.end), '#repeat=sometimes');
 	});
 });
+
+describe('the start date gets the same checks as the due date', () => {
+	it('reports a day the calendar does not have', () => {
+		// A start date is the same value behind a different arrow, and this
+		// went unreported while `-> 2026-02-31` was caught.
+		assert.deepEqual(codes(['[ ] x <- 2026-02-31']), ['impossible-date@0']);
+	});
+
+	it('reports a second one, which is disregarded just as a due date is', () => {
+		assert.deepEqual(codes(['[ ] x <- 2026-01-01 <- 2026-02-02']), ['extra-start-date@0']);
+	});
+
+	it('does not confuse the two arrows', () => {
+		assert.deepEqual(codes(['[ ] x <- 2026-01-01 -> 2026-02-02']), []);
+	});
+
+	it('reports one on a continuation line, because the item already had one', () => {
+		assert.deepEqual(codes(['[ ] x <- 2026-01-01', '    more <- 2026-02-02']), ['extra-start-date@1']);
+	});
+
+	it('says nothing about a subtask having its own', () => {
+		assert.deepEqual(codes(['[ ] Parent <- 2026-01-01', '\t[ ] Child <- 2026-02-02']), []);
+	});
+});

@@ -296,3 +296,34 @@ describe('postponing', () => {
 		);
 	});
 });
+
+describe('a repeating item with a start date', () => {
+	it('moves the window, not just the deadline', () => {
+		// A new occurrence is a new window. Leaving the start date behind gave
+		// the next occurrence a date from the past, so an item that should not
+		// be startable until next month was startable at once - the tag
+		// silently stopped meaning anything the moment the item repeated.
+		assert.equal(
+			next('[x] Water <- 2026-08-01 -> 2026-08-03 #repeat=weekly'),
+			'[ ] Water <- 2026-08-08 -> 2026-08-10 #repeat=weekly',
+		);
+	});
+
+	it('keeps each date in the pattern it was written in', () => {
+		assert.equal(
+			next('[x] Rent <- 2026-01 -> 2026-01 #repeat=monthly'),
+			'[ ] Rent <- 2026-02 -> 2026-02 #repeat=monthly',
+		);
+	});
+
+	it('moves a start date even with no due date to reschedule', () => {
+		assert.equal(
+			next('[x] Open the window <- 2026-08-01 #repeat=weekly'),
+			'[ ] Open the window <- 2026-08-08 #repeat=weekly',
+		);
+	});
+
+	it('leaves an item with neither date alone but reopened', () => {
+		assert.equal(next('[x] Something #repeat=weekly'), '[ ] Something #repeat=weekly');
+	});
+});

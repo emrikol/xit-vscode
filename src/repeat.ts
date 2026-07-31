@@ -17,7 +17,7 @@
  */
 
 import { STATUS_CLASS } from './checkbox';
-import { Day, Parts, dueDatesOn, renderDueDate } from './dueDate';
+import { Day, Parts, dueDatesOn, renderDueDate, startDatesOn } from './dueDate';
 import { tagsOn } from './tag';
 
 export type Unit = 'day' | 'weekday' | 'week' | 'month' | 'quarter' | 'year';
@@ -274,7 +274,11 @@ export function nextOccurrence(
 	if (!interval) return null;
 
 	const opened = text.replace(ANY_CHECKBOX, '[ ]');
-	if (!dueDate) return opened;
+
+	// An item may carry a start date and no due date. There is nothing to
+	// reschedule, but the window still has to move, or the next occurrence
+	// keeps a start date from the past and the tag stops meaning anything.
+	if (!dueDate) return withStartMoved(opened, interval);
 
 	// `+7d` counts from the day it was checked rather than from the due date.
 	// The written pattern is kept, so a month-precision date advances from
@@ -285,7 +289,28 @@ export function nextOccurrence(
 		: dueDate.parts;
 
 	const moved = renderDueDate(advance(from, interval));
-	return opened.slice(0, dueDate.start) + moved + opened.slice(dueDate.end);
+	const rescheduled = opened.slice(0, dueDate.start) + moved + opened.slice(dueDate.end);
+
+	return withStartMoved(rescheduled, interval);
+}
+
+/**
+ * The start date moved by the same interval, if the item has one.
+ *
+ * A new occurrence is a new window. Leaving the start date where it was gave
+ * the next occurrence a date from the past, so an item that should not be
+ * startable until next month was startable immediately - the start date
+ * silently stopped meaning anything the moment the item repeated.
+ *
+ * Applied after the due date, and read off the rewritten line, because moving
+ * the due date changes the offsets of everything after it.
+ */
+function withStartMoved(text: string, interval: Interval): string {
+	const [start] = startDatesOn(text);
+	if (!start) return text;
+
+	const moved = renderDueDate(advance(start.parts, interval)).replace(/^-> /, '<- ');
+	return text.slice(0, start.start) + moved + text.slice(start.end);
 }
 
 /**

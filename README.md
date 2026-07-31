@@ -484,6 +484,7 @@ Four rules quietly throw away what you wrote. Silent disregard is the worst prop
 | `dropped-tag-value` | A quoted tag value whose quote never closes, or closes with the other quote character. The guide's `tags/9`: "the value is disregarded altogether". |
 | `not-a-priority` | Exclamation marks with no space after them, or a second run right after the priority. The guide's `priority/5` and `priority/6`. |
 | `unrecognised-value` | A value one of this fork's own tags cannot read: `#repeat=sometimes`, `#est=2hrs`, `#done=notadate`. |
+| `extra-start-date` | A second `<- ` in an item. Only the first counts, exactly as with a due date. |
 
 `unrecognised-value` covers a hole this fork dug itself. The four rules above are the specification disregarding what you wrote; `#repeat=sometimes` never repeating and `#est=2hrs` being counted as unestimated were *our* features doing exactly the same thing, in silence, while `#after=` already reported an unknown id. The codebase disagreed with itself about its own rule.
 
@@ -518,7 +519,7 @@ An item tagged `#repeat=` is rescheduled when you check it — the checked one s
 [ ] Water the plants -> 2026-08-10 #repeat=weekly
 ```
 
-Intervals are `daily`, `weekly`, `monthly`, `quarterly`, `yearly`, `weekdays`, a named day such as `monday`, or a count such as `3d`, `2w`, `6m`. The date keeps whichever pattern it was written in, so `-> 2026-01 #repeat=monthly` becomes `-> 2026-02`, a month rather than a day in February. An interval that is not recognised does nothing at all: scheduling something on a date nobody asked for is worse than not scheduling it.
+Intervals are `daily`, `weekly`, `monthly`, `quarterly`, `yearly`, `weekdays`, a named day such as `monday`, or a count such as `3d`, `2w`, `6m`. An item that also carries a start date has **both** dates moved, because a new occurrence is a new window — leaving the start date behind would give the next occurrence a date from the past, and the tag would silently stop meaning anything. The date keeps whichever pattern it was written in, so `-> 2026-01 #repeat=monthly` becomes `-> 2026-02`, a month rather than a day in February. An interval that is not recognised does nothing at all: scheduling something on a date nobody asked for is worse than not scheduling it.
 
 `weekdays` skips Saturday and Sunday. A named day lands on the next day of that name, so a Monday item checked on the Wednesday reschedules to the following Monday rather than drifting a day further every time.
 
@@ -634,5 +635,8 @@ The extension provides shortcuts for toggling/shuffling checkbox state. The shor
 - `o`/`~` - Obsolete (`[~] `)
 - `x` - Checked (`[x] `)
 - `q` - Question (`[?] `)
+- `t` - Title (`# `)
+- `d` - Due date (`-> `)
+- `s` - Start date (`<- `)
 - `c` - Comment (`<!--  -->`)
 - `cb` - Comment block (`<!--` / `-->` on their own lines)

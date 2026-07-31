@@ -21,7 +21,7 @@ import { commentLines } from './comment';
 import { parseEstimate } from './estimate';
 import { parseInterval } from './repeat';
 import { foldName, tagsOn } from './tag';
-import { dueDatesOn } from './dueDate';
+import { dueDatesOn, startDatesOn } from './dueDate';
 import { MARKER, isTitle } from './title';
 import { linkProblems } from './link';
 import { items } from './tree';
@@ -165,8 +165,10 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 		if (parked.has(line)) continue;
 
 		// A day the calendar does not have. The grammar cannot check this, and
-		// the spec requires it.
-		for (const due of dueDatesOn(text)) {
+		// the spec requires it. Both arrows: a start date is the same value
+		// behind a different arrow, and `<- 2026-02-31` was going unreported
+		// while `-> 2026-02-31` was caught.
+		for (const due of [...dueDatesOn(text), ...startDatesOn(text)]) {
 			const { year, month, date } = due.parts;
 			if (date === undefined || month === undefined) continue;
 
@@ -293,6 +295,32 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 				code: 'unrecognised-line',
 				message: `This is not an item, a title or a comment. A title starts with \`${MARKER} \`; an item starts with a checkbox; a description continues on the next line indented by four spaces or a tab.`,
 			});
+		}
+	}
+
+	// The same for a second start date. `startDatesOn` takes the first and
+	// drops the rest exactly as due dates do, so the silence was identical
+	// and only the report was missing.
+	for (const item of all.values()) {
+		let seen = false;
+
+		for (let line = item.line; line <= item.endLine; line++) {
+			if (parked.has(line)) continue;
+			if (line !== item.line && all.has(line)) continue;
+
+			for (const start of startDatesOn(lines[line])) {
+				if (seen) {
+					found.push({
+						line,
+						start: start.start,
+						end: start.end,
+						severity: 'warning',
+						code: 'extra-start-date',
+						message: 'An item has one start date; any others are disregarded. This one has no effect.',
+					});
+				}
+				seen = true;
+			}
 		}
 	}
 

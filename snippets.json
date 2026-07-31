@@ -1,57 +1,102 @@
 {
     "Unchecked Item (u)": {
         "prefix": "u",
-        "body": ["[ ] $1"],
+        "body": [
+            "[ ] $1"
+        ],
         "description": "Unchecked item"
     },
     "Checked Item (x)": {
         "prefix": "x",
-        "body": ["[x] $1"],
+        "body": [
+            "[x] $1"
+        ],
         "description": "Checked item"
     },
     "Ongoing Item (a)": {
         "prefix": "a",
-        "body": ["[@] $1"],
+        "body": [
+            "[@] $1"
+        ],
         "description": "Ongoing item"
     },
     "Ongoing Item (@)": {
         "prefix": "@",
-        "body": ["[@] $1"],
+        "body": [
+            "[@] $1"
+        ],
         "description": "Ongoing item"
     },
-     "In Question Item (?)": {
+    "In Question Item (?)": {
         "prefix": "q",
-        "body": ["[?] $1"],
+        "body": [
+            "[?] $1"
+        ],
         "description": "In Question item"
     },
     "Waiting Item (w)": {
         "prefix": "w",
-        "body": ["[>] $1"],
+        "body": [
+            "[>] $1"
+        ],
         "description": "Waiting item"
     },
     "Waiting Item (>)": {
         "prefix": ">",
-        "body": ["[>] $1"],
+        "body": [
+            "[>] $1"
+        ],
         "description": "Waiting item"
+    },
+    "Title (t)": {
+        "prefix": "t",
+        "body": [
+            "# $1"
+        ],
+        "description": "Title heading a group"
+    },
+    "Due Date (d)": {
+        "prefix": "d",
+        "body": [
+            "-> ${1:2026-01-31}"
+        ],
+        "description": "Due date"
+    },
+    "Start Date (s)": {
+        "prefix": "s",
+        "body": [
+            "<- ${1:2026-01-31}"
+        ],
+        "description": "Start date: the earliest day this can be worked on"
     },
     "Obsolete Item (o)": {
         "prefix": "o",
-        "body": ["[~] $1"],
+        "body": [
+            "[~] $1"
+        ],
         "description": "Obsolete item"
     },
     "Obsolete Item (~)": {
         "prefix": "~",
-        "body": ["[~] $1"],
+        "body": [
+            "[~] $1"
+        ],
         "description": "Obsolete item"
     },
     "Comment (c)": {
         "prefix": "c",
-        "body": ["<!-- $1 -->"],
+        "body": [
+            "<!-- $1 -->"
+        ],
         "description": "Comment"
     },
     "Comment Block (cb)": {
         "prefix": "cb",
-        "body": ["<!--", "$1", "-->"],
+        "body": [
+            "<!--",
+            "$1",
+            "-->"
+        ],
         "description": "Comment spanning several lines"
     }
 }
