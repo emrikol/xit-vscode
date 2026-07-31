@@ -595,6 +595,20 @@ The rule exists because it was nearly broken without one. A start date moved fro
 
 There is a second reason to keep tags cheap. Adding one character to the status set touched eleven hand-written patterns across the grammar, the TypeScript and a test. Every syntax element is permanent cost in places that must not drift; a tag costs nothing, because the tag rule already matches anything you invent.
 
+### Keeping the format and the features in step
+
+The conformance suite proves every format element is *understood*. It says nothing about whether every element is understood by every *feature*, and that cross-product is where almost every bug in this fork has lived: the outline lifted a due date and not a start date, a repeating item kept its old start date, a checked item stayed painted overdue.
+
+Two checks guard it, and they cover different halves.
+
+`test/parity.test.mjs` compares **sibling elements**. For each pair that ought to behave alike — `due`/`start`, `done`/`created`, `checked`/`obsolete`, every pairing of the four open statuses — it rewrites a document from one into the other and compares each reader's output, with the sibling's own spelling normalised out so `extra-due-date` against `extra-start-date` does not read as a difference. Deliberate asymmetries live in an allowlist with reasons.
+
+`test/coverage.test.mjs` classifies **all 154 reader-element cells**. Each is `must` with a named test that exercises it, `gap` with the task number tracking it, or `n/a` with the reason. An unclassified cell fails, so adding a format element forces someone to say what every reader does with it.
+
+Neither can tell you a reader is *correct* about an element, only that something exercises it. Two stronger designs were tried and rejected, and the reasons are in `test/parity.test.mjs` so nobody rebuilds them: scanning imports has false negatives, and a generic probe matrix over all 154 cells produced almost nothing but noise.
+
+**Adding an element or a reader means feeding both files.** A new element is caught automatically by the ledger; a new *reader* is caught only by the hard-coded list at the end of it.
+
 ### Divergences from upstream, on purpose
 
 Kept here so they are not silently "fixed". Each is also recorded where it lives, with the discussion it came from.
