@@ -141,6 +141,24 @@ To be clear about what is built: the dots are no longer read, and **no alignment
 
 One thing falls out for free. `[ ] !!. Do this` has no priority at all rather than a priority of `!!`, and no new rule was needed to say so — the guide already has "If the space between priority and description is missing, the exclamation mark is treated as part of the description", and with the dots gone a dot after the marks is exactly that missing space.
 
+## Start Dates
+
+`<- 2026-09-01` is the earliest day an item can be worked on.
+
+```
+[ ] Book the venue <- 2026-09-01 -> 2026-09-30
+```
+
+This is the one real gap in the format: `-> ` says when a thing is due, and nothing said when it could begin. It takes exactly the same date patterns — a day, month, week, quarter or year, with `-` or `/` — and reads them from the **first** day of the period, where a due date reads the **last**. `<- 2026-08` becomes actionable on 1 August; `-> 2026-08` stays on time until 31 August.
+
+An arrow rather than a tag, because a start date and a due date are the same kind of thing: **syntax is for what you author, tags are for what the editor records.**
+
+In the workspace view, an item whose start date has not arrived goes to **Not started yet**, below everything you can act on. It is not hidden — hiding it would lose work — and it is not ranked by a due date you cannot work towards yet. `[>]` waiting items get the same treatment in **Waiting on someone else**, because they are the same question with a different answer: work you cannot act on.
+
+**Known cost:** `<-` and `<!--` both open with `<`. There is no ambiguity for the parser — a comment is line-initial and occupies whole lines, while `<-` lives inside a description — but the two are confusable to read. Every alternative arrow was worse, so this is accepted rather than solved.
+
+The grammar and `src/dueDate.ts` build both arrows from one shared date pattern, and `test/dueDate.test.mjs` runs every due-date example in the conformance corpus through the start-date rule with the arrow swapped, so a corpus written for one tests the other.
+
 ## Waiting
 
 `[>]` means the item should happen, you cannot act on it, and someone or something else holds it.

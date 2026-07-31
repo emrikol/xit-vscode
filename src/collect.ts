@@ -14,7 +14,7 @@
 
 import { Status } from './checkbox';
 import { commentLines } from './comment';
-import { Day, daysBetween, dueDatesOn } from './dueDate';
+import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { tags } from './tag';
 import { items } from './tree';
 
@@ -27,6 +27,8 @@ export interface Collected {
 	description: string;
 	/** The due date as written, and the last day of the period it names. */
 	due: { text: string; endOfPeriod: Day } | null;
+	/** The start date as written, and the first day of the period it names. */
+	start: { text: string; startOfPeriod: Day } | null;
 	/** Folded tag names, so `#Work` and `#work` are one tag. */
 	tags: string[];
 	parent: number | null;
@@ -59,13 +61,19 @@ export function collect(lines: readonly string[]): Collected[] {
 		.map((item) => {
 			const text = lines[item.line];
 			const [due] = dueDatesOn(text);
+			const [start] = startDatesOn(text);
 
+			// Both arrows are lifted out of the description, so neither is
+			// printed twice on the same row. Cut by offset and back to front,
+			// because removing the earlier one first would move the later one.
 			const from = item.indent.length + 3;
-			const body = text.slice(from);
-			const description = (due
-				? body.slice(0, due.start - from) + body.slice(due.end - from)
-				: body
-			).replace(/\s+/g, ' ').trim();
+			const cuts = [due, start]
+				.filter((date): date is NonNullable<typeof date> => date !== undefined)
+				.sort((a, b) => b.start - a.start);
+
+			let body = text.slice(from);
+			for (const cut of cuts) body = body.slice(0, cut.start - from) + body.slice(cut.end - from);
+			const description = body.replace(/\s+/g, ' ').trim();
 
 			return {
 				line: item.line,
@@ -73,6 +81,7 @@ export function collect(lines: readonly string[]): Collected[] {
 				status: item.status,
 				description,
 				due: due ? { text: due.text, endOfPeriod: due.endOfPeriod } : null,
+				start: start ? { text: start.text, startOfPeriod: startOfPeriod(start.parts) } : null,
 				tags: [...new Set(allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key))],
 				parent: item.parent,
 				children: item.children,
@@ -82,7 +91,7 @@ export function collect(lines: readonly string[]): Collected[] {
 }
 
 /** How urgent an item is, which is what the sidebar groups by. */
-export type Urgency = 'critical' | 'overdue' | 'soon' | 'later' | 'none';
+export type Urgency = 'critical' | 'overdue' | 'soon' | 'later' | 'none' | 'waiting' | 'notYet';
 
 export interface Thresholds {
 	today: Day;
@@ -99,6 +108,17 @@ export interface Thresholds {
  * editor never disagree about what is late.
  */
 export function urgencyOf(item: Collected, thresholds: Thresholds): Urgency {
+	// Three tasks converged on one question - what counts as outstanding for
+	// an item you cannot act on yet - and this is the single answer all of
+	// them use: it is outstanding, and it is sorted below everything you can
+	// act on. Hiding it would lose work; ranking it by a due date you cannot
+	// work towards would put it above things you can.
+	//
+	// Waiting comes first because someone else is holding it, which is worth
+	// seeing; not-yet-started is your own decision and can wait at the bottom.
+	if (item.status === '>') return 'waiting';
+	if (item.start && item.start.startOfPeriod > thresholds.today) return 'notYet';
+
 	if (!item.due) return 'none';
 
 	const { today, criticalAfterDays, soonWithinDays } = thresholds;

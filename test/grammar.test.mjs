@@ -710,3 +710,33 @@ describe('urls (fork: so a fragment is not a tag)', () => {
 		await assertScope('[ ] Colour is #FF8800', TAG, '#FF8800');
 	});
 });
+
+describe('start date (fork: the one gap in the format)', () => {
+	const START = 'task.start';
+
+	it('accepts every pattern the due date accepts', async () => {
+		for (const value of ['2026-08-14', '2026-08', '2026', '2026-W33', '2026-Q3', '2026-Q4', '2026/08/14']) {
+			await assertScope(`[ ] x <- ${value}`, START, `<- ${value}`);
+		}
+	});
+
+	it('keeps the same boundaries as the due date', async () => {
+		await assertNoScope('[ ] Start<- 2026-08-14', START);
+		await assertNoScope('[ ] x <-2026-08-14', START);
+		await assertNoScope('[ ] x <- 2026-08/14', START);
+		await assertNoScope('[ ] x <- 2026-13-01', START);
+	});
+
+	it('reads both arrows on one line, whichever comes first', async () => {
+		await assertScope('[ ] Do it <- 2026-08-14 -> 2026-08-20', START, '<- 2026-08-14');
+		await assertScope('[ ] Do it -> 2026-08-20 <- 2026-08-14', START, '<- 2026-08-14');
+	});
+
+	it('is not confused with a comment, which also opens with a bracket-less <', async () => {
+		// The known cost of the arrow. No ambiguity for the parser: a comment
+		// is line-initial and occupies whole lines, this lives in a
+		// description. Confusable to read, and accepted rather than solved.
+		await assertNoScope('<!-- on hold -->', START);
+		await assertScope('<!-- on hold -->', COMMENT, '<!-- on hold -->');
+	});
+});

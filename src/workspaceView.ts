@@ -20,6 +20,11 @@ const GROUPS: { urgency: Urgency; label: string }[] = [
 	{ urgency: 'soon', label: 'Due soon' },
 	{ urgency: 'later', label: 'Later' },
 	{ urgency: 'none', label: 'No due date' },
+	// The two you cannot act on, below everything you can. Neither is hidden:
+	// hiding would lose work, and ranking them by a due date you cannot work
+	// towards would put them above things you can.
+	{ urgency: 'waiting', label: 'Waiting on someone else' },
+	{ urgency: 'notYet', label: 'Not started yet' },
 ];
 
 class Group {
@@ -27,7 +32,7 @@ class Group {
 }
 
 class Row {
-	constructor(readonly uri: vscode.Uri, readonly item: Collected) {}
+	constructor(readonly uri: vscode.Uri, readonly item: Collected, readonly urgency: Urgency) {}
 }
 
 type Element = Group | Row;
@@ -62,9 +67,13 @@ class Provider implements vscode.TreeDataProvider<Element> {
 		// The file and the due date, which is what turns a list of everything
 		// into something you can act on.
 		const file = uri.path.split('/').pop() ?? uri.path;
-		row.description = [item.due?.text, file].filter(Boolean).join('  ');
+		// The start date is shown only where it is the reason the row is
+		// where it is; elsewhere the due date is the useful one.
+		const when = item.start && element.urgency === 'notYet' ? item.start.text : item.due?.text;
+		row.description = [when, file].filter(Boolean).join('  ');
 		row.tooltip = new vscode.MarkdownString(
 			`${item.description || '_no description_'}\n\n`
+			+ (item.start ? `Not before \`${item.start.text.slice(3)}\`\n\n` : '')
 			+ (item.due ? `Due \`${item.due.text.slice(3)}\`\n\n` : '')
 			+ `${uri.path}:${item.line + 1}`,
 		);
@@ -97,7 +106,8 @@ class Provider implements vscode.TreeDataProvider<Element> {
 		for (const file of this.index.all()) {
 			for (const item of file.items) {
 				if (!this.showDone && !isOpen(item)) continue;
-				rows.get(urgencyOf(item, thresholds))!.push(new Row(file.uri, item));
+				const urgency = urgencyOf(item, thresholds);
+				rows.get(urgency)!.push(new Row(file.uri, item, urgency));
 			}
 		}
 

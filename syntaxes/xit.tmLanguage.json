@@ -167,6 +167,9 @@
 					"include": "#priority"
 				},
 				{
+					"include": "#start-date"
+				},
+				{
 					"include": "#due-date"
 				},
 				{
@@ -197,6 +200,9 @@
 			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?>]\\](?=[^\\S\\n]|$))|(?!    (?=.*\\S)))",
 			"patterns": [
 				{
+					"include": "#start-date"
+				},
+				{
 					"include": "#url"
 				},
 				{
@@ -223,6 +229,11 @@
 			"comment": "A URL, matched before #tag so its fragment is not read as one. The format has no escaping and says so - the guide's tags/8, \"Backslashes don't have special meaning\" - so `https://example.com/#top` used to hold the tag `#top`. Most links escape by luck, because a tag needs a space or punctuation before the hash and `docs#installation` has a letter there; a bare fragment after a slash does not. Consuming the whole link first is how TextMate says \"not here\", and it costs no new punctuation and nothing for anyone to learn. Deliberately blunt: scheme then non-space, because the job is to cover what a person would call a link rather than to validate one. See src/tag.ts, which carries the same rule and is pinned to this one by test/tag.test.mjs.",
 			"name": "markup.underline.link.xit markup.other.task.url.xit",
 			"match": "\\b[a-zA-Z][a-zA-Z\\d+.-]*://\\S*"
+		},
+		"start-date": {
+			"comment": "A start date: the earliest day an item can be worked on. A fork, and the one real gap in the format - `-> ` said when a thing was due and nothing said when it could begin. An arrow rather than a tag because a start date and a due date are the same kind of thing; see the README, \"arrows for what you author, tags for what the tool records\". The date value is identical to the due date's and test/dueDate.test.mjs pins both to src/dueDate.ts, which builds them from one shared string. A plain match rather than a begin/end rule: \"any additional due dates MUST be disregarded\" is a rule about due dates, so a second start date is highlighted here and reported by src/diagnostics.ts instead. Known cost: `<-` and `<!--` both open with `<`. No ambiguity for the parser - a comment is line-initial and whole-line, this lives in a description - but the two are confusable to read, and every alternative arrow is worse.",
+			"match": "(?<![^\\s\\p{P}])(?<![-/])<- ((\\d{4})((([-/])(0[1-9]|1[0-2])(\\5(0[1-9]|[1-2]\\d|3[0-1])?)?)|([-/](W(0[1-9]|[1-4]\\d|5[0-3])|Q[1-4])))?)(?![-/])(?=[\\p{P} ]|$)",
+			"name": "constant.other.xit markup.other.task.start.xit"
 		}
 	}
 }

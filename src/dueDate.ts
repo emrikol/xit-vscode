@@ -84,17 +84,41 @@ export function renderDueDate(parts: Parts): string {
  * `Due-> 2026-01-31` and `---> 2026-01-31`, and the back-reference, which
  * stops a date mixing `-` and `/` separators.
  */
-const DUE_DATE = new RegExp(
-	'(?<![^\\s\\p{P}])(?<![-/])'
-	+ '-> (?<year>\\d{4})'
+const VALUE =
+	'(?<year>\\d{4})'
 	+ '(?:(?<sep>[-/])(?:'
 	+ '(?<month>0[1-9]|1[0-2])(?:\\k<sep>(?<date>0[1-9]|[1-2]\\d|3[0-1]))?'
 	+ '|W(?<week>0[1-9]|[1-4]\\d|5[0-3])'
 	+ '|Q(?<quarter>[1-4])'
-	+ '))?'
-	+ '(?![-/])(?=[\\p{P} ]|$)',
-	'gu',
-);
+	+ '))?';
+
+/** An arrow rule: the same date value, the same boundaries, a different arrow. */
+function arrow(prefix: string): RegExp {
+	return new RegExp(
+		`(?<![^\\s\\p{P}])(?<![-/])${prefix} ${VALUE}(?![-/])(?=[\\p{P} ]|$)`,
+		'gu',
+	);
+}
+
+const DUE_DATE = arrow('->');
+
+/**
+ * A start date: the earliest day an item can be worked on.
+ *
+ * A fork, and the one real gap in the format - `-> ` says when a thing is due
+ * and nothing said when it could begin.
+ *
+ * An arrow rather than a tag, because a start date and a due date are the same
+ * kind of thing and writing one as an arrow and the other as a tag would be
+ * asymmetric for no reason. That is the rule in the README: arrows for what you
+ * author, tags for what the tool records.
+ *
+ * Known cost: `<-` and `<!--` both open with `<`. There is no ambiguity for the
+ * parser, because a comment is line-initial and occupies whole lines while this
+ * lives inside a description, but the two are confusable to read. Every
+ * alternative arrow is worse, so it is accepted rather than solved.
+ */
+const START_DATE = arrow('<-');
 
 /**
  * A line that continues the item above it.
@@ -152,6 +176,12 @@ function endOfIsoWeek(year: number, week: number): Day {
 	return day(sunday.getUTCFullYear(), sunday.getUTCMonth() + 1, sunday.getUTCDate());
 }
 
+/** `from` shifted by `count` whole days, through UTC so no timezone can bite. */
+function addDays(from: Day, count: number): Day {
+	const at = new Date(Date.UTC(Math.floor(from / 10000), (Math.floor(from / 100) % 100) - 1, (from % 100) + count));
+	return day(at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate());
+}
+
 /** The pieces of a matched due date. */
 function partsOf(groups: Record<string, string | undefined>): Parts {
 	return {
@@ -192,12 +222,12 @@ function endOfPeriod(groups: Record<string, string | undefined>): Day {
 	return day(year, 12, 31);
 }
 
-/** Every due date on a line, in order. */
-export function dueDatesOn(line: string): DueDate[] {
+/** Every date written with `pattern` on a line, in order. */
+function datesOn(pattern: RegExp, line: string): DueDate[] {
 	const found: DueDate[] = [];
 
-	DUE_DATE.lastIndex = 0;
-	for (let match = DUE_DATE.exec(line); match; match = DUE_DATE.exec(line)) {
+	pattern.lastIndex = 0;
+	for (let match = pattern.exec(line); match; match = pattern.exec(line)) {
 		found.push({
 			start: match.index,
 			end: match.index + match[0].length,
@@ -208,6 +238,34 @@ export function dueDatesOn(line: string): DueDate[] {
 	}
 
 	return found;
+}
+
+/** Every due date on a line, in order. */
+export function dueDatesOn(line: string): DueDate[] {
+	return datesOn(DUE_DATE, line);
+}
+
+/**
+ * Every start date on a line, in order.
+ *
+ * `endOfPeriod` is still the end of the period named, which is not what a start
+ * date is asking about - `startOfPeriod` below is. Both are kept because a
+ * start date written as a month is ambiguous on its own, and the two ends
+ * answer different questions: when it becomes actionable, and when it stops
+ * being merely scheduled.
+ */
+export function startDatesOn(line: string): DueDate[] {
+	return datesOn(START_DATE, line);
+}
+
+/** The first day of the period a date names. */
+export function startOfPeriod(parts: Parts): Day {
+	if (parts.date !== undefined) return day(parts.year, parts.month!, parts.date);
+	if (parts.month !== undefined) return day(parts.year, parts.month, 1);
+	if (parts.quarter !== undefined) return day(parts.year, parts.quarter * 3 - 2, 1);
+	// A week runs Monday to Sunday, and endOfIsoWeek gives the Sunday.
+	if (parts.week !== undefined) return addDays(endOfIsoWeek(parts.year, parts.week), -6);
+	return day(parts.year, 1, 1);
 }
 
 export interface DueDateAt extends DueDate {
