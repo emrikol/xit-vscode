@@ -228,3 +228,49 @@ describe('folding', () => {
 		assert.ok(ranges.includes('1-3'), `expected 1-3 among ${ranges.join(', ')}`);
 	});
 });
+
+describe('completion dates', () => {
+	/** Run `body` with a setting changed, then put it back. */
+	async function withSetting<T>(key: string, value: unknown, body: () => Promise<T>) {
+		const configuration = vscode.workspace.getConfiguration('xit');
+		const previous = configuration.get(key);
+		await configuration.update(key, value, vscode.ConfigurationTarget.Global);
+		try {
+			return await body();
+		} finally {
+			await configuration.update(key, previous, vscode.ConfigurationTarget.Global);
+		}
+	}
+
+	it('does nothing while the setting is off, which is the default', async () => {
+		const editor = await openXit('[ ] Do this');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.equal(editor.document.lineAt(0).text, '[x] Do this');
+	});
+
+	it('stamps on check and removes on uncheck', async () => {
+		await withSetting('stampCompletionDate', true, async () => {
+			const editor = await openXit('[ ] Do this');
+			editor.selection = at(0);
+
+			await vscode.commands.executeCommand('xit.toggle');
+			assert.match(editor.document.lineAt(0).text, /^\[x\] Do this #done=\d{4}-\d{2}-\d{2}$/);
+
+			await vscode.commands.executeCommand('xit.toggle');
+			assert.equal(editor.document.lineAt(0).text, '[ ] Do this');
+		});
+	});
+
+	it('stamps a parent checked by the cascade', async () => {
+		await withSetting('stampCompletionDate', true, async () => {
+			const editor = await openXit('[ ] Parent\n  [ ] Child');
+			editor.selection = at(1);
+			await vscode.commands.executeCommand('xit.toggle');
+
+			const [parent, child] = editor.document.getText().split('\n');
+			assert.match(parent, /^\[x\] Parent #done=/);
+			assert.match(child, /^ {2}\[x\] Child #done=/);
+		});
+	});
+});

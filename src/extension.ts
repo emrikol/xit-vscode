@@ -4,53 +4,76 @@ import { selectedLines } from './selection';
 import { cascade } from './tree';
 import { outline, Node } from './outline';
 import { folds } from './folding';
+import { stamp, isTagName } from './stamp';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
 
-/** Replace the status of the checkbox on `line`, keeping its indentation. */
-function setStatus(builder: vscode.TextEditorEdit, document: vscode.TextDocument, line: number, status: Status) {
-	const checkbox = readCheckbox(document.lineAt(line).text);
-	if (!checkbox) return;
+/** Settings that shape what a toggle does beyond changing the checkbox. */
+function editSettings() {
+	const configuration = vscode.workspace.getConfiguration(LANGUAGE);
+	const tag = configuration.get<string>('completionDateTag', 'done');
 
-	// Anchored on the checkbox rather than on column zero, so a subtask keeps
-	// the indentation that makes it one.
-	const { column } = checkbox;
-	builder.replace(new vscode.Range(line, column, line, column + 3), `[${status}]`);
+	return {
+		autoCheckParents: configuration.get<boolean>('autoCheckParents', true),
+		stampCompletionDate: configuration.get<boolean>('stampCompletionDate', false),
+		// Fall back rather than write a tag the format cannot express. A
+		// hand-edited setting should not be able to corrupt the file.
+		completionDateTag: isTagName(tag) ? tag : 'done',
+	};
 }
 
 function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: Status) => Status) {
 	const document = editor.document;
-	const lines = selectedLines(editor.selections);
+	const settings = editSettings();
+
+	// The document as it will read once everything is applied. Built up in
+	// full first, then written in one edit: the cascade has to reason about
+	// the change the user just made rather than about the text on disk, and
+	// applying the steps separately would fire a document change per step.
+	const before: string[] = [];
+	for (let line = 0; line < document.lineCount; line++) before.push(document.lineAt(line).text);
+
+	const after = [...before];
 	const edited: number[] = [];
 
-	// The document as it will read once the selection is applied, which is
-	// what the cascade has to reason about - asking about the text on disk
-	// would decide against the change the user just made.
-	const after: string[] = [];
-	for (let line = 0; line < document.lineCount; line++) after.push(document.lineAt(line).text);
-
-	for (const line of lines) {
+	for (const line of selectedLines(editor.selections)) {
 		const checkbox = readCheckbox(after[line]);
 		if (!checkbox) continue;
 		after[line] = writeStatus(after[line], replacer(checkbox.status));
 		edited.push(line);
 	}
 
-	const parents = vscode.workspace.getConfiguration(LANGUAGE).get<boolean>('autoCheckParents', true)
-		? cascade(after, edited)
-		: new Map<number, Status>();
+	if (settings.autoCheckParents) {
+		for (const [line, status] of cascade(after, edited)) {
+			after[line] = writeStatus(after[line], status);
+			edited.push(line);
+		}
+	}
+
+	if (settings.stampCompletionDate) {
+		const today = todayFrom(new Date());
+
+		for (const line of edited) {
+			const was = readCheckbox(before[line])?.status;
+			const now = readCheckbox(after[line])?.status;
+			if (was === now) continue;
+
+			// Only on the way in and out of checked. Every other status change
+			// says nothing about when the item was completed.
+			if (now === 'x') after[line] = stamp(after[line], settings.completionDateTag, today);
+			else if (was === 'x') after[line] = stamp(after[line], settings.completionDateTag, null);
+		}
+	}
 
 	// Returned, not fired and forgotten. `editor.edit` is asynchronous, so a
 	// caller that awaits the command would otherwise see the document before
 	// the edit landed.
-	//
-	// One edit for the selection and the whole cascade together. Applying them
-	// separately would fire a document change per step, and each of those
-	// would set the question again from a half-applied document.
 	return editor.edit(builder => {
-		for (const line of edited) setStatus(builder, document, line, readCheckbox(after[line])!.status);
-		for (const [line, status] of parents) setStatus(builder, document, line, status);
+		for (const line of new Set(edited)) {
+			if (after[line] === before[line]) continue;
+			builder.replace(document.lineAt(line).range, after[line]);
+		}
 	});
 }
 

@@ -423,6 +423,14 @@ describe('overdue due dates', () => {
 		}
 	});
 
+	it('keeps completion stamping off by default', () => {
+		// It rewrites the user's file. Opt in.
+		const properties = manifest.contributes.configuration.properties;
+		assert.equal(properties['xit.stampCompletionDate'].type, 'boolean');
+		assert.equal(properties['xit.stampCompletionDate'].default, false);
+		assert.equal(properties['xit.completionDateTag'].default, 'done');
+	});
+
 	it('can be turned off, restyled, and have its second tier retimed', () => {
 		const properties = manifest.contributes.configuration?.properties ?? {};
 

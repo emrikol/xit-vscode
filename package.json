@@ -113,6 +113,16 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Check an item automatically once all of its subtasks are checked, and uncheck it again when one is reopened. Only moves an item between open and checked; an ongoing, obsolete or in-question item is left as it is."
+                },
+                "xit.stampCompletionDate": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Record when an item was completed, as a tag on its first line. Removed again if the item is reopened. Uses a tag rather than new syntax, so other [x]it! tools still read the file."
+                },
+                "xit.completionDateTag": {
+                    "type": "string",
+                    "default": "done",
+                    "description": "Name of the tag used to record a completion date. Must be a valid tag name: letters, digits, underscore or hyphen."
                 }
             }
         },
