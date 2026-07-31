@@ -259,3 +259,42 @@ describe('an unquoted value takes almost anything, which is a fork', () => {
 		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
 	});
 });
+
+describe('a name takes more than letters, which is a fork', () => {
+	it('takes a script that needs combining marks', () => {
+		// The bug this fixed, and it was a bug rather than a limit. Spec §Tag
+		// allows letters, digits, `_` and `-`; Devanagari vowel signs are
+		// marks, so `#हिन्दी` gave `#ह`. Thai and Arabic diacritics broke the
+		// same way.
+		assert.deepEqual(tagsOn('[ ] x #हिन्दी').map((tag) => tag.text), ['#हिन्दी']);
+		assert.deepEqual(tagsOn('[ ] x #ไทย').map((tag) => tag.text), ['#ไทย']);
+	});
+
+	it('takes emoji, including sequences held together by a joiner', () => {
+		assert.deepEqual(tagsOn('[ ] x #tag\u{1F973}').map((tag) => tag.text), ['#tag\u{1F973}']);
+		assert.deepEqual(tagsOn('[ ] x #❤️').map((tag) => tag.text), ['#❤️'], 'a variation selector is a mark');
+		assert.deepEqual(tagsOn('[ ] x #\u{1F468}‍\u{1F469}‍\u{1F467}').map((tag) => tag.text),
+			['#\u{1F468}‍\u{1F469}‍\u{1F467}']);
+	});
+
+	it('keeps the letters that always worked', () => {
+		for (const name of ['σκληρά', '今日は', 'übermorgen', 'Русский']) {
+			assert.deepEqual(tagsOn(`[ ] x #${name}`).map((tag) => tag.text), [`#${name}`], name);
+		}
+	});
+
+	it('does not take a math symbol, or `=` would end no tag value', () => {
+		// Extended_Pictographic rather than \p{S} on purpose: `=`, `+`, `<`
+		// and `>` are math symbols, and a name that swallowed `=` would make
+		// every `#tag=value` one long name.
+		assert.equal(tagsOn('[ ] x #a=b')[0].name, 'a');
+		assert.equal(tagsOn('[ ] x #a=b')[0].value, 'b');
+		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
+	});
+
+	it('does not take punctuation, so a tag can still end a sentence', () => {
+		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
+		assert.deepEqual(tagsOn('[ ] x (#tag)').map((tag) => tag.text), ['#tag']);
+		assert.deepEqual(tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text), ['#tag1', '#tag2']);
+	});
+});

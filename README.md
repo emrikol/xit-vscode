@@ -377,7 +377,18 @@ The last one gives `feature/login-v2` — the comma is trimmed, because a value 
 
 Trailing `.` `,` `;` `:` `!` `?` `)` `]` `}` and quotes are trimmed. A leading quote is excluded, so `#tag="unterminated` still falls to the specification's rule that an unclosed value is disregarded.
 
-**Tag names are unchanged, and deliberately so.** The syntax guide pins this in `tags/2`, and the examples are the argument:
+**Tag names take letters, marks, numerals, emoji and `_` `-`.** That is wider than the specification, which allows letters, digits, `_` and `-` — and widening it fixed a bug rather than adding a nicety:
+
+```
+#हिन्दी   →  #ह          before
+#हिन्दी   →  #हिन्दी      now
+```
+
+Devanagari vowel signs are combining *marks*, not letters, so the specification's set breaks Devanagari, Thai, Arabic diacritics, and `#❤️` — whose variation selector is also a mark. The conformance corpus tests UTF-8 with Greek, Latin and CJK, none of which use combining marks, which is exactly why the suite written to catch encoding bugs never caught this one. Once marks are in, excluding emoji is an arbitrary line, so `#tag🥳` and `#👨‍👩‍👧` work too.
+
+Emoji specifically, not all symbols. `=`, `+`, `<` and `>` are Unicode *math symbols*, and a name that swallowed `=` would turn every `#tag=value` into one long name.
+
+**Punctuation still stops a name, and deliberately so.** The syntax guide pins this in `tags/2`, and the examples are the argument:
 
 ```
 [ ] This is a #tag.      → #tag

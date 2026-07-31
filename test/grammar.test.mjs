@@ -299,8 +299,23 @@ describe('tag (spec §Tag)', () => {
 		await assertScope('[ ] #Actually, it is', TAG, '#Actually');
 	});
 
-	it('stops at characters that are not letters', async () => {
-		await assertScope('[ ] #tag🥳', TAG, '#tag');
+	it('takes an emoji, which is a fork', async () => {
+		// The guide's tags/2 ends this at `#tag`. Emoji are not letters, so
+		// the specification's set excludes them - and the same set excluded
+		// combining marks, which broke `#हिन्दी` down to `#ह`.
+		await assertScope('[ ] #tag🥳', TAG, '#tag🥳');
+		await assertScope('[ ] #❤️', TAG, '#❤️');
+	});
+
+	it('takes a script that needs combining marks', async () => {
+		// Devanagari vowel signs are marks, not letters. The corpus only
+		// exercises Greek, Latin and CJK, which is why this went unnoticed.
+		await assertScope('[ ] #हिन्दी', TAG, '#हिन्दी');
+	});
+
+	it('still stops at punctuation, so a tag can end a sentence', async () => {
+		await assertScope('[ ] This is a #tag.', TAG, '#tag');
+		await assertScope('[ ] x (#tag)', TAG, '#tag');
 	});
 
 	it('separates adjacent tags', async () => {

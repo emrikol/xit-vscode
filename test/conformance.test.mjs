@@ -63,6 +63,21 @@ const STATUS_SCOPE = {
  * list of things that were fixed years ago.
  */
 const KNOWN = {
+	// Emoji and combining marks in a tag name, which the guide ends at `#tag`.
+	//
+	// Not a preference. The specification's name set - letters, digits, `_`,
+	// `-` - is broken for whole writing systems: `#हिन्दी` gave `#ह`, because
+	// Devanagari vowel signs are marks rather than letters, and `#❤️` failed
+	// entirely because a variation selector is a mark too. Fixing that means
+	// admitting marks, and once marks are in, excluding emoji is an arbitrary
+	// line rather than a principled one.
+	//
+	// The corpus exercises Greek, Latin and CJK under `encoding/0`, none of
+	// which use combining marks - which is exactly why the suite written to
+	// catch encoding bugs did not catch this one.
+	'tags/2:6#tag@4': 'this fork takes emoji and combining marks in a tag name',
+	'tags/2:6#extra-tag@8': 'this fork takes emoji and combining marks in a tag name',
+
 	// The guide and the specification disagree, and we follow the
 	// specification. Spec §Item, on the checkbox, priority and description:
 	//

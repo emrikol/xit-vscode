@@ -96,9 +96,29 @@ function urlRanges(line: string): [number, number][] {
  */
 const UNQUOTED = String.raw`(?!['"])(?:[^\s]*[^\s.,;:!?)\]}'"])?`;
 
+/**
+ * A tag name.
+ *
+ * Wider than spec §Tag, which allows only letters, digits, `_` and `-`. That
+ * set is not merely narrow, it is broken for whole writing systems: `#हिन्दी`
+ * gave `#ह`, because Devanagari vowel signs are marks rather than letters.
+ * Thai, Arabic diacritics and `#❤️` failed the same way - a variation selector
+ * is a mark too. The conformance corpus only exercises Greek, Latin and CJK,
+ * none of which use combining marks, which is exactly why it never caught it.
+ *
+ * So: letters, marks, every numeral, emoji, and the zero-width joiner that
+ * holds an emoji sequence like 👨‍👩‍👧 together.
+ *
+ * `Extended_Pictographic` rather than `\p{S}`, deliberately. `=`, `+`, `<` and
+ * `>` are math symbols, and a name that swallowed `=` would end tag values.
+ * Punctuation stays out for the reason tags/2 gives: `[ ] This is a #tag.`
+ * must end at the tag, or a tag could never end a sentence.
+ */
+const NAME = String.raw`[\p{L}\p{M}\p{N}\p{Extended_Pictographic}\u200D_-]+`;
+
 const TAG = new RegExp(
 	'(?<=[\\s\\p{P}])'
-	+ '#(?<name>[\\p{L}\\d_-]+)'
+	+ `#(?<name>${NAME})`
 	+ `(?:=(?<value>'[^'\\n]*'|"[^"\\n]*"|${UNQUOTED})?)?`,
 	'gu',
 );
