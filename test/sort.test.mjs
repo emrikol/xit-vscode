@@ -141,3 +141,45 @@ describe('never losing a line', () => {
 		assert.deepEqual([...sorted].sort(), [...lines].sort(), 'the same lines, reordered');
 	});
 });
+
+describe('a group with a comment in it', () => {
+	it('sorts, instead of silently refusing', () => {
+		// Loose lines used to be dropped from the rebuilt group, which made it
+		// shorter, which tripped the line-count guard, which abandoned the
+		// sort. The command then reported the group was already in order - the
+		// guard doing its job while the outcome was a lie.
+		assert.deepEqual(
+			sortGroup(['# Todos', '[ ] Low', '<!-- parked -->', '[ ] !!! Urgent'], 1),
+			['# Todos', '<!-- parked -->', '[ ] !!! Urgent', '[ ] Low'],
+		);
+	});
+
+	it('carries a comment with the item it sits above', () => {
+		// A note written above an item is a note about that item.
+		assert.deepEqual(
+			sortGroup(['[ ] Low', '<!-- about the urgent one -->', '[ ] !!! Urgent'], 0),
+			['<!-- about the urgent one -->', '[ ] !!! Urgent', '[ ] Low'],
+		);
+	});
+
+	it('carries a whole comment block', () => {
+		assert.deepEqual(
+			sortGroup(['[ ] Low', '<!--', '[ ] Parked', '-->', '[ ] !!! Urgent'], 0),
+			['<!--', '[ ] Parked', '-->', '[ ] !!! Urgent', '[ ] Low'],
+		);
+	});
+
+	it('leaves a trailing comment at the end', () => {
+		assert.deepEqual(
+			sortGroup(['# Todos', '[ ] Low', '[ ] !!! Urgent', '<!-- trailing -->'], 1),
+			['# Todos', '[ ] !!! Urgent', '[ ] Low', '<!-- trailing -->'],
+		);
+	});
+
+	it('still loses nothing', () => {
+		const lines = ['# Todos', '[ ] Low ...', '    ... more', '<!-- note -->', '[ ] !!! Urgent', '<!-- end -->'];
+		const sorted = sortGroup(lines, 1);
+		assert.equal(sorted.length, lines.length);
+		assert.deepEqual([...sorted].sort(), [...lines].sort());
+	});
+});

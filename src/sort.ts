@@ -90,16 +90,10 @@ export function sortGroup(lines: readonly string[], line: number): string[] {
 
 	// The group's own top level: items in it with no parent inside it.
 	const roots: number[] = [];
-	const head: string[] = [];
 
 	for (let at = group.start; at <= group.end; at++) {
 		const item = all.get(at);
-		if (!item) {
-			// A title, or anything before the first item, stays where it is.
-			if (roots.length === 0) head.push(lines[at]);
-			continue;
-		}
-		if (item.parent === null || item.parent < group.start) roots.push(at);
+		if (item && (item.parent === null || item.parent < group.start)) roots.push(at);
 	}
 
 	// Only when there is nothing to sort at all. A group with one root item
@@ -107,8 +101,44 @@ export function sortGroup(lines: readonly string[], line: number): string[] {
 	// silently skipped.
 	if (roots.length === 0) return [...lines];
 
+	// Lines a root's block already accounts for. Everything else in the group
+	// is loose - a title, or a comment, which does not split a group and so
+	// can sit between two items.
+	const owned = new Set<number>();
+	for (const root of roots) {
+		for (let at = root; at <= all.get(root)!.endLine; at++) owned.add(at);
+	}
+
+	// Loose lines used to be dropped, which made the rebuilt group shorter,
+	// which tripped the line-count guard below, which abandoned the sort. So a
+	// group with a comment in it never sorted and the command reported that it
+	// was already in order - the guard doing its job while the outcome was a
+	// lie. They are carried now: anything before the first item stays at the
+	// head, and anything after one travels with the item that follows it,
+	// because a note written above an item is a note about that item.
+	const head: string[] = [];
+	const prefix = new Map<number, string[]>();
+	const trailing: string[] = [];
+	let pending: string[] = [];
+
+	for (let at = group.start; at <= group.end; at++) {
+		if (owned.has(at)) continue;
+		if (roots.length === 0 || at < roots[0]) head.push(lines[at]);
+		else pending.push(lines[at]);
+
+		const next = roots.find((root) => root > at);
+		if (next !== undefined && pending.length > 0) {
+			prefix.set(next, [...(prefix.get(next) ?? []), ...pending]);
+			pending = [];
+		}
+	}
+	trailing.push(...pending);
+
 	const sorted = [...head];
-	for (const root of sortChildren(roots)) sorted.push(...blockOf(all.get(root)!));
+	for (const root of sortChildren(roots)) {
+		sorted.push(...(prefix.get(root) ?? []), ...blockOf(all.get(root)!));
+	}
+	sorted.push(...trailing);
 
 	// Same number of lines out as in, or something has been lost. Cheap to
 	// check and the one failure that would be unforgivable.
