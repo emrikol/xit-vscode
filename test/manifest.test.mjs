@@ -655,3 +655,20 @@ describe('the README keeps up with what is contributed', () => {
 		assert.deepEqual(missing, [], `diagnostic codes nobody documented: ${missing.join(', ')}`);
 	});
 });
+
+describe('the changelog stays readable', () => {
+	const changelog = readFileSync(resolve(REPO_ROOT, 'CHANGELOG.md'), 'utf8');
+
+	it('has no heading twice in one release', () => {
+		// Two `### Changed` sections in the same release is how a changelog
+		// stops being read. It happened by adding one without checking.
+		const releases = changelog.split(/^## /m).slice(1);
+		const repeated = releases.flatMap((release) => {
+			const headings = [...release.matchAll(/^### (.+)$/gm)].map(([, name]) => name);
+			return headings.filter((name, at) => headings.indexOf(name) !== at)
+				.map((name) => `${release.split('\n')[0]}: ${name}`);
+		});
+
+		assert.deepEqual(repeated, [], `a release repeats a heading: ${repeated.join(', ')}`);
+	});
+});

@@ -23,7 +23,7 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - **File-level directives** in a comment - `<!-- xit: tags=work -->` and `<!-- xit: archive=Done -->`. An unknown key is ignored in silence, so a directive written for a later version cannot break an earlier one.
 - **Sort Group**, by priority then due date, moving whole items rather than lines.
 - **Archive Finished Items**, to a group at the end of the same file. One edit in one document, so undo puts it back.
-- **Postpone**, pushing the due date forward - counted from today, because that is what postponing means.
+- **Postpone**, pushing the due date forward - counted from today, or from the due date if that is later, so postponing can never make an item more urgent. The start date is left where it is: postponing a deadline is not saying you may begin later.
 - **Migrate to the Current Format**, applying every breaking change in one pass. Idempotent, and one edit so undo takes it back.
 - **Tag completion** for names and values, drawn from the whole workspace.
 - **An overdue count in the status bar**, silent when nothing is overdue.
@@ -56,6 +56,19 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - **Nesting is one tab per level; spaces no longer nest.** The old rule was our own and too loose - a three-space line became a child of a two-space one, so a stray space created a level in silence. A space-indented item is not lost, only unnested, and is reported as `cannot-nest`.
 - A second due date in an item is a warning rather than a hint. Silent disregard is the worst property a plain-text format can have, and a hint is not visible enough to say "this does nothing".
 - `xit.refreshItems` returns its promise, so awaiting the command actually awaits the refresh.
+- Checkbox command logic moved to `src/checkbox.ts` so it can be tested without the `vscode` module. Toggle and shuffle behaviour is unchanged.
+- Items are matched with `begin`/`end` rather than `begin`/`while`, so the grammar keeps state across an item's continuation lines.
+- Minimum VS Code raised from 1.66 to 1.75, the oldest release that supports the current manifest. `@types/vscode` is pinned to that floor so the code cannot use API newer than the minimum it declares.
+- TypeScript 4.5 to 7, `@types/node` 14 to 20, build target ES2020 to ES2022, and the stricter `noUnusedLocals`, `noUnusedParameters`, `noImplicitOverride` and `noFallthroughCasesInSwitch` checks.
+- Removed the `onCommand:` activation events, which VS Code has inferred from contributed commands since 1.74. The extension now declares `onLanguage:xit` instead, so it runs whenever an xit file is open rather than waking on the first command. Marking overdue dates needs code, and it has to run without the user invoking anything.
+- Dot-only priorities such as `[ ] ... Not important` are highlighted. Spec §Priority: "any number of exclamation marks (`!`) and dots (`.`)", and any number includes none. A test asserted the opposite on purpose.
+- The `=` of a valueless tag is part of the tag. `#tag=` left it uncoloured in the middle of a coloured tag, the same defect the square brackets had.
+- `[ ] ---> 2022-01-31` and `[ ] Due-> 2022-01-31` no longer highlight a due date. The guide: "Due dates can be surrounded by a space or punctuation (apart from a hyphen or slash)."
+- `.claude` and source maps are no longer bundled into the extension.
+- Publisher changed from `tscpp` to `emrikol`, so the extension identity is `emrikol.xit` rather than `tscpp.xit`. The publisher is a Marketplace account, not a credit line: the original `tscpp.xit` is a different extension and this build would otherwise collide with it. The LICENSE keeps Elias Skogevall's copyright notice, as MIT requires, with the fork's added beside it.
+- Git hooks run the suite before a commit, and the suite, the integration tests and a packaging check before a push. They install themselves on `npm install` through `core.hooksPath`, with no extra dependency. The push hook runs the integration tests in a headless browser rather than in desktop Electron, which opened a VS Code window that took focus mid-push. `@vscode/test-electron` has no headless mode on any platform and macOS has no xvfb to hide it behind, so the desktop run stays a manual command.
+- The extension is bundled with esbuild instead of shipped as raw `tsc` output, so activation loads one file rather than one per module.
+- Manifest metadata the Marketplace uses: `license`, `keywords`, `homepage`, `bugs`, the object form of `repository`, `extensionKind`, and `capabilities.virtualWorkspaces`. Marketplace Q&A is turned off, because Issues, Discussions and pull requests are all closed on purpose.
 
 ### Fixed
 
@@ -76,19 +89,3 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - All three commands threw a TypeError when invoked from the command palette with no editor focused, because they asserted `activeTextEditor` non-null.
 - Selected line numbers were sorted lexicographically, so line 10 sorted before line 2.
 - The internal `xit.suggest` command was listed in the command palette. Toggle and shuffle are now listed only for `.xit` files.
-
-### Changed
-
-- Checkbox command logic moved to `src/checkbox.ts` so it can be tested without the `vscode` module. Toggle and shuffle behaviour is unchanged.
-- Items are matched with `begin`/`end` rather than `begin`/`while`, so the grammar keeps state across an item's continuation lines.
-- Minimum VS Code raised from 1.66 to 1.75, the oldest release that supports the current manifest. `@types/vscode` is pinned to that floor so the code cannot use API newer than the minimum it declares.
-- TypeScript 4.5 to 7, `@types/node` 14 to 20, build target ES2020 to ES2022, and the stricter `noUnusedLocals`, `noUnusedParameters`, `noImplicitOverride` and `noFallthroughCasesInSwitch` checks.
-- Removed the `onCommand:` activation events, which VS Code has inferred from contributed commands since 1.74. The extension now declares `onLanguage:xit` instead, so it runs whenever an xit file is open rather than waking on the first command. Marking overdue dates needs code, and it has to run without the user invoking anything.
-- Dot-only priorities such as `[ ] ... Not important` are highlighted. Spec §Priority: "any number of exclamation marks (`!`) and dots (`.`)", and any number includes none. A test asserted the opposite on purpose.
-- The `=` of a valueless tag is part of the tag. `#tag=` left it uncoloured in the middle of a coloured tag, the same defect the square brackets had.
-- `[ ] ---> 2022-01-31` and `[ ] Due-> 2022-01-31` no longer highlight a due date. The guide: "Due dates can be surrounded by a space or punctuation (apart from a hyphen or slash)."
-- `.claude` and source maps are no longer bundled into the extension.
-- Publisher changed from `tscpp` to `emrikol`, so the extension identity is `emrikol.xit` rather than `tscpp.xit`. The publisher is a Marketplace account, not a credit line: the original `tscpp.xit` is a different extension and this build would otherwise collide with it. The LICENSE keeps Elias Skogevall's copyright notice, as MIT requires, with the fork's added beside it.
-- Git hooks run the suite before a commit, and the suite, the integration tests and a packaging check before a push. They install themselves on `npm install` through `core.hooksPath`, with no extra dependency. The push hook runs the integration tests in a headless browser rather than in desktop Electron, which opened a VS Code window that took focus mid-push. `@vscode/test-electron` has no headless mode on any platform and macOS has no xvfb to hide it behind, so the desktop run stays a manual command.
-- The extension is bundled with esbuild instead of shipped as raw `tsc` output, so activation loads one file rather than one per module.
-- Manifest metadata the Marketplace uses: `license`, `keywords`, `homepage`, `bugs`, the object form of `repository`, `extensionKind`, and `capabilities.virtualWorkspaces`. Marketplace Q&A is turned off, because Issues, Discussions and pull requests are all closed on purpose.
