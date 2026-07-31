@@ -9,7 +9,10 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 
-const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS } = createRequire(import.meta.url)('../out/checkbox.js');
+import { tokenizeLine, scoped } from './tokenizer.mjs';
+import { corpusAspects } from './corpus.test.mjs';
+
+const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS, priorityOf } = createRequire(import.meta.url)('../out/checkbox.js');
 
 const GRAMMAR = JSON.parse(readFileSync(new URL('../syntaxes/xit.tmLanguage.json', import.meta.url), 'utf8'));
 
@@ -202,5 +205,62 @@ describe('the grammar and STATUSES agree', () => {
 		const both = [...open].filter((status) => closed.has(status));
 		assert.deepEqual(both, [], 'a status cannot be both open and closed');
 		assert.equal(open.size + closed.size, STATUSES.length);
+	});
+});
+
+describe('priority, and the grammar', () => {
+	it('counts exclamation marks', () => {
+		assert.equal(priorityOf('[ ] !!! Ship it'), 3);
+		assert.equal(priorityOf('[ ] ! One'), 1);
+		assert.equal(priorityOf('[ ] None at all'), 0);
+	});
+
+	it('allows the additional spaces the specification allows', () => {
+		// Spec §Item: "(Additional space characters MAY appear.)"
+		assert.equal(priorityOf('[ ]    !! Do something'), 2);
+	});
+
+	it('reads a nested item too', () => {
+		assert.equal(priorityOf('\t\t[@] !! Nested'), 2);
+	});
+
+	it('has no priority where the grammar shows none', () => {
+		// The dots are gone from this fork, and marks with no space after
+		// them are description text.
+		assert.equal(priorityOf('[ ] !!. Dotted'), 0);
+		assert.equal(priorityOf('[ ] !Nospace'), 0);
+		assert.equal(priorityOf('[ ] ... Dots only'), 0);
+	});
+
+	// The drift detector. Same house pattern as the due date and the tag:
+	// neither implementation can be removed, so the conformance corpus goes
+	// through both and they must agree about every line.
+	it('agrees with the grammar on every example in the syntax guide', async () => {
+		const disagreements = [];
+		let compared = 0;
+
+		for (const aspect of corpusAspects()) {
+			for (const line of aspect.lines) {
+				const tokens = await tokenizeLine(line.text);
+				const fromGrammar = scoped(tokens, 'markup.other.task.priority');
+				const fromCode = priorityOf(line.text);
+
+				// The grammar spans the marks; this counts them. Same fact.
+				const marks = fromGrammar.length === 1 ? fromGrammar[0].length : 0;
+
+				compared++;
+				if (marks !== fromCode) {
+					disagreements.push(
+						`  ${aspect.id}: ${JSON.stringify(line.text)}\n` +
+						`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
+						`    TypeScript: ${fromCode}`,
+					);
+				}
+			}
+		}
+
+		assert.ok(compared > 150, `only ${compared} lines compared`);
+		assert.deepEqual(disagreements, [],
+			`priorityOf has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
 	});
 });

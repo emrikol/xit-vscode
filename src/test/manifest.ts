@@ -21,4 +21,4 @@ export const NAME = 'xit';
 export const EXTENSION_ID = `${PUBLISHER}.${NAME}`;
 
 /** Every id in contributes.commands, in manifest order. */
-export const COMMANDS = ['xit.suggest', 'xit.toggle', 'xit.shuffle', 'xit.refreshItems', 'xit.toggleDoneItems', 'xit.migrate', 'xit.postpone'];
+export const COMMANDS = ['xit.suggest', 'xit.toggle', 'xit.shuffle', 'xit.refreshItems', 'xit.toggleDoneItems', 'xit.migrate', 'xit.postpone', 'xit.sortGroup'];

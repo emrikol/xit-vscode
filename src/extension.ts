@@ -9,6 +9,7 @@ import { nextOccurrence, parseInterval, postpone } from './repeat';
 import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
+import { sortGroup } from './sort';
 import { registerWorkspaceView } from './workspaceView';
 import { WorkspaceIndex } from './workspaceIndex';
 import { commonSpelling, foldName, tagsOn } from './tag';
@@ -268,6 +269,32 @@ function registerCompletion(context: vscode.ExtensionContext, index: WorkspaceIn
 			});
 		},
 	}, '#', '='));
+}
+
+/**
+ * Sort the group the cursor is in, by priority and then by due date.
+ *
+ * The reordering is src/sort.ts, which moves blocks rather than lines: a
+ * subtask travels with its parent and so does every description continuation.
+ *
+ * One edit for the whole group, so undo takes it back in one step. The
+ * cursor's group is the unit rather than the whole file, because a group is
+ * the unit the format already has.
+ */
+async function sortGroupAtCursor(editor: vscode.TextEditor) {
+	if (editor.document.languageId !== LANGUAGE) return;
+
+	const before = documentLines(editor.document);
+	const after = sortGroup(before, editor.selection.active.line);
+
+	if (after.every((text, line) => text === before[line])) {
+		void vscode.window.showInformationMessage('This group is already in order.');
+		return;
+	}
+
+	const last = editor.document.lineCount - 1;
+	const whole = new vscode.Range(0, 0, last, editor.document.lineAt(last).text.length);
+	await editor.edit(builder => builder.replace(whole, after.join('\n')));
 }
 
 /** What the postpone picker offers, in the order it offers them. */
@@ -683,6 +710,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerEditorCommand(context, 'xit.migrate', editor => migrateDocument(editor));
 
 	registerEditorCommand(context, 'xit.postpone', editor => postponeSelected(editor));
+
+	registerEditorCommand(context, 'xit.sortGroup', editor => sortGroupAtCursor(editor));
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 

@@ -113,3 +113,21 @@ export function shuffle(status: Status): Status {
 		default: return ' ';
 	}
 }
+
+/**
+ * The priority of an item: how many exclamation marks it carries, or zero.
+ *
+ * A second implementation of a rule the grammar already has, like the due date
+ * and the tag before it, and for the same reason - VS Code offers no way to
+ * read TextMate tokens from an extension. The duplication is detected rather
+ * than avoided: test/checkbox.test.mjs runs the conformance corpus through both
+ * and fails if they disagree about a single line.
+ *
+ * The dots the specification allows are gone from this fork; priority is
+ * exclamation marks. See the README.
+ */
+const PRIORITY = new RegExp(`^[^\\S\\n]*\\[[${STATUS_CLASS}]\\][^\\S\\n]+(!+)(?=[^\\S\\n]|$)`);
+
+export function priorityOf(line: string): number {
+	return PRIORITY.exec(line)?.[1].length ?? 0;
+}

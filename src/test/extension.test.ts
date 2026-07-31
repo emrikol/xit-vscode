@@ -477,3 +477,38 @@ describe('creation dates', () => {
 		assert.equal(editor.document.lineAt(0).text, '[ ]');
 	});
 });
+
+describe('xit.sortGroup', () => {
+	it('sorts the group the cursor is in, moving whole items', async () => {
+		const editor = await openXit('# Todos\n[ ] Low ...\n    ... continued\n[ ] !!! High');
+		editor.selection = at(1);
+		await vscode.commands.executeCommand('xit.sortGroup');
+
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['# Todos', '[ ] !!! High', '[ ] Low ...', '    ... continued'],
+		);
+	});
+
+	it('leaves other groups alone', async () => {
+		const editor = await openXit('[ ] Low\n[ ] !!! High\n\n[ ] Also low\n[ ] !!! Also high');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.sortGroup');
+
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['[ ] !!! High', '[ ] Low', '', '[ ] Also low', '[ ] !!! Also high'],
+		);
+	});
+
+	it('is one edit, so undo takes the whole group back', async () => {
+		const before = '[ ] Low\n[ ] !!! High';
+		const editor = await openXit(before);
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.sortGroup');
+		assert.notEqual(editor.document.getText(), before);
+
+		await vscode.commands.executeCommand('undo');
+		assert.equal(editor.document.getText(), before);
+	});
+});

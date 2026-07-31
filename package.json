@@ -312,6 +312,10 @@
                 {
                     "command": "xit.postpone",
                     "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.sortGroup",
+                    "when": "editorLangId == 'xit'"
                 }
             ],
             "view/title": [
@@ -360,6 +364,11 @@
             {
                 "command": "xit.postpone",
                 "title": "Postpone",
+                "category": "xit!"
+            },
+            {
+                "command": "xit.sortGroup",
+                "title": "Sort Group",
                 "category": "xit!"
             }
         ],

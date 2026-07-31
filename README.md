@@ -311,6 +311,16 @@ They come from **the whole workspace**, not just the open file, which is the poi
 
 Names fold case and values do not, because the specification says so — §Tag makes names case-insensitive and values case-sensitive. So a name written both `#Work` and `#work` is offered once, spelled whichever way you use more often, while `#size=S` and `#size=s` are two different values and both are offered. Ties in spelling are broken by code-unit order rather than by locale, so the same workspace suggests the same spelling on every machine.
 
+## Sorting a Group
+
+**xit!: Sort Group** reorders the group the cursor is in: higher priority first, then earlier due date, then the order you wrote them in.
+
+It moves **items**, not lines. A subtask travels with its parent and so does every description continuation, which is the whole difficulty — an item is a block of text, not a row. Every nesting level is sorted within its own parent, so the result reads exactly as it did before, only ordered.
+
+An item with no due date sorts last rather than first. No date is not the most urgent thing in a group, it is the least scheduled.
+
+The sort is stable and idempotent, so running it twice changes nothing the second time. A group inside a comment is left alone: parked work was set aside deliberately, and rewriting it is the one edit nobody asked for. And the whole group is one edit, so undo takes it back in a single step.
+
 ## Postponing
 
 **xit!: Postpone** pushes the due date of the selected items forward — tomorrow, in three days, next week, next Monday, or next month.
