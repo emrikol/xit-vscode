@@ -298,3 +298,18 @@ describe('a name takes more than letters, which is a fork', () => {
 		assert.deepEqual(tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text), ['#tag1', '#tag2']);
 	});
 });
+
+describe('a dot inside a name but never at its end', () => {
+	it('keeps a version-like name whole', () => {
+		// `#v1.2` gave `#v1` - silently, which is the shape of bug this whole
+		// area kept producing.
+		assert.deepEqual(tagsOn('[ ] x #v1.2').map((tag) => tag.text), ['#v1.2']);
+		assert.deepEqual(tagsOn('[ ] x #a.b.c=d').map((tag) => tag.text), ['#a.b.c=d']);
+	});
+
+	it('still lets a tag end a sentence', () => {
+		// The trailing dot is trimmed, exactly as it is from a value.
+		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
+		assert.deepEqual(tagsOn('[ ] Done #shopping..').map((tag) => tag.text), ['#shopping']);
+	});
+});

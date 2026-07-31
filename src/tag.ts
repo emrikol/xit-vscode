@@ -113,8 +113,15 @@ const UNQUOTED = String.raw`(?!['"])(?:[^\s]*[^\s.,;:!?)\]}'"])?`;
  * `>` are math symbols, and a name that swallowed `=` would end tag values.
  * Punctuation stays out for the reason tags/2 gives: `[ ] This is a #tag.`
  * must end at the tag, or a tag could never end a sentence.
+ *
+ * A `.` is the one exception, and it is allowed inside a name but never at the
+ * end. `#v1.2` used to give `#v1` - silently, which is the shape of bug this
+ * whole area keeps producing - and `[ ] This is a #tag.` still ends at the
+ * tag. The unquoted value earns the same courtesy the same way.
  */
-const NAME = String.raw`[\p{L}\p{M}\p{N}\p{Extended_Pictographic}\u200D_-]+`;
+// The `-` sits last in every class it appears in, or it reads as a range.
+const NAME_CHAR = String.raw`\p{L}\p{M}\p{N}\p{Extended_Pictographic}\u200D_`;
+const NAME = `[${NAME_CHAR}.-]*[${NAME_CHAR}-]`;
 
 const TAG = new RegExp(
 	'(?<=[\\s\\p{P}])'

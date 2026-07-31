@@ -388,6 +388,8 @@ Devanagari vowel signs are combining *marks*, not letters, so the specification'
 
 Emoji specifically, not all symbols. `=`, `+`, `<` and `>` are Unicode *math symbols*, and a name that swallowed `=` would turn every `#tag=value` into one long name.
 
+A `.` is allowed inside a name but never at the end, so `#v1.2` is one tag and `[ ] This is a #tag.` still ends at the tag — the same trailing trim a value gets, for the same reason.
+
 **Punctuation still stops a name, and deliberately so.** The syntax guide pins this in `tags/2`, and the examples are the argument:
 
 ```
