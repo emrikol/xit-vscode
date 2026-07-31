@@ -457,14 +457,34 @@ function registerHover(context: vscode.ExtensionContext, index: WorkspaceIndex) 
 		}),
 
 		vscode.commands.registerCommand('xit.setStatus', async (target: StatusTarget) => {
-			const editor = vscode.window.activeTextEditor;
-			// The hover belongs to a document, and the command arrives with no
-			// editor of its own. Refusing when the active one is something else
-			// is safer than guessing, since the payload names a line number and
-			// a stale one would rewrite the wrong line of the wrong file.
-			if (!editor || editor.document.uri.toString() !== target.uri) return;
-			if (target.line >= editor.document.lineCount) return;
-			if (!readCheckbox(editor.document.lineAt(target.line).text)) return;
+			// The payload names its own document rather than trusting whichever
+			// editor happens to be active. That is not only safety: clicking a
+			// link inside a hover widget is not guaranteed to leave the editor
+			// beneath it active, and the first version of this checked
+			// `activeTextEditor` and returned in silence when it did not match -
+			// which is exactly what "clicking does nothing" looks like.
+			const document = vscode.workspace.textDocuments.find((each) => each.uri.toString() === target.uri);
+			if (!document) {
+				void vscode.window.showWarningMessage('That item’s file is no longer open.');
+				return;
+			}
+
+			if (target.line >= document.lineCount || !readCheckbox(document.lineAt(target.line).text)) {
+				// The line moved or stopped being an item between the hover
+				// opening and the click landing. Saying so beats a silent
+				// no-op, and beats rewriting whatever is on that line now.
+				void vscode.window.showWarningMessage('That line is no longer the item you pointed at.');
+				return;
+			}
+
+			// `editor.edit` needs an editor, and the one for this document may
+			// not be focused. Showing it is a no-op when it already is, and
+			// `preserveFocus` keeps the click from stealing the cursor.
+			const editor = await vscode.window.showTextDocument(document, {
+				preserveFocus: true,
+				preview: false,
+				viewColumn: vscode.window.activeTextEditor?.viewColumn,
+			});
 
 			await editSelectedCheckboxes(editor, () => target.status, [target.line]);
 		}),

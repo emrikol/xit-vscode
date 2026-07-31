@@ -385,7 +385,7 @@ describe('the checkbox hover', () => {
 		assert.equal(document.lineAt(1).text, '[@] Second');
 	});
 
-	it('refuses a payload for a document that is not in front', async () => {
+	it('refuses a payload for a document nothing has open', async () => {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Here' });
 		await vscode.window.showTextDocument(document);
 
@@ -396,6 +396,42 @@ describe('the checkbox hover', () => {
 		});
 
 		assert.equal(document.lineAt(0).text, '[ ] Here');
+	});
+
+	it('works on a document that is open but not the active editor', async () => {
+		// The bug that made every status link do nothing. Clicking inside a
+		// hover widget does not guarantee the editor beneath it is still the
+		// active one, and the first version read `activeTextEditor` and
+		// returned in silence when it did not match the payload.
+		const target = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Behind' });
+		await vscode.window.showTextDocument(target);
+
+		// Put something else in front, so activeTextEditor is not the target.
+		const front = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] In front' });
+		await vscode.window.showTextDocument(front);
+		assert.notEqual(vscode.window.activeTextEditor?.document.uri.toString(), target.uri.toString());
+
+		await vscode.commands.executeCommand('xit.setStatus', {
+			uri: target.uri.toString(),
+			line: 0,
+			status: 'x',
+		});
+
+		assert.equal(target.lineAt(0).text, '[x] Behind');
+		assert.equal(front.lineAt(0).text, '[ ] In front', 'the front document was rewritten instead');
+	});
+
+	it('does nothing when the line stopped being an item', async () => {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: 'Not an item' });
+		await vscode.window.showTextDocument(document);
+
+		await vscode.commands.executeCommand('xit.setStatus', {
+			uri: document.uri.toString(),
+			line: 0,
+			status: 'x',
+		});
+
+		assert.equal(document.lineAt(0).text, 'Not an item');
 	});
 
 	it('cascades to a parent, like every other way of setting a status', async () => {
