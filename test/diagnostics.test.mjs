@@ -341,3 +341,32 @@ describe('the start date gets the same checks as the due date', () => {
 		assert.deepEqual(codes(['[ ] Parent <- 2026-01-01', '\t[ ] Child <- 2026-02-02']), []);
 	});
 });
+
+describe('a window the calendar cannot satisfy', () => {
+	it('reports a start date after its own due date', () => {
+		assert.deepEqual(codes(['[ ] Ship it <- 2030-01-01 -> 2026-01-01']), ['starts-after-due@0']);
+	});
+
+	it('points at the start date, not the due date', () => {
+		// The due date is usually the one that is right; the start is the one
+		// that was mistyped.
+		const line = '[ ] Ship it <- 2030-01-01 -> 2026-01-01';
+		const [problem] = problems([line]);
+		assert.equal(line.slice(problem.start, problem.end), '<- 2030-01-01');
+	});
+
+	it('says nothing about a coherent window', () => {
+		assert.deepEqual(codes(['[ ] Ship it <- 2026-01-01 -> 2026-06-01']), []);
+	});
+
+	it('compares whole periods, so the same month is fine', () => {
+		// A start date reads from the first day of its period and a due date
+		// from the last, so `<- 2026-06 -> 2026-06` is a whole month to work in.
+		assert.deepEqual(codes(['[ ] Ship it <- 2026-06 -> 2026-06']), []);
+		assert.deepEqual(codes(['[ ] Ship it <- 2026-07 -> 2026-06']), ['starts-after-due@0']);
+	});
+
+	it('says nothing when only one arrow is there', () => {
+		assert.deepEqual(codes(['[ ] Only due -> 2026-01-01', '[ ] Only start <- 2026-01-01']), []);
+	});
+});

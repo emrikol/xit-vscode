@@ -22,7 +22,7 @@ import { directiveProblems } from './directive';
 import { parseEstimate } from './estimate';
 import { parseInterval } from './repeat';
 import { foldName, tagsOn } from './tag';
-import { dueDatesOn, startDatesOn } from './dueDate';
+import { dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { MARKER, isTitle } from './title';
 import { linkProblems } from './link';
 import { items } from './tree';
@@ -297,6 +297,28 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 				message: `This is not an item, a title or a comment. A title starts with \`${MARKER} \`; an item starts with a checkbox; a description continues on the next line indented by four spaces or a tab.`,
 			});
 		}
+	}
+
+	// A window the calendar cannot satisfy: may not begin until after it is
+	// due. Postpone used to be able to create this; it no longer can, so what
+	// is left is only what a person can write by hand - still worth saying.
+	for (const [line, text] of lines.entries()) {
+		if (parked.has(line)) continue;
+
+		const [due] = dueDatesOn(text);
+		const [start] = startDatesOn(text);
+		if (!due || !start || startOfPeriod(start.parts) <= due.endOfPeriod) continue;
+
+		found.push({
+			line,
+			// The start date, because the due date is usually the one that is
+			// right and the start is the one that was mistyped.
+			start: start.start,
+			end: start.end,
+			severity: 'warning',
+			code: 'starts-after-due',
+			message: 'This item cannot begin until after it is due.',
+		});
 	}
 
 	// The same for a second start date. `startDatesOn` takes the first and
