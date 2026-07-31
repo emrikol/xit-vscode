@@ -10,7 +10,7 @@ Files written for it still open anywhere. Files written for the official format 
 [Titles](#titles) · [Subtasks](#subtasks) · [Waiting](#waiting) · [Priority](#priority) · [Start Dates](#start-dates) · [Overdue Dates](#overdue-dates) · [Tag Values](#tag-values) · [Comments](#comments) · [Blank Lines Inside an Item](#blank-lines-inside-an-item) · [Links](#links) · [One Item Waiting on Another](#one-item-waiting-on-another) · [Time Estimates](#time-estimates) · [Completion Dates and Repeats](#completion-dates-and-repeats) · [What a File Says About Itself](#what-a-file-says-about-itself) · [In Markdown](#in-markdown)
 
 **Using it**  
-[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Status Bar](#status-bar) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
+[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
 
 **Reference**  
 [Development](#development) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
@@ -463,6 +463,20 @@ The thresholds are the same ones the editor decorations use, so the sidebar and 
 Checked and obsolete items are hidden; the toolbar toggles them back. Anything inside a comment never appears at all — parked work is not outstanding work, and that holds for its tags too, so a `#secret` in a commented-out item is not offered by completion. Both count as finished, for opposite reasons — one was done, the other never will be — and neither is outstanding.
 
 This is the part that makes a plain-text todo list bearable across more than one file. Three people built it outside VS Code before this existed: a shell script in [#12](https://github.com/jotaen/xit/discussions/12), an HTML view in [#7](https://github.com/jotaen/xit/discussions/7), and a whole terminal UI in [#38](https://github.com/jotaen/xit/discussions/38), whose author described his todos as "littered with undone, forgotten `[ ] things`".
+
+## Filtering by Tag
+
+**Filter Items by Tag** narrows the sidebar to one or more tags. **Group Items by Tag** switches its top level from urgency to tag, ranking by urgency inside each one — so it answers "how much is left on this project" rather than "what is late everywhere". `xit.itemGrouping` picks which one the panel starts in; the command switches it for the session.
+
+The picker is multi-select and shows how many items carry each tag. Picking two tags shows items carrying **either**, because ticking a second box in a picker adds to what is shown everywhere else, and tags that name projects almost never intersect. Accepting it with nothing ticked clears the filter, so the way back out is the control you came in by. When a filter is on, the panel says which tags in its header — a narrowed list that does not admit it is narrowed reads as a complete one with work missing from it.
+
+**Untagged** is one of the choices, not just a leftover group. "What have I never filed" is a real question, and it is the one that finds work about to be lost.
+
+An item carrying two tags appears under both when grouping by tag. Filing it under one would have to pick arbitrarily, then hide it from the other group where you are looking for it.
+
+This is what [file-level directives](#what-a-file-says-about-itself) were for. A `<!-- xit: tags=client-acme -->` at the top of a file tags every item in it, and until this existed that changed nothing anyone could see — the tags were carried from the file to the view and read by nothing. The panel is also the only place the two kinds of tag are worth telling apart: a `#work` you invented is an axis you file work under, while `#est`, `#id`, `#after` and `#repeat` are fields the tooling reads. All of them are offered, with their counts, because a picker that hides tags your files actually contain is lying about them — and `#repeat` in particular is a genuinely useful thing to filter to.
+
+The status bar count ignores this filter. It answers how much is overdue in the workspace, and a workspace-wide number that quietly followed a panel's filter would be a different number every time you narrowed the panel.
 
 ## Status Bar
 

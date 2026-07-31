@@ -356,6 +356,36 @@ describe('the workspace view', () => {
 		const found = await vscode.workspace.findFiles('**/*.xit');
 		assert.ok(found.length > 0, 'no .xit files in the test workspace');
 	});
+
+	// What each of these does to the tree is unit tested in test/filter.test.mjs,
+	// which can call the pure functions directly. There is no API for reading a
+	// TreeView's contents back, so what is left to prove here is that the
+	// commands exist, run against a real index, and rebuild the view rather
+	// than throwing inside the provider - which is exactly what a wrong context
+	// key or a stale group class would do.
+	it('groups by tag and back again without throwing', async () => {
+		await vscode.commands.executeCommand('xit.refreshItems');
+		await vscode.commands.executeCommand('xit.toggleItemGrouping');
+		await vscode.commands.executeCommand('xit.toggleItemGrouping');
+	});
+
+	it('clears a filter that was never set, without throwing', async () => {
+		// The state the button is hidden in. Running it anyway from the palette
+		// has to be harmless.
+		await vscode.commands.executeCommand('xit.clearItemFilter');
+	});
+
+	it('rebuilds the view after the grouping setting changes', async () => {
+		const configuration = vscode.workspace.getConfiguration('xit');
+		const before = configuration.get<string>('itemGrouping');
+		try {
+			await configuration.update('itemGrouping', 'tag', vscode.ConfigurationTarget.Workspace);
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			await vscode.commands.executeCommand('xit.refreshItems');
+		} finally {
+			await configuration.update('itemGrouping', before, vscode.ConfigurationTarget.Workspace);
+		}
+	});
 });
 
 describe('xit.migrate', () => {

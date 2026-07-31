@@ -175,6 +175,19 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Draw priority marks in a column, aligned within each group. Nothing is inserted into the file — the padding is a decoration, so it disappears with this setting. Off by default: Sort Group answers \"which is most urgent\" definitively, and a column only helps you eyeball it."
+                },
+                "xit.itemGrouping": {
+                    "type": "string",
+                    "enum": [
+                        "urgency",
+                        "tag"
+                    ],
+                    "enumDescriptions": [
+                        "Group by how late each item is, worst first.",
+                        "Group by tag, ranked by urgency inside each one. An item with two tags appears under both."
+                    ],
+                    "default": "urgency",
+                    "description": "How the Items panel arranges its top level. Group Items by Tag switches it for the session without changing this."
                 }
             }
         },
@@ -321,6 +334,18 @@
                     "when": "xit.hasItems"
                 },
                 {
+                    "command": "xit.filterItemsByTag",
+                    "when": "xit.hasItems"
+                },
+                {
+                    "command": "xit.clearItemFilter",
+                    "when": "xit.filteringByTag"
+                },
+                {
+                    "command": "xit.toggleItemGrouping",
+                    "when": "xit.hasItems"
+                },
+                {
                     "command": "xit.migrate",
                     "when": "editorLangId == 'xit'"
                 },
@@ -343,14 +368,29 @@
             ],
             "view/title": [
                 {
-                    "command": "xit.toggleDoneItems",
+                    "command": "xit.filterItemsByTag",
                     "when": "view == xit.items",
                     "group": "navigation@1"
                 },
                 {
+                    "command": "xit.clearItemFilter",
+                    "when": "view == xit.items && xit.filteringByTag",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "xit.toggleItemGrouping",
+                    "when": "view == xit.items",
+                    "group": "navigation@3"
+                },
+                {
+                    "command": "xit.toggleDoneItems",
+                    "when": "view == xit.items",
+                    "group": "navigation@4"
+                },
+                {
                     "command": "xit.refreshItems",
                     "when": "view == xit.items",
-                    "group": "navigation@2"
+                    "group": "navigation@5"
                 }
             ]
         },
@@ -378,6 +418,24 @@
                 "title": "Show Completed Items",
                 "category": "xit!",
                 "icon": "$(check-all)"
+            },
+            {
+                "command": "xit.filterItemsByTag",
+                "title": "Filter Items by Tag",
+                "category": "xit!",
+                "icon": "$(filter)"
+            },
+            {
+                "command": "xit.clearItemFilter",
+                "title": "Clear Tag Filter",
+                "category": "xit!",
+                "icon": "$(clear-all)"
+            },
+            {
+                "command": "xit.toggleItemGrouping",
+                "title": "Group Items by Tag",
+                "category": "xit!",
+                "icon": "$(list-tree)"
             },
             {
                 "title": "Migrate to the Current Format",

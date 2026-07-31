@@ -7,8 +7,8 @@
  * hole was found by hand: alignment padding across nesting levels, a group
  * with a comment in it never sorting, parked tags leaking into completion.
  *
- * This is the ledger that closes it. Fourteen readers by eleven elements is
- * 154 cells, and every one must be declared:
+ * This is the ledger that closes it. Fifteen readers by eleven elements is
+ * 165 cells, and every one must be declared:
  *
  *   must  the reader has to understand this, and a named test exercises it
  *   gap   it does not, and a task says so
@@ -45,6 +45,7 @@ const { nextOccurrence } = require_('../out/repeat.js');
 const { dueDatesOn } = require_('../out/dueDate.js');
 const { tagUsage } = require_('../out/tag.js');
 const { directives } = require_('../out/directive.js');
+const { tagChoices } = require_('../out/filter.js');
 
 /** How to recognise a document exercising each element, in a test's source. */
 const ELEMENTS = {
@@ -178,6 +179,16 @@ const LEDGER = {
 			start: 'not an item', title: 'a directive lives in a comment, not a title',
 			nesting: 'file-level, not per item', ids: 'not a directive key', estimate: 'not a directive key' },
 	},
+	filter: {
+		must: { tags: 'filter.test.mjs', comment: 'filter.test.mjs', directive: 'filter.test.mjs' },
+		gap: {},
+		na: { status: 'the view decides what statuses reach the filter, by showDone',
+			priority: 'not an axis you file work under', due: 'urgency is the other grouping, not this one',
+			start: 'urgency is the other grouping', title: 'a group heading is not a tag',
+			nesting: 'an item is filed under its own tags, whatever its depth',
+			ids: 'offered like any other tag, and counted as one',
+			estimate: 'offered like any other tag, and counted as one' },
+	},
 };
 
 /**
@@ -201,6 +212,7 @@ const BEHAVIOUR = {
 	cycle: (lines) => collect(lines).map((item) => item.took),
 	estimate: (lines) => collect(lines).map((item) => item.estimate),
 	directive: (lines) => directives(lines),
+	filter: (lines) => tagChoices(collect(lines), (item) => item.tags),
 };
 
 /** Two documents differing only in what the named element means. */
@@ -303,7 +315,17 @@ describe('every reader is classified against every element', () => {
 		// prevent, so the list is asserted rather than derived from the ledger.
 		assert.deepEqual(Object.keys(LEDGER).sort(), [
 			'align', 'archive', 'collect', 'cycle', 'diagnostics', 'directive', 'estimate',
-			'folding', 'link', 'migrate', 'outline', 'repeat', 'sort', 'tag',
+			'filter', 'folding', 'link', 'migrate', 'outline', 'repeat', 'sort', 'tag',
 		]);
+	});
+
+	it('has a projection for every reader, so no n/a goes unchecked', () => {
+		// The n/a check skips a reader with no BEHAVIOUR entry, silently. That
+		// makes forgetting a projection the cheapest way to get a whole
+		// reader's worth of n/a cells taken on trust - which is the one thing
+		// this file exists to stop. Adding `filter` to the ledger without a
+		// projection would have done exactly that.
+		const unprojected = Object.keys(LEDGER).filter((reader) => !BEHAVIOUR[reader]);
+		assert.deepEqual(unprojected, [], `a reader with n/a cells and no way to check them:\n  ${unprojected.join('\n  ')}`);
 	});
 });
