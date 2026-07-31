@@ -16,7 +16,7 @@ const urgency = (line) => urgencyOf(collect([line])[0], THRESHOLDS);
 
 describe('collecting items', () => {
 	it('finds every item, with its depth', () => {
-		const found = collect(['[ ] One', '  [ ] Two', '    [ ] Three', '[ ] Four']);
+		const found = collect(['[ ] One', '\t[ ] Two', '\t\t[ ] Three', '[ ] Four']);
 		assert.deepEqual(found.map((item) => [item.line, item.depth]), [[0, 0], [1, 1], [2, 2], [3, 0]]);
 	});
 
@@ -45,7 +45,7 @@ describe('collecting items', () => {
 	});
 
 	it('keeps the nesting', () => {
-		const [parent, child] = collect(['[ ] Parent', '  [ ] Child']);
+		const [parent, child] = collect(['[ ] Parent', '\t[ ] Child']);
 		assert.equal(parent.parent, null);
 		assert.deepEqual(parent.children, [1]);
 		assert.equal(child.parent, 0);

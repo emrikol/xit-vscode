@@ -83,7 +83,7 @@ describe('checkbox (spec §Checkbox)', () => {
 	it('must start at the beginning of the line', async () => {
 		// Spec §Item: "It MUST start at the beginning of a line with a checkbox."
 		await assertNoScope(' [x] Invalid', CHECKBOX);
-		await assertNoScope('    [x] Invalid', CHECKBOX);
+		await assertNoScope('\t\t[x] Invalid', CHECKBOX);
 	});
 
 	it('must be followed by a space or the end of the line', async () => {
@@ -386,7 +386,7 @@ describe('subtasks (fork, discussion #2)', () => {
 	// and this fork overrules that. See KNOWN in test/conformance.test.mjs.
 
 	it('recognises an item indented from its parent', async () => {
-		const lines = await tokenize('[ ] Parent\n  [ ] Child');
+		const lines = await tokenize('[ ] Parent\n\t[ ] Child');
 		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
 	});
 
@@ -401,32 +401,48 @@ describe('subtasks (fork, discussion #2)', () => {
 		}
 	});
 
-	it('takes two spaces, or a tab', async () => {
-		for (const indent of ['  ', '   ', '        ', '\t', '\t\t']) {
+	it('takes a tab per level, and nothing else', async () => {
+		for (const indent of ['\t', '\t\t', '\t\t\t']) {
 			const lines = await tokenize(`[ ] Parent\n${indent}[x] Child`);
 			assert.deepEqual(scoped(lines[1], CHECKED), ['[x]'], `indent ${JSON.stringify(indent)}`);
 		}
 	});
 
-	it('does not take one space', async () => {
-		// Spec §Checkbox still holds below two: the guide's "The checkbox
-		// cannot be preceded by whitespace" is only relaxed for real nesting.
-		const lines = await tokenize('[ ] Parent\n [x] Not a child');
+	it('does not take spaces, however many', async () => {
+		// This used to be "two or more spaces, or a tab", which was our own
+		// rule and too loose: a stray space created a level, silently, and a
+		// three-space line became a child of a two-space one. Four spaces is
+		// a description continuation, which is why the guide's description/8
+		// example agrees with this grammar again.
+		for (const indent of [' ', '  ', '   ', '    ', '        ']) {
+			const lines = await tokenize(`[ ] Parent\n${indent}[x] Not a child`);
+			assert.deepEqual(scoped(lines[1], CHECKBOX), [], `indent ${JSON.stringify(indent)}`);
+		}
+	});
+
+	it('does not take a mixed indent', async () => {
+		const lines = await tokenize('[ ] Parent\n\t  [x] Tab then spaces');
 		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
 	});
 
 	it('needs a parent, so an orphan stays invalid', async () => {
-		const lines = await tokenize('A title\n\n  [ ] Indented with nothing above it');
+		const lines = await tokenize('A title\n\n\t[ ] Indented with nothing above it');
 		assert.deepEqual(scoped(lines[2], CHECKBOX), []);
 	});
 
 	it('nests to any depth', async () => {
-		const lines = await tokenize('[ ] One\n  [ ] Two\n    [ ] Three\n      [ ] Four\n        [ ] Five');
+		const lines = await tokenize('[ ] One\n\t[ ] Two\n\t\t[ ] Three\n\t\t\t[ ] Four\n\t\t\t\t[ ] Five');
 		for (const line of lines) assert.deepEqual(scoped(line, OPEN), ['[ ]']);
 	});
 
+	it('nests far past six levels, which is deliberate', async () => {
+		const source = Array.from({ length: 12 }, (_, depth) => '\t'.repeat(depth) + '[ ] Level').join('\n');
+		const lines = await tokenize(source);
+		for (const [depth, line] of lines.entries()) assert.deepEqual(scoped(line, OPEN), ['[ ]'], `level ${depth}`);
+	});
+
 	it('tells a subtask from a description continuation', async () => {
-		const lines = await tokenize('[ ] Parent ...\n    ... continued\n    [ ] but this is a subtask');
+		const lines = await tokenize('[ ] Parent ...\n    ... continued\n\t[ ] but this is a subtask');
 		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
 		assert.deepEqual(scoped(lines[2], OPEN), ['[ ]']);
 	});
@@ -434,19 +450,19 @@ describe('subtasks (fork, discussion #2)', () => {
 	it('gives a subtask its own due date', async () => {
 		// The parent already has one, and "any additional due dates MUST be
 		// disregarded" applies within an item - a subtask is a different item.
-		const lines = await tokenize('[ ] Parent -> 2026-01-01\n  [ ] Child -> 2026-02-02');
+		const lines = await tokenize('[ ] Parent -> 2026-01-01\n\t[ ] Child -> 2026-02-02');
 		assert.deepEqual(scoped(lines[0], DATE), ['-> 2026-01-01']);
 		assert.deepEqual(scoped(lines[1], DATE), ['-> 2026-02-02']);
 	});
 
 	it('still disregards a second date within one subtask', async () => {
-		const lines = await tokenize('[ ] Parent\n  [ ] Child -> 2026-02-02 -> 2026-03-03');
+		const lines = await tokenize('[ ] Parent\n\t[ ] Child -> 2026-02-02 -> 2026-03-03');
 		assert.deepEqual(scoped(lines[1], DATE), ['-> 2026-02-02']);
 	});
 
 	it('ends the whole nest at a blank line', async () => {
 		// Spec §Item: "The item MUST NOT contain any blank lines."
-		const lines = await tokenize('[ ] Parent\n  [ ] Child\n\n  [ ] Orphan');
+		const lines = await tokenize('[ ] Parent\n\t[ ] Child\n\n\t[ ] Orphan');
 		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
 		assert.deepEqual(scoped(lines[3], CHECKBOX), []);
 	});
@@ -467,7 +483,7 @@ describe('subtasks (fork, discussion #2)', () => {
 	});
 
 	it('carries the closed styling into a subtask', async () => {
-		const lines = await tokenize('[ ] Parent\n  [x] Done child');
+		const lines = await tokenize('[ ] Parent\n\t[x] Done child');
 		assert.deepEqual(scoped(lines[1], CHECKED), ['[x]']);
 	});
 
@@ -482,22 +498,23 @@ describe('subtasks (fork, discussion #2)', () => {
 	});
 
 	it('strikes through a subtask that is closed in its own right', async () => {
-		const lines = await tokenize('[x] Closed parent\n  [x] Also done\n    its continuation');
+		const lines = await tokenize('[x] Closed parent\n\t[x] Also done\n\t\tits continuation');
 		assert.ok(scoped(lines[1], STRIKETHROUGH).length > 0);
 		assert.ok(scoped(lines[2], STRIKETHROUGH).length > 0);
 	});
 
 	it('resumes the parent description after a subtask', async () => {
-		// Four spaces, not two. Two is a legal subtask indent but not a legal
-		// continuation - the spec asks for exactly four spaces, and this fork
-		// adds a tab, nothing else.
-		const lines = await tokenize('[x] Closed ...\n    [ ] open subtask\n    ... and more description');
+		// A tab nests; four spaces continue. They used to overlap - four
+		// spaces did both - and separating them is what let the guide's
+		// description/8 example agree with this grammar again.
+		const lines = await tokenize('[x] Closed ...\n\t[ ] open subtask\n    ... and more description');
 		assert.deepEqual(scoped(lines[1], STRIKETHROUGH), []);
 		assert.ok(scoped(lines[2], STRIKETHROUGH).length > 0, 'the description should be struck again');
 	});
 
-	it('does not continue a description at a subtask indent', async () => {
-		// Two spaces nests an item; it does not continue a description.
+	it('does not continue a description at two spaces', async () => {
+		// Two spaces is now neither: not a nesting indent, and not the four
+		// spaces a continuation asks for.
 		const lines = await tokenize('[ ] Item ...\n  ... two spaces is not a continuation -> 2026-01-31');
 		assert.deepEqual(scoped(lines[1], DATE), []);
 	});

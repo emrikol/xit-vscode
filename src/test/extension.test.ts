@@ -148,39 +148,39 @@ describe('commands with no editor', () => {
 
 describe('subtasks', () => {
 	it('toggles an indented checkbox without losing its indentation', async () => {
-		const editor = await openXit('[ ] Parent\n  [ ] Child');
+		const editor = await openXit('[ ] Parent\n\t[ ] Child');
 		editor.selection = at(1);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.equal(editor.document.lineAt(1).text, '  [x] Child');
+		assert.equal(editor.document.lineAt(1).text, '\t[x] Child');
 	});
 
 	it('checks the parent once its last child is checked', async () => {
-		const editor = await openXit('[ ] Parent\n  [x] One\n  [ ] Two');
+		const editor = await openXit('[ ] Parent\n\t[x] One\n\t[ ] Two');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
 		assert.deepEqual(
 			editor.document.getText().split('\n'),
-			['[x] Parent', '  [x] One', '  [x] Two'],
+			['[x] Parent', '\t[x] One', '\t[x] Two'],
 		);
 	});
 
 	it('reopens the parent when a child is unchecked', async () => {
-		const editor = await openXit('[x] Parent\n  [x] One\n  [x] Two');
+		const editor = await openXit('[x] Parent\n\t[x] One\n\t[x] Two');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
 		assert.deepEqual(
 			editor.document.getText().split('\n'),
-			['[ ] Parent', '  [x] One', '  [ ] Two'],
+			['[ ] Parent', '\t[x] One', '\t[ ] Two'],
 		);
 	});
 
 	it('cascades more than one level in a single edit', async () => {
-		const editor = await openXit('[ ] A\n  [ ] B\n    [ ] C');
+		const editor = await openXit('[ ] A\n\t[ ] B\n\t\t[ ] C');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
 		assert.deepEqual(
 			editor.document.getText().split('\n'),
-			['[x] A', '  [x] B', '    [x] C'],
+			['[x] A', '\t[x] B', '\t\t[x] C'],
 		);
 	});
 });
@@ -202,7 +202,7 @@ describe('outline', () => {
 	});
 
 	it('nests subtasks', async () => {
-		const [parent] = await symbolsFor('[ ] Parent\n  [x] Child');
+		const [parent] = await symbolsFor('[ ] Parent\n\t[x] Child');
 		assert.equal(parent.name, '[ ] Parent');
 		assert.deepEqual(parent.children.map(s => s.name), ['[x] Child']);
 	});
@@ -224,7 +224,7 @@ describe('folding', () => {
 	}
 
 	it('is registered, and folds an item with its subtasks', async () => {
-		const ranges = await foldsFor('[ ] Parent\n  [x] One\n  [ ] Two');
+		const ranges = await foldsFor('[ ] Parent\n\t[x] One\n\t[ ] Two');
 		assert.ok(ranges.includes('0-2'), `expected 0-2 among ${ranges.join(', ')}`);
 	});
 
@@ -269,13 +269,13 @@ describe('completion dates', () => {
 
 	it('stamps a parent checked by the cascade', async () => {
 		await withSetting('stampCompletionDate', true, async () => {
-			const editor = await openXit('[ ] Parent\n  [ ] Child');
+			const editor = await openXit('[ ] Parent\n\t[ ] Child');
 			editor.selection = at(1);
 			await vscode.commands.executeCommand('xit.toggle');
 
 			const [parent, child] = editor.document.getText().split('\n');
 			assert.match(parent, /^\[x\] Parent #done=/);
-			assert.match(child, /^ {2}\[x\] Child #done=/);
+			assert.match(child, /^\t\[x\] Child #done=/);
 		});
 	});
 });

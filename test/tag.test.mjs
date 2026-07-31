@@ -115,7 +115,7 @@ describe('tags inside items', () => {
 	});
 
 	it('attributes a subtask tag to the subtask, not the parent', () => {
-		const found = tags(['[ ] Parent #a', '  [ ] Child #b']);
+		const found = tags(['[ ] Parent #a', '\t[ ] Child #b']);
 		assert.deepEqual(found.map((t) => [t.item, t.text]), [[0, '#a'], [1, '#b']]);
 	});
 });

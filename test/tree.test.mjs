@@ -24,58 +24,91 @@ function applied(lines, changed) {
 
 describe('reading the nesting', () => {
 	it('finds a parent and its children', () => {
-		const tree = items(['[ ] Parent', '  [ ] One', '  [ ] Two']);
+		const tree = items(['[ ] Parent', '\t[ ] One', '\t[ ] Two']);
 		assert.equal(tree.get(0).parent, null);
 		assert.deepEqual(tree.get(0).children, [1, 2]);
 		assert.equal(tree.get(1).parent, 0);
 		assert.equal(tree.get(2).parent, 0);
 	});
 
-	it('nests to any depth, at any indent width', () => {
-		const tree = items(['[ ] One', '  [ ] Two', '      [ ] Three', '        [ ] Four']);
+	it('nests to any depth', () => {
+		const tree = items(['[ ] One', '\t[ ] Two', '\t\t[ ] Three', '\t\t\t[ ] Four']);
 		assert.equal(tree.get(1).parent, 0);
 		assert.equal(tree.get(2).parent, 1);
 		assert.equal(tree.get(3).parent, 2);
 	});
 
-	it('nests with tabs just as well', () => {
-		const tree = items(['[ ] One', '\t[ ] Two', '\t\t[ ] Three']);
-		assert.equal(tree.get(1).parent, 0);
-		assert.equal(tree.get(2).parent, 1);
+	it('nests well past the six levels the design mentioned', () => {
+		// There is no limit, deliberately. A cap would have to live here and
+		// in diagnostics, and could not live in the grammar, which nests by
+		// back-referencing its parent's indent and so cannot count. The
+		// highlighting and the diagnostics disagreeing about one line is
+		// worse than no limit at all.
+		const lines = Array.from({ length: 12 }, (_, depth) => '\t'.repeat(depth) + '[ ] Level');
+		const tree = items(lines);
+		assert.equal(tree.size, 12);
+		for (let depth = 1; depth < 12; depth++) assert.equal(tree.get(depth).parent, depth - 1, `level ${depth}`);
+	});
+
+	it('does not nest a space-indented line', () => {
+		// Spaces used to nest, at "two or more from the previous level", and
+		// that was too loose to keep: a stray space made a three-space line a
+		// child of a two-space one. A tab is a level; a space is a mistake.
+		const tree = items(['[ ] Top', '  [ ] Spaces']);
+		assert.equal(tree.get(1).parent, null);
+	});
+
+	it('closes the nest at a space-indented line, as it would at any sibling', () => {
+		// Not nested means not inside, so it ends the item above it exactly as
+		// a line in column zero would. The item is still recorded and the tab
+		// below it starts a nest of its own; nothing is lost, only unnested.
+		// src/diagnostics.ts is what tells the user, and the migration is what
+		// fixes the file.
+		const tree = items(['[ ] Top', '  [ ] Spaces', '\t[ ] Tab']);
+		assert.equal(tree.get(2).parent, null, 'Top was closed by the space-indented line');
+		assert.equal(tree.size, 3, 'all three are still items');
+	});
+
+	it('still records a space-indented item, rather than losing it', () => {
+		// The safe failure. Indentation only decides parentage; every line
+		// holding a checkbox is an item either way, so a file written before
+		// this rule loses its nesting and not its tasks.
+		const tree = items(['[ ] Top', '    [x] Was a subtask']);
+		assert.equal(tree.size, 2);
+		assert.equal(tree.get(1).status, 'x');
 	});
 
 	it('does not nest a tab inside spaces, or the reverse', () => {
-		// Depth is compared as a prefix, not as a width, because a width
-		// cannot answer this: four tabs is four characters and six spaces is
-		// six, so the deeper-looking line measures as the shallower one.
-		// Neither indent is a prefix of the other, so neither contains the
-		// other, and both fall back to the nearest ancestor that does.
-		const tree = items(['[ ] Top', '  [ ] Spaces', '\t\t[ ] Tabs']);
+		// Depth is compared as a prefix, not as a width. That mattered more
+		// when spaces nested - four tabs is four characters and six spaces is
+		// six, so measuring by width made the deeper-looking line measure as
+		// the shallower one - and it is kept because it is still correct.
+		const tree = items(['[ ] Top', '\t[ ] Tab', '\t  [ ] Tab then spaces']);
 		assert.equal(tree.get(1).parent, 0);
-		assert.equal(tree.get(2).parent, 0, 'a tab-indented line is not inside a space-indented one');
+		assert.equal(tree.get(2).parent, null, 'a mixed indent does not nest anywhere');
 	});
 
 	it('treats equal indentation as siblings, not as nesting', () => {
-		const tree = items(['[ ] Parent', '  [ ] One', '  [ ] Two', '[ ] Another top level']);
+		const tree = items(['[ ] Parent', '\t[ ] One', '\t[ ] Two', '[ ] Another top level']);
 		assert.deepEqual(tree.get(0).children, [1, 2]);
 		assert.equal(tree.get(3).parent, null);
 	});
 
 	it('closes the whole nest at a blank line', () => {
 		// Spec §Item: "The item MUST NOT contain any blank lines."
-		const tree = items(['[ ] Parent', '  [ ] Child', '', '  [ ] Not a child of anything']);
+		const tree = items(['[ ] Parent', '\t[ ] Child', '', '\t[ ] Not a child of anything']);
 		assert.deepEqual(tree.get(0).children, [1]);
 		assert.equal(tree.get(3).parent, null);
 	});
 
 	it('steps back out correctly after a deeper level', () => {
-		const tree = items(['[ ] A', '    [ ] B', '        [ ] C', '    [ ] D']);
+		const tree = items(['[ ] A', '\t\t[ ] B', '\t\t\t\t[ ] C', '\t\t[ ] D']);
 		assert.equal(tree.get(3).parent, 0, 'D should return to A, not stay under C');
 		assert.deepEqual(tree.get(0).children, [1, 3]);
 	});
 
 	it('ignores lines that are not items', () => {
-		const tree = items(['A title', '[ ] Item', '    continuation text', '  [ ] Child']);
+		const tree = items(['A title', '[ ] Item', '    continuation text', '\t[ ] Child']);
 		assert.equal(tree.size, 2);
 		assert.equal(tree.get(3).parent, 1);
 	});
@@ -83,39 +116,39 @@ describe('reading the nesting', () => {
 
 describe('auto-checking a parent', () => {
 	it('checks a parent once its last child is checked', () => {
-		const before = ['[ ] Parent', '  [x] One', '  [ ] Two'];
-		const after = applied(['[ ] Parent', '  [x] One', '  [x] Two'], [2]);
+		const before = ['[ ] Parent', '\t[x] One', '\t[ ] Two'];
+		const after = applied(['[ ] Parent', '\t[x] One', '\t[x] Two'], [2]);
 		assert.equal(before[0], '[ ] Parent');
 		assert.equal(after[0], '[x] Parent');
 	});
 
 	it('leaves a parent alone while a child is outstanding', () => {
-		const after = applied(['[ ] Parent', '  [x] One', '  [ ] Two'], [1]);
+		const after = applied(['[ ] Parent', '\t[x] One', '\t[ ] Two'], [1]);
 		assert.equal(after[0], '[ ] Parent');
 	});
 
 	it('cascades up more than one level', () => {
-		const after = applied(['[ ] A', '  [ ] B', '    [x] C'], [2]);
-		assert.equal(after[1], '  [x] B');
+		const after = applied(['[ ] A', '\t[ ] B', '\t\t[x] C'], [2]);
+		assert.equal(after[1], '\t[x] B');
 		assert.equal(after[0], '[x] A');
 	});
 
 	it('stops cascading where a sibling is outstanding', () => {
-		const after = applied(['[ ] A', '  [ ] B', '    [x] C', '  [ ] D'], [2]);
-		assert.equal(after[1], '  [x] B', 'B has only C, which is done');
+		const after = applied(['[ ] A', '\t[ ] B', '\t\t[x] C', '\t[ ] D'], [2]);
+		assert.equal(after[1], '\t[x] B', 'B has only C, which is done');
 		assert.equal(after[0], '[ ] A', 'A still has D outstanding');
 	});
 
 	it('reopens a parent when a child is unchecked', () => {
 		// Not asked for, but the pair is what makes it coherent: a ticked
 		// parent above an unticked child states something false.
-		const after = applied(['[x] Parent', '  [x] One', '  [ ] Two'], [2]);
+		const after = applied(['[x] Parent', '\t[x] One', '\t[ ] Two'], [2]);
 		assert.equal(after[0], '[ ] Parent');
 	});
 
 	it('reopens all the way up', () => {
-		const after = applied(['[x] A', '  [x] B', '    [ ] C'], [2]);
-		assert.equal(after[1], '  [ ] B');
+		const after = applied(['[x] A', '\t[x] B', '\t\t[ ] C'], [2]);
+		assert.equal(after[1], '\t[ ] B');
 		assert.equal(after[0], '[ ] A');
 	});
 
@@ -123,7 +156,7 @@ describe('auto-checking a parent', () => {
 		// Those were set deliberately. A child being ticked is not a reason to
 		// overrule someone who marked the parent as blocked or abandoned.
 		for (const status of ['@', '~', '?', '>']) {
-			const after = applied([`[${status}] Parent`, '  [x] Child'], [1]);
+			const after = applied([`[${status}] Parent`, '\t[x] Child'], [1]);
 			assert.equal(after[0], `[${status}] Parent`, `[${status}] was overwritten`);
 		}
 	});
@@ -132,14 +165,14 @@ describe('auto-checking a parent', () => {
 		// The whole point of waiting is that it is not finished. A parent
 		// checking itself over one would be the format asserting something
 		// false, which is the reason auto-check exists in the first place.
-		const after = applied(['[ ] Parent', '  [x] One', '  [>] Waiting'], [1]);
+		const after = applied(['[ ] Parent', '\t[x] One', '\t[>] Waiting'], [1]);
 		assert.equal(after[0], '[ ] Parent');
 	});
 
 	it('does not count an obsolete child as done', () => {
 		// The conservative reading. Arguable the other way, and the reasoning
 		// is written down in src/tree.ts.
-		const after = applied(['[ ] Parent', '  [x] One', '  [~] Abandoned'], [1]);
+		const after = applied(['[ ] Parent', '\t[x] One', '\t[~] Abandoned'], [1]);
 		assert.equal(after[0], '[ ] Parent');
 	});
 
@@ -153,7 +186,7 @@ describe('auto-checking a parent', () => {
 
 	it('handles several edits at once without contradicting itself', () => {
 		// Toggling a whole selection is one edit over many lines.
-		const after = applied(['[ ] Parent', '  [ ] One', '  [ ] Two'].map((line, i) =>
+		const after = applied(['[ ] Parent', '\t[ ] One', '\t[ ] Two'].map((line, i) =>
 			i === 0 ? line : line.replace('[ ]', '[x]')), [1, 2]);
 		assert.equal(after[0], '[x] Parent');
 	});

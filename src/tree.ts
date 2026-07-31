@@ -56,9 +56,28 @@ function isDone(status: Status): boolean {
 	return status === 'x';
 }
 
-/** Whether `inner` is nested inside `outer`, by indentation. */
+/** An indent that can nest: tabs, and nothing else. */
+const NESTABLE = /^\t*$/;
+
+/**
+ * Whether `inner` is nested inside `outer`, by indentation.
+ *
+ * Only tabs nest. The earlier rule here was "two or more spaces, or one tab",
+ * which was too loose in a way that cost real structure: a three-space line
+ * became a child of a two-space one, so a single stray space created a level
+ * and nothing said anything.
+ *
+ * Compared as a prefix rather than a width. That mattered more when spaces
+ * nested - four tabs is four characters and six spaces is six, so measuring by
+ * width made the deeper-looking line the shallower one - and it is kept
+ * because it is still the correct test and costs nothing.
+ *
+ * A space-indented checkbox is not lost by this: items() records every line
+ * that holds one, and indentation only decides parentage, so such a line
+ * becomes a sibling rather than a child. src/diagnostics.ts reports it.
+ */
 function isDeeper(inner: string, outer: string): boolean {
-	return inner.length > outer.length && inner.startsWith(outer);
+	return inner.length > outer.length && inner.startsWith(outer) && NESTABLE.test(inner);
 }
 
 /**

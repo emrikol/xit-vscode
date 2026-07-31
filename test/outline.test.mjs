@@ -12,10 +12,14 @@ import { createRequire } from 'node:module';
 
 const { outline } = createRequire(import.meta.url)('../out/outline.js');
 
-/** The tree as indented text, which is far easier to assert on than nested objects. */
+/**
+ * The tree as indented text, which is far easier to assert on than nested
+ * objects. A tab per level, matching the format itself, so the expected shape
+ * of an outline reads the same as the document that produced it.
+ */
 function shape(nodes, depth = 0) {
 	return nodes.flatMap((node) => [
-		'  '.repeat(depth) + node.name,
+		'\t'.repeat(depth) + node.name,
 		...shape(node.children, depth + 1),
 	]);
 }
@@ -26,30 +30,30 @@ describe('outline', () => {
 		// by one title".
 		assert.deepEqual(shape(outline(['Reading list', '[ ] A book', '[x] Another'])), [
 			'Reading list',
-			'  [ ] A book',
-			'  [x] Another',
+			'\t[ ] A book',
+			'\t[x] Another',
 		]);
 	});
 
 	it('nests subtasks under their parent', () => {
-		assert.deepEqual(shape(outline(['[ ] Parent', '  [x] One', '    [ ] Deeper', '  [ ] Two'])), [
+		assert.deepEqual(shape(outline(['[ ] Parent', '\t[x] One', '\t\t[ ] Deeper', '\t[ ] Two'])), [
 			'[ ] Parent',
-			'  [x] One',
-			'    [ ] Deeper',
-			'  [ ] Two',
+			'\t[x] One',
+			'\t\t[ ] Deeper',
+			'\t[ ] Two',
 		]);
 	});
 
 	it('starts a new section at each title', () => {
 		const lines = ['First', '[ ] One', '', 'Second', '[ ] Two'];
-		assert.deepEqual(shape(outline(lines)), ['First', '  [ ] One', 'Second', '  [ ] Two']);
+		assert.deepEqual(shape(outline(lines)), ['First', '\t[ ] One', 'Second', '\t[ ] Two']);
 	});
 
 	it('keeps items before any title at the top level', () => {
 		assert.deepEqual(shape(outline(['[ ] Loose', 'A title', '[ ] Owned'])), [
 			'[ ] Loose',
 			'A title',
-			'  [ ] Owned',
+			'\t[ ] Owned',
 		]);
 	});
 
@@ -84,13 +88,13 @@ describe('outline', () => {
 	it('covers an item and everything under it', () => {
 		// The range is what collapsing the panel row collapses, so it has to
 		// include continuations and subtasks.
-		const [parent] = outline(['[ ] Parent ...', '    ... continued', '  [ ] Child', '[ ] Next']);
+		const [parent] = outline(['[ ] Parent ...', '    ... continued', '\t[ ] Child', '[ ] Next']);
 		assert.equal(parent.line, 0);
 		assert.equal(parent.endLine, 2);
 	});
 
 	it('covers a title to the end of its group', () => {
-		const [title] = outline(['Todos', '[ ] One', '  [ ] Nested', '', 'Next', '[ ] Two']);
+		const [title] = outline(['Todos', '[ ] One', '\t[ ] Nested', '', 'Next', '[ ] Two']);
 		assert.equal(title.endLine, 2);
 	});
 
@@ -102,11 +106,11 @@ describe('outline', () => {
 	});
 
 	it('selects the checkbox, not the whole line', () => {
-		const [parent] = outline(['[ ] Parent', '    [ ] Child']);
+		const [parent] = outline(['[ ] Parent', '\t[ ] Child']);
 		assert.equal(parent.selectionStart, 0);
 		assert.equal(parent.selectionEnd, 3);
-		assert.equal(parent.children[0].selectionStart, 4, 'a subtask selects its own indented checkbox');
-		assert.equal(parent.children[0].selectionEnd, 7);
+		assert.equal(parent.children[0].selectionStart, 1, 'a subtask selects its own indented checkbox');
+		assert.equal(parent.children[0].selectionEnd, 4);
 	});
 
 	it('collapses whitespace in a name', () => {

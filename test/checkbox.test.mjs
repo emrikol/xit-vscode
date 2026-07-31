@@ -48,20 +48,20 @@ describe('readStatus', () => {
 
 	it('accepts an indented checkbox, which the grammar may not', () => {
 		// Subtasks, this fork's addition (discussion #2). Deliberately more
-		// permissive than the grammar, which wants two spaces or a tab and an
-		// item above to nest under: highlighting describes the format and has
-		// to be strict, a command does not. Toggling a checkbox the grammar
-		// declined to colour is harmless; refusing to would be baffling.
-		assert.equal(readStatus('  [x] A subtask'), 'x');
+		// permissive than the grammar, which wants a tab and an item above to
+		// nest under: highlighting describes the format and has to be strict,
+		// a command does not. Toggling a checkbox the grammar declined to
+		// colour is harmless; refusing to would be baffling.
+		assert.equal(readStatus('\t[x] A subtask'), 'x');
 		assert.equal(readStatus('\t[@] A subtask'), '@');
-		assert.equal(readStatus(' [x] Not nested enough to be coloured'), 'x');
+		assert.equal(readStatus('  [x] Spaces no longer nest, but this still toggles'), 'x');
 	});
 
 	it('reports the column the checkbox sits at', () => {
 		// editSelectedCheckboxes replaces a three-character range, and it has
 		// to move with the indentation or a subtask loses its indent.
 		assert.deepEqual(readCheckbox('[ ] Top level'), { column: 0, status: ' ' });
-		assert.deepEqual(readCheckbox('    [x] Indented'), { column: 4, status: 'x' });
+		assert.deepEqual(readCheckbox('\t\t[x] Indented'), { column: 2, status: 'x' });
 		assert.deepEqual(readCheckbox('\t[~] Tabbed'), { column: 1, status: '~' });
 		assert.equal(readCheckbox('Not an item'), null);
 	});
@@ -74,7 +74,7 @@ describe('writeStatus', () => {
 	});
 
 	it('keeps the indentation that makes a subtask one', () => {
-		assert.equal(writeStatus('    [ ] A subtask', 'x'), '    [x] A subtask');
+		assert.equal(writeStatus('\t\t[ ] A subtask', 'x'), '\t\t[x] A subtask');
 		assert.equal(writeStatus('\t\t[ ] Deeper', '@'), '\t\t[@] Deeper');
 	});
 

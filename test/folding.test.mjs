@@ -20,7 +20,7 @@ function shape(lines) {
 
 describe('folding items', () => {
 	it('folds an item with subtasks', () => {
-		assert.deepEqual(shape(['[ ] Parent', '  [x] One', '  [ ] Two']), ['item 0-2']);
+		assert.deepEqual(shape(['[ ] Parent', '\t[x] One', '\t[ ] Two']), ['item 0-2']);
 	});
 
 	it('folds an item with a description continuation', () => {
@@ -33,18 +33,18 @@ describe('folding items', () => {
 	});
 
 	it('folds each level of a nest', () => {
-		assert.deepEqual(shape(['[ ] A', '  [ ] B', '    [ ] C']), ['item 0-2', 'item 1-2']);
+		assert.deepEqual(shape(['[ ] A', '\t[ ] B', '\t\t[ ] C']), ['item 0-2', 'item 1-2']);
 	});
 
 	it('stops at a blank line', () => {
 		// Spec §Item: "The item MUST NOT contain any blank lines."
-		assert.deepEqual(shape(['[ ] Parent', '  [ ] Child', '', '  [ ] Unrelated']), ['item 0-1']);
+		assert.deepEqual(shape(['[ ] Parent', '\t[ ] Child', '', '\t[ ] Unrelated']), ['item 0-1']);
 	});
 
 	it('does not treat a continuation as a subtask, which plain indentation would', () => {
 		// The whole reason this provider exists. Indentation folding cannot
 		// see that line 2 belongs to line 0 rather than to line 1.
-		assert.deepEqual(shape(['[ ] Parent ...', '  [ ] Child', '    ... parent continued']), ['item 0-2', 'item 1-2']);
+		assert.deepEqual(shape(['[ ] Parent ...', '\t[ ] Child', '    ... parent continued']), ['item 0-2', 'item 1-2']);
 	});
 });
 
@@ -64,7 +64,7 @@ describe('folding comments', () => {
 	});
 
 	it('offers no item or group folds inside a comment', () => {
-		const lines = ['<!--', '[ ] parked', '  [ ] parked child', 'A parked title', '[ ] more', '-->'];
+		const lines = ['<!--', '[ ] parked', '\t[ ] parked child', 'A parked title', '[ ] more', '-->'];
 		assert.deepEqual(shape(lines), ['comment 0-5']);
 	});
 });
@@ -97,7 +97,7 @@ describe('folding groups', () => {
 
 describe('folding a whole document', () => {
 	it('sorts ranges by where they start', () => {
-		const lines = ['Todos', '[ ] Parent', '  [x] Child', '', '<!--', 'parked', '-->'];
+		const lines = ['Todos', '[ ] Parent', '\t[x] Child', '', '<!--', 'parked', '-->'];
 		assert.deepEqual(shape(lines), ['group 0-2', 'item 1-2', 'comment 4-6']);
 	});
 

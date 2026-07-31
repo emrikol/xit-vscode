@@ -320,7 +320,7 @@ describe('first-line detection', () => {
 		// This is the one that would actually bite. Markdown writes them with
 		// a list marker in front, so anchoring at the start of the line is
 		// enough to tell them apart.
-		for (const line of ['- [ ] A markdown task', '* [x] Another one', '  [ ] Indented']) {
+		for (const line of ['- [ ] A markdown task', '* [x] Another one', '\t[ ] Indented']) {
 			assert.doesNotMatch(line, firstLine, `${line} was claimed`);
 		}
 	});

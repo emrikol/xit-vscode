@@ -120,8 +120,8 @@ describe('the next occurrence of an item', () => {
 
 	it('keeps the indentation, so a repeating subtask stays a subtask', () => {
 		assert.equal(
-			next('  [x] Sub -> 2026-08-03 #repeat=weekly'),
-			'  [ ] Sub -> 2026-08-10 #repeat=weekly',
+			next('\t[x] Sub -> 2026-08-03 #repeat=weekly'),
+			'\t[ ] Sub -> 2026-08-10 #repeat=weekly',
 		);
 	});
 

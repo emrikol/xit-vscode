@@ -93,7 +93,7 @@ describe('extra due dates', () => {
 
 	it('says nothing about a subtask having its own', () => {
 		// A subtask is a different item, so its date is its first.
-		assert.deepEqual(codes(['[ ] Parent -> 2026-01-01', '  [ ] Child -> 2026-02-02']), []);
+		assert.deepEqual(codes(['[ ] Parent -> 2026-01-01', '\t[ ] Child -> 2026-02-02']), []);
 	});
 
 	it('is only a hint, because nothing is actually wrong', () => {
@@ -124,9 +124,41 @@ describe('what is inside a comment', () => {
 	});
 });
 
+describe('an indent that cannot nest', () => {
+	it('reports one to three spaces', () => {
+		// The realistic case: a file written when "two or more spaces, or one
+		// tab" still nested. Nothing is lost, but the nesting is gone, and
+		// silently losing structure is what this exists to prevent.
+		for (const indent of [' ', '  ', '   ']) {
+			assert.deepEqual(codes(['[ ] Parent', `${indent}[ ] Child`]), ['cannot-nest@1'], JSON.stringify(indent));
+		}
+	});
+
+	it('reports a tab mixed with spaces', () => {
+		assert.deepEqual(codes(['[ ] Parent', '\t  [ ] Child']), ['cannot-nest@1']);
+		assert.deepEqual(codes(['[ ] Parent', '  \t[ ] Child']), ['cannot-nest@1']);
+	});
+
+	it('says nothing about a tab, which is how nesting is written', () => {
+		assert.deepEqual(codes(['[ ] Parent', '\t[ ] Child', '\t\t[ ] Deeper']), []);
+	});
+
+	it('says nothing about four spaces, which is a description continuation', () => {
+		// A continuation may begin with a bracket - the syntax guide has that
+		// example, and this grammar agrees with it again now that four spaces
+		// no longer nests. Reporting it would half-undo that.
+		assert.deepEqual(codes(['[ ] Parent', '    [ ] not a subtask, just description']), []);
+		assert.deepEqual(codes(['[ ] Parent', '        [ ] nor is this']), []);
+	});
+
+	it('says nothing about a line with no checkbox on it', () => {
+		assert.deepEqual(codes(['[ ] Parent', '  just some indented prose']), []);
+	});
+});
+
 describe('a clean document', () => {
 	it('has nothing to say about it', () => {
-		const lines = ['Todos', '[ ] One -> 2026-02-28', '  [x] Two', '', '<!-- parked -->'];
+		const lines = ['Todos', '[ ] One -> 2026-02-28', '\t[x] Two', '', '<!-- parked -->'];
 		assert.deepEqual(problems(lines), []);
 	});
 });

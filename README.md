@@ -125,26 +125,32 @@ This is the format author's own suggestion for keeping a list inside a larger do
 
 ## Subtasks
 
-An item indented under another is a subtask. Indent by two spaces or more, or by one tab.
+An item indented under another is a subtask. **One tab per level.**
 
 ```
 [ ] Ship the release
-  [x] Write the notes
-  [x] Tag the commit
-  [ ] Publish
+	[x] Write the notes
+	[x] Tag the commit
+	[ ] Publish
 ```
+
+There is no depth limit, on purpose. A cap would have to live in the TypeScript and in the diagnostics and could not live in the grammar, which nests by back-referencing its parent's indentation and so cannot count; the highlighting and the diagnostics disagreeing about one line is worse than no limit at all.
 
 Check the last outstanding subtask and the parent checks itself, all the way up the nest. Uncheck one and the parent reopens, because a ticked parent above an unticked child states something false. Turn it off with `xit.autoCheckParents`. It only ever moves an item between open and checked — an ongoing, obsolete or in-question parent was set deliberately and is left alone.
 
-Depth is compared as a prefix, not as a width, so a tab-indented nest and a space-indented one do not nest inside each other. Pick one. Four tabs is four characters and six spaces is six, so measuring by width would make the deeper-looking line the shallower one.
+**Spaces do not nest.** This rule was looser to begin with — "two or more spaces, or one tab, from the previous level" — and that was our own invention and too loose to keep. A three-space line became a child of a two-space one, so a single stray space created a nesting level and nothing said anything. Tabs for indentation, spaces for alignment: nesting is structure and should scale to whatever depth you like a level to look, so it is a tab.
 
-Tabs work for description continuations too, which the specification does not allow — it asks for exactly four spaces, and the syntax guide lists a tab as invalid. Without that second fork, the Tab key would nest a subtask but break a continuation, and you would need tabs and spaces in the same document. `.xit` files also default to `editor.insertSpaces: false`, so Tab inserts a real tab; override it per language if you prefer spaces, which still work everywhere.
+A space-indented checkbox is not lost by the change. Indentation only decides which item is the parent, so such a line becomes a sibling rather than a child, and the Problems panel reports it as `cannot-nest`. Four spaces or more stays silent, because that is a description continuation and a continuation may begin with a bracket.
+
+Description continuations are unchanged: four spaces, or a tab. Four is not arbitrary — `[ ] ` is exactly four columns, so the continuation lands under the first letter of the description. A tab is however many columns the reader's tab stop says, which is four here and eight on GitHub and in most terminals, so spaces are what keep that alignment true everywhere. The tab is kept alongside them because otherwise the Tab key would nest a subtask and break a continuation. `.xit` files default to `editor.insertSpaces: false`, so Tab inserts a real tab.
+
+Separating the two rules had an unexpected reward. The syntax guide's `description/8` says "Square brackets in the description (even at the beginning of subsequent lines) are not recognised as checkboxes", with a four-space example — and that example agrees with this grammar again, so tightening a rule for its own reasons gave a conformance divergence back.
 
 A closed parent strikes through its own description, but not its subtasks: an open subtask under a checked parent is not done, and is not drawn as though it were. A subtask struck through is one that is closed in its own right.
 
 **This is a fork of the format.** [Discussion #2](https://github.com/jotaen/xit/discussions/2) is the most-upvoted open request on [x]it!, at 21, and jotaen has not adopted it — his stated hesitation is whether editors can implement it at all. Other xit tools will read a subtask as the parent's description text, which still reads correctly to a person, but the nesting is ours alone.
 
-The one thing it costs: a description continuation can no longer begin with a literal `[ ]`, because that is now a subtask. The syntax guide has an example of exactly that, and `test/conformance.test.mjs` records the divergence.
+The one thing it costs: a description continuation indented with a tab can no longer begin with a literal `[ ]`, because that is a subtask. At four spaces it can, which is why the guide's own example of exactly that agrees with this grammar.
 
 ## Overdue Dates
 

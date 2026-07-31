@@ -16,7 +16,7 @@
  * nice-to-have." A todo list that shouts at you is a worse todo list.
  */
 
-import { STATUSES } from './checkbox';
+import { STATUSES, readCheckbox } from './checkbox';
 import { commentLines } from './comment';
 import { dueDatesOn } from './dueDate';
 import { items } from './tree';
@@ -52,6 +52,28 @@ function lastDayOfMonth(year: number, month: number): number {
  */
 const NEARLY_A_CHECKBOX = /^\[[^\]\n]{0,3}\]/;
 
+/**
+ * Whether `indent` before a checkbox can neither nest nor continue.
+ *
+ * Nesting is one tab per level. Four spaces or more is a description
+ * continuation, and a line of description that happens to begin with `[ ]` is
+ * legal - the syntax guide has exactly that example - so those stay silent.
+ *
+ * What is left is unambiguous: one to three spaces, or any mix of tabs and
+ * spaces in either order. Neither nests, neither continues, and both are
+ * almost always a file written when "two or more spaces" still nested. Saying
+ * so is what let that rule be tightened without losing anyone's structure.
+ *
+ * Written out rather than done as one pattern because the mixed case has to
+ * hold whichever character comes first, and the regular expression that says
+ * that is harder to read than the sentence it stands for.
+ */
+function cannotNest(indent: string): boolean {
+	if (!indent.includes(' ')) return false;
+	if (indent.includes('\t')) return true;
+	return indent.length < 4;
+}
+
 /** Everything worth reporting about a document. */
 export function problems(lines: readonly string[]): Problem[] {
 	const found: Problem[] = [];
@@ -78,6 +100,21 @@ export function problems(lines: readonly string[]): Problem[] {
 					message: `${year}-${String(month).padStart(2, '0')} has ${last} days, so this date does not exist.`,
 				});
 			}
+		}
+
+		// An indent that used to nest and no longer does. Reported wherever the
+		// line really does hold a checkbox, whether or not it ended up an item,
+		// because the point is the indentation rather than the checkbox.
+		const checkbox = readCheckbox(text);
+		if (checkbox && checkbox.column > 0 && cannotNest(text.slice(0, checkbox.column))) {
+			found.push({
+				line,
+				start: 0,
+				end: checkbox.column,
+				severity: 'warning',
+				code: 'cannot-nest',
+				message: 'This indentation does not nest. A subtask is indented by one tab per level; spaces do not nest, and a tab mixed with spaces does not either.',
+			});
 		}
 
 		// Something shaped like a checkbox that is not one. Reported only when

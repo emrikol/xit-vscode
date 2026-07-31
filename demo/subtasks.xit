@@ -7,7 +7,7 @@ Subtasks are a fork of the format
 	[x] Move the plants
 	[x] Find whose mug that is
 
-Tabs or two spaces or more, to any depth
+One tab per level, to any depth
 [ ] Any depth works
 	[ ] One tab
 		[ ] Two tabs
@@ -18,8 +18,13 @@ A subtask keeps its own due date
 	[ ] Child has its own -> 2026-08-14
 	[ ] So does this one -> 2026-09-01
 
-Descriptions still continue, with a tab or four spaces
+Descriptions continue with four spaces, or a tab
 [ ] This one has a description ...
 	... continued with a tab
 	[ ] and a subtask under that
 		... which continues too
+
+Spaces do not nest, and the Problems panel says so
+[ ] This parent keeps its own level
+  [ ] two spaces is reported as cannot-nest
+    [ ] four spaces is description text, not a subtask
