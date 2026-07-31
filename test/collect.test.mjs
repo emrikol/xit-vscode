@@ -9,7 +9,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { collect, urgencyOf, isOpen } = createRequire(import.meta.url)('../out/collect.js');
+const require_ = createRequire(import.meta.url);
+const { collect, urgencyOf, isOpen, overdueCount } = require_('../out/collect.js');
 
 const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
 const urgency = (line) => urgencyOf(collect([line])[0], THRESHOLDS);
@@ -151,5 +152,37 @@ describe('what counts as outstanding', () => {
 		for (const status of ['x', '~']) {
 			assert.equal(isOpen(collect([`[${status}] x`])[0]), false, status);
 		}
+	});
+});
+
+describe('the status bar count', () => {
+	const files = (...lines) => [{ items: collect(lines) }];
+
+	it('counts overdue items, and how many of those are critical', () => {
+		const { overdue, critical } = overdueCount(files(
+			'[ ] Long gone -> 2020-01-01',
+			'[ ] Just late -> 2026-07-30',
+			'[ ] Fine -> 2027-01-01',
+		), THRESHOLDS);
+
+		assert.equal(overdue, 2);
+		assert.equal(critical, 1);
+	});
+
+	it('leaves out anything finished', () => {
+		assert.deepEqual(overdueCount(files('[x] Done -> 2020-01-01', '[~] Abandoned -> 2020-01-01'), THRESHOLDS),
+			{ overdue: 0, critical: 0 });
+	});
+
+	it('leaves out what you cannot act on, matching the sidebar', () => {
+		// A waiting item and one whose start date has not arrived sort into
+		// their own groups rather than by their due date, so counting them as
+		// overdue would make the status bar disagree with the panel it opens.
+		assert.deepEqual(overdueCount(files('[>] Waiting -> 2020-01-01'), THRESHOLDS), { overdue: 0, critical: 0 });
+		assert.deepEqual(overdueCount(files('[ ] Later <- 2026-09-01 -> 2020-01-01'), THRESHOLDS), { overdue: 0, critical: 0 });
+	});
+
+	it('is zero for an empty workspace', () => {
+		assert.deepEqual(overdueCount([], THRESHOLDS), { overdue: 0, critical: 0 });
 	});
 });

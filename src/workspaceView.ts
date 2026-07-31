@@ -9,7 +9,7 @@
 
 import * as vscode from 'vscode';
 
-import { Collected, Urgency, isOpen, urgencyOf } from './collect';
+import { Collected, Urgency, isOpen, overdueCount, urgencyOf } from './collect';
 import { todayFrom } from './dueDate';
 import { WorkspaceIndex } from './workspaceIndex';
 
@@ -118,9 +118,58 @@ class Provider implements vscode.TreeDataProvider<Element> {
 	}
 }
 
+/**
+ * A count of what is late, always visible, costing no screen space.
+ *
+ * Says nothing when nothing is overdue. A permanent `0` is noise, and a status
+ * bar entry that is always there stops being read.
+ *
+ * The critical tier is named in the text rather than only coloured. A status
+ * bar background is one of two colours VS Code offers and a theme may override
+ * either, so colour cannot be the thing carrying the meaning - the same
+ * reasoning as the overdue decoration, and WCAG SC 1.4.1.
+ */
+function registerStatusBar(context: vscode.ExtensionContext, index: WorkspaceIndex) {
+	const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+	status.command = 'xit.items.focus';
+
+	const update = () => {
+		const configuration = vscode.workspace.getConfiguration('xit');
+		const { overdue, critical } = overdueCount(index.all(), {
+			today: todayFrom(new Date()),
+			criticalAfterDays: configuration.get<number>('criticallyOverdueAfterDays', 14),
+			soonWithinDays: configuration.get<number>('dueSoonWithinDays', 7),
+		});
+
+		if (!configuration.get<boolean>('overdueInStatusBar', true) || overdue === 0) {
+			status.hide();
+			return;
+		}
+
+		status.text = `$(warning) ${overdue} overdue`;
+		status.tooltip = critical > 0
+			? `${overdue} outstanding items are past their due date, ${critical} of them by more than the critical threshold.`
+			: `${overdue} outstanding items are past their due date.`;
+		status.backgroundColor = critical > 0
+			? new vscode.ThemeColor('statusBarItem.warningBackground')
+			: undefined;
+		status.show();
+	};
+
+	index.onDidChange(update);
+	vscode.workspace.onDidChangeConfiguration((event) => {
+		if (event.affectsConfiguration('xit')) update();
+	}, undefined, context.subscriptions);
+
+	context.subscriptions.push(status);
+	update();
+}
+
 export function registerWorkspaceView(context: vscode.ExtensionContext) {
 	const index = new WorkspaceIndex();
 	const provider = new Provider(index);
+
+	registerStatusBar(context, index);
 
 	const view = vscode.window.createTreeView('xit.items', {
 		treeDataProvider: provider,

@@ -138,3 +138,26 @@ export function isOpen(item: Collected): boolean {
 	// and in-question are not.
 	return item.status !== 'x' && item.status !== '~';
 }
+
+/**
+ * How many outstanding items are overdue, and how many of those are critical.
+ *
+ * Exported so it can be unit tested without a status bar. The thresholds are
+ * read the same way the view and the editor decorations read them, so the
+ * three cannot disagree about what is late.
+ */
+export function overdueCount(files: { items: Collected[] }[], thresholds: Thresholds) {
+	let overdue = 0;
+	let critical = 0;
+
+	for (const file of files) {
+		for (const item of file.items) {
+			if (!isOpen(item)) continue;
+			const urgency = urgencyOf(item, thresholds);
+			if (urgency === 'critical') critical += 1;
+			if (urgency === 'critical' || urgency === 'overdue') overdue += 1;
+		}
+	}
+
+	return { overdue, critical };
+}

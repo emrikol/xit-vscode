@@ -303,6 +303,16 @@ Checked and obsolete items are hidden; the toolbar toggles them back. Both count
 
 This is the part that makes a plain-text todo list bearable across more than one file. Three people built it outside VS Code before this existed: a shell script in [#12](https://github.com/jotaen/xit/discussions/12), an HTML view in [#7](https://github.com/jotaen/xit/discussions/7), and a whole terminal UI in [#38](https://github.com/jotaen/xit/discussions/38), whose author described his todos as "littered with undone, forgotten `[ ] things`".
 
+## Status Bar
+
+A count of what is overdue across the workspace, always visible, costing no screen space. Click it to open the workspace view.
+
+It says nothing when nothing is overdue — a permanent `0` is noise, and a status bar entry that is always there stops being read. Turn it off with `xit.overdueInStatusBar`.
+
+The count uses the same thresholds as the sidebar and the editor decorations, so the three cannot disagree about what is late. That includes the awkward cases: a `[>]` waiting item and one whose start date has not arrived are **not** counted as overdue, however old their due date, because they do not appear as overdue in the panel the status bar opens.
+
+Where some of them are critically overdue, the count says so in its tooltip and takes a warning background. The number is in the text rather than only in the colour: a status bar background is one of two colours VS Code offers and a theme may override either, so colour cannot be the thing carrying the meaning.
+
 ## Problems
 
 The syntax highlighting cannot check everything the specification asks for, and one rule it cannot check is a `MUST`:

@@ -145,6 +145,11 @@
                     "default": 7,
                     "minimum": 0,
                     "description": "Days ahead within which a due date counts as due soon, in the workspace view."
+                },
+                "xit.overdueInStatusBar": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a count of overdue items in the status bar. It says nothing when nothing is overdue, so a quiet workspace costs no space."
                 }
             }
         },
