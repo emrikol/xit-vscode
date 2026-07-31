@@ -598,3 +598,38 @@ describe('links between items', () => {
 		assert.deepEqual(links, []);
 	});
 });
+
+describe('references across files', () => {
+	it('follows one into another file', async () => {
+		// demo/showcase.xit waits on an item in demo/linked.xit. Both are in
+		// the test workspace, so the index has read them.
+		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();
+		await vscode.commands.executeCommand('xit.refreshItems');
+
+		const all = await vscode.workspace.findFiles('**/*.xit');
+		const showcase = all.find(uri => uri.path.endsWith('/showcase.xit'));
+		assert.ok(showcase, `showcase.xit not in the workspace: ${JSON.stringify(all.map(uri => uri.path))}`);
+
+		const document = await vscode.workspace.openTextDocument(showcase);
+		await vscode.window.showTextDocument(document);
+
+		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+			'vscode.executeLinkProvider', document.uri) ?? [];
+
+		const across = links.filter(link => link.target?.path.endsWith('linked.xit'));
+		assert.equal(across.length, 1,
+			`no cross-file link among ${links.length}: ${JSON.stringify(links.map(one => one.target?.toString()))}`);
+		assert.equal(across[0].target!.fragment, 'L3', 'points at the line the id is on');
+	});
+
+	it('reports a reference to a file that has no such id', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit', content: '[ ] Send #after="nowhere.xit#zzzz"',
+		});
+		await vscode.window.showTextDocument(document);
+		await new Promise(resolve => setTimeout(resolve, 400));
+
+		const found = vscode.languages.getDiagnostics(document.uri);
+		assert.ok(found.some(one => one.code === 'unknown-id'), JSON.stringify(found.map(one => one.code)));
+	});
+});

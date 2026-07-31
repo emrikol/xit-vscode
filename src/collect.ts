@@ -17,7 +17,7 @@ import { commentLines } from './comment';
 import { directives } from './directive';
 import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { estimateOn } from './estimate';
-import { blocked as blockedLines } from './link';
+import { Reference, blocked as blockedLines, dependencies } from './link';
 import { tags } from './tag';
 import { items } from './tree';
 
@@ -36,8 +36,16 @@ export interface Collected {
 	tags: string[];
 	/** How long it is expected to take, in minutes, or null. */
 	estimate: number | null;
-	/** Whether it waits on another item that is not finished yet. */
+	/**
+	 * Whether it waits on another item that is not finished yet.
+	 *
+	 * Answered here for references within this file, which is all a pure
+	 * function over one document can know. WorkspaceIndex follows the ones
+	 * naming another file and sets this again.
+	 */
 	blocked: boolean;
+	/** What it waits on, unresolved. The index needs these to look across files. */
+	waitingOn: Reference[];
 	parent: number | null;
 	children: number[];
 }
@@ -54,6 +62,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 	// src/directive.ts: a work.xit should not need `#work` on every line.
 	const inherited = directives(lines).tags;
 	const waiting = blockedLines(lines);
+	const waitingOn = dependencies(lines);
 	const all = items(lines);
 	const allTags = tags(lines);
 
@@ -96,6 +105,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 				tags: [...new Set([...inherited, ...allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key)])],
 				estimate: estimateOn(text, estimateTag),
 				blocked: waiting.has(item.line),
+				waitingOn: waitingOn.filter((each) => each.line === item.line).map((each) => each.on),
 				parent: item.parent,
 				children: item.children,
 			};

@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
-const { identities, dependencies, linkProblems, blocked, freshId, foldId } = require_('../out/link.js');
+const { identities, dependencies, linkProblems, blocked, freshId, foldId, parseReference } = require_('../out/link.js');
 const { collect, urgencyOf } = require_('../out/collect.js');
 
 const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
@@ -24,7 +24,8 @@ describe('reading identity', () => {
 	});
 
 	it('finds an item that waits on another', () => {
-		assert.deepEqual(dependencies(['[ ] Send #after=k3f9']).map((each) => [each.line, each.on]), [[0, 'k3f9']]);
+		assert.deepEqual(dependencies(['[ ] Send #after=k3f9']).map((each) => [each.line, each.on]),
+			[[0, { file: null, id: 'k3f9' }]]);
 	});
 
 	it('ignores anything inside a comment', () => {
@@ -122,6 +123,42 @@ describe('being blocked', () => {
 		const [, item] = collect(['[x] A #id=aaaa', '[ ] B #after=aaaa -> 2020-01-01']);
 		assert.equal(item.blocked, false);
 		assert.equal(urgencyOf(item, THRESHOLDS), 'critical');
+	});
+});
+
+describe('referring across files', () => {
+	// The file first, then the id. Quoted, because `.` and `#` are not legal
+	// in an unquoted tag value and a quoted one takes anything - so this needs
+	// no new syntax at all.
+	it('splits a file from an id', () => {
+		assert.deepEqual(parseReference('work-todo.xit#k3f9'), { file: 'work-todo.xit', id: 'k3f9' });
+	});
+
+	it('reads a bare id as this file', () => {
+		assert.deepEqual(parseReference('k3f9'), { file: null, id: 'k3f9' });
+	});
+
+	it('splits at the last hash, so a filename may hold one', () => {
+		assert.deepEqual(parseReference('odd#name.xit#k3f9'), { file: 'odd#name.xit', id: 'k3f9' });
+	});
+
+	it('reads one off a quoted tag value', () => {
+		const [each] = dependencies(['[ ] Send #after="work-todo.xit#k3f9"']);
+		assert.deepEqual(each.on, { file: 'work-todo.xit', id: 'k3f9' });
+	});
+
+	it('does not block on a cross-file reference, which only the index can judge', () => {
+		// A pure function over one document does not know what other files
+		// exist. WorkspaceIndex follows these and sets blocked again.
+		assert.deepEqual([...blocked(['[ ] Send #after="other.xit#k3f9"'])], []);
+	});
+
+	it('does not report one as an unknown id either, for the same reason', () => {
+		assert.deepEqual(kinds(['[ ] Send #after="other.xit#k3f9"']), []);
+	});
+
+	it('still reports a bare id that nothing here has', () => {
+		assert.deepEqual(kinds(['[ ] Send #after=zzzz']), ['unknown-id@0']);
 	});
 });
 

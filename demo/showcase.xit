@@ -35,3 +35,7 @@
 [ ] Book the venue <- 2026-09-01 -> 2026-09-30
 [ ] Chase the invoice <- 2026-08-15
 [>] Waiting on the contract to come back
+
+# Waiting on another file
+
+[ ] Post the contract #after="linked.xit#k3f9"

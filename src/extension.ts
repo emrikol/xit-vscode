@@ -308,28 +308,67 @@ async function giveIdToItem(editor: vscode.TextEditor) {
 /**
  * Make `#after=` clickable, so a reference goes to what it waits on.
  *
- * Within one document. Ids resolve inside a file, which is a real limit and a
- * deliberate one: making them resolve across a workspace needs ids to be
- * unique across every file, and nothing generates or enforces that. Better a
- * scope that is honest than one that works until two files collide.
+ * `#after=k3f9` is this file; `#after="work-todo.xit#k3f9"` is that one. Both
+ * resolve through the workspace index, which has already read every `.xit`, so
+ * a cross-file link works without opening anything.
+ *
+ * Naming the file beats making ids unique across the workspace. Nothing
+ * generates or enforces that uniqueness, so a global namespace works right up
+ * until two files collide and is then silently wrong; an explicit filename
+ * cannot be.
  */
-function registerLinks(context: vscode.ExtensionContext) {
+function registerLinks(context: vscode.ExtensionContext, index: WorkspaceIndex) {
 	context.subscriptions.push(vscode.languages.registerDocumentLinkProvider(LANGUAGE, {
 		provideDocumentLinks(document) {
 			const lines = documentLines(document);
-			const target = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
+			// A reference to this file is answered from this file. Going
+			// through the index for it would fail on anything the index has
+			// not read - an untitled buffer, a file outside the workspace -
+			// which is exactly where you are most likely to be writing one.
+			const here = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
 
 			return dependencies(lines).flatMap((each) => {
-				const at = target.get(foldId(each.on));
-				if (at === undefined) return [];
+				const target = each.on.file === null
+					? nullable(here.get(foldId(each.on.id)), (line) => ({ uri: document.uri, line }))
+					: index.resolve(document.uri, each.on);
+				if (!target) return [];
 
 				const link = new vscode.DocumentLink(new vscode.Range(each.line, each.tag.start, each.line, each.tag.end));
-				link.target = document.uri.with({ fragment: `L${at + 1}` });
-				link.tooltip = lines[at].trim();
+				link.target = target.uri.with({ fragment: `L${target.line + 1}` });
+				link.tooltip = each.on.file === null
+					? 'Go to the item this waits on'
+					: `Go to ${each.on.file}, line ${target.line + 1}`;
 				return [link];
 			});
 		},
 	}));
+}
+
+/** Apply `then` to a value that may be undefined, which reads better than a ternary here. */
+function nullable<T, R>(value: T | undefined, then: (value: T) => R): R | null {
+	return value === undefined ? null : then(value);
+}
+
+/**
+ * Problems a single document cannot see: a reference to another file.
+ *
+ * src/link.ts is pure and skips these deliberately - it does not know which
+ * files exist. This is the layer that does, so this is where they are said.
+ */
+function crossFileProblems(document: vscode.TextDocument, index: WorkspaceIndex): vscode.Diagnostic[] {
+	return dependencies(documentLines(document)).flatMap((each) => {
+		if (each.on.file === null) return [];
+		if (index.resolve(document.uri, each.on)) return [];
+
+		const diagnostic = new vscode.Diagnostic(
+			new vscode.Range(each.line, each.tag.start, each.line, each.tag.end),
+			`Nothing in \`${each.on.file}\` has the id \`${each.on.id}\`, or that file is not in this workspace.`,
+			vscode.DiagnosticSeverity.Warning,
+		);
+		diagnostic.code = 'unknown-id';
+		diagnostic.source = LANGUAGE;
+		return [diagnostic];
+	});
 }
 
 /**
@@ -740,7 +779,7 @@ function registerFolding(context: vscode.ExtensionContext) {
  * by the gregorian calendar" - which no regular expression can check, because
  * counting the days in February is not something they do.
  */
-function registerDiagnostics(context: vscode.ExtensionContext) {
+function registerDiagnostics(context: vscode.ExtensionContext, index: WorkspaceIndex) {
 	const collection = vscode.languages.createDiagnosticCollection(LANGUAGE);
 	context.subscriptions.push(collection);
 
@@ -761,7 +800,7 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
 
-		collection.set(document.uri, problems(lines).map((problem) => {
+		const found = problems(lines).map((problem) => {
 			const diagnostic = new vscode.Diagnostic(
 				new vscode.Range(problem.line, problem.start, problem.line, problem.end),
 				problem.message,
@@ -770,7 +809,11 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 			diagnostic.source = 'xit';
 			diagnostic.code = problem.code;
 			return diagnostic;
-		}));
+		});
+
+		// A reference to another file is skipped by the pure checker, which
+		// does not know what files exist. This layer does.
+		collection.set(document.uri, [...found, ...crossFileProblems(document, index)]);
 	}
 
 	const checkAll = () => vscode.workspace.textDocuments.forEach(check);
@@ -789,10 +832,13 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 }
 
 export function activate(context: vscode.ExtensionContext) {
-	registerDiagnostics(context);
-	registerCompletion(context, registerWorkspaceView(context));
+
+	const index = registerWorkspaceView(context);
+	registerCompletion(context, index);
+	registerLinks(context, index);
+	registerDiagnostics(context, index);
 	registerCreationDate(context);
-	registerLinks(context);
+
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);

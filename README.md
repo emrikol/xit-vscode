@@ -346,7 +346,17 @@ Four things get reported in the Problems panel: an id nothing has, an id used tw
 
 **Ids are generated, not derived.** An id has to survive a re-sort and a move between files, and both **Sort Group** and **Archive Finished Items** rewrite lines — either would break every reference in the file if an id were a line number or a hash of its surroundings. They are four characters of base32 with the vowels and the look-alike pairs removed, so an id cannot spell a word and can be read aloud.
 
-**Ids resolve within a file.** That is a real limit and a deliberate one: making them resolve across a workspace needs ids unique across every file, and nothing generates or enforces that. A scope that is honest beats one that works until two files collide.
+**A reference can name another file.** Quote the value, because `.` and `#` are not legal in an unquoted tag value and a quoted one takes anything — so this needs no new syntax at all:
+
+```
+[ ] Post the contract #after="linked.xit#k3f9"
+```
+
+The `.xit` may be left off. The file resolves beside the one doing the referring, and the link is clickable across files because the workspace index has already read every `.xit`.
+
+**Naming the file beats making ids unique across the workspace.** Nothing generates or enforces that uniqueness, so a global namespace works right up until two files collide and is then silently wrong. An explicit filename cannot be silently wrong.
+
+One consequence worth knowing if you read the source. `collect()` is a pure function over one document, and it answers "is this blocked" for references within that file — which is the only answer a pure function can give, and the right one for a document read on its own. The workspace index follows the cross-file references afterwards and settles it. `src/link.ts` skips them deliberately for the same reason, and `extension.ts` is where a reference to a file that has no such id gets reported.
 
 Nothing cascades. Checking an item does not check what waits on it, and nothing reorders itself — a dependency describes the world, it does not get to edit your file.
 

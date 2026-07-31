@@ -30,6 +30,24 @@
  * `0`/`O` or `1`/`l`, and four characters - which is 32^4, plenty for one
  * person's todo files and short enough to read aloud.
  *
+ * ## Referring across files
+ *
+ *     [ ] Send it out #after="work-todo.xit#k3f9"
+ *
+ * The file first, then the id. Quoted, because `.` and `#` are not legal in an
+ * unquoted tag value and a quoted one takes anything - so this needs no new
+ * syntax at all.
+ *
+ * Naming the file beats making ids unique across a workspace. Nothing
+ * generates or enforces that uniqueness, so a global namespace works right up
+ * until two files collide, and then it is silently wrong. An explicit filename
+ * cannot be silently wrong.
+ *
+ * This module stays pure and knows nothing about paths: it parses `file#id`
+ * and stops. Resolving the file against a workspace is the index's job, and
+ * that is also where cross-file blocking is decided - see the note on
+ * `blocked` below.
+ *
  * ## What is deliberately not here
  *
  * Nothing cascades. Checking an item does not check what waits on it, and
@@ -64,12 +82,31 @@ export interface Identified {
 	tag: Tag;
 }
 
+/** What an `#after=` names: an id, and optionally the file holding it. */
+export interface Reference {
+	/** The file as written, or null where the reference is to this file. */
+	file: string | null;
+	id: string;
+}
+
 export interface Dependency {
 	/** Line of the item that is waiting. */
 	line: number;
-	/** The id it is waiting for. */
-	on: string;
+	/** The id it is waiting for, and where. */
+	on: Reference;
 	tag: Tag;
+}
+
+/**
+ * Split an `#after=` value into a file and an id.
+ *
+ * `k3f9` is this file; `work-todo.xit#k3f9` is that one. The last `#` splits
+ * them, so a filename containing a hash still works - unlikely, and free.
+ */
+export function parseReference(value: string): Reference {
+	const at = value.lastIndexOf('#');
+	if (at <= 0) return { file: null, id: value };
+	return { file: value.slice(0, at), id: value.slice(at + 1) };
 }
 
 /** Ids are matched case-insensitively, like tag names. Values are not folded by the spec, so this is ours. */
@@ -99,7 +136,7 @@ export function dependencies(lines: readonly string[]): Dependency[] {
 	for (const item of items(lines).values()) {
 		if (parked.has(item.line)) continue;
 		for (const tag of tagsOn(lines[item.line])) {
-			if (tag.key === AFTER_TAG && tag.value) found.push({ line: item.line, on: tag.value, tag });
+			if (tag.key === AFTER_TAG && tag.value) found.push({ line: item.line, on: parseReference(tag.value), tag });
 		}
 	}
 
@@ -173,15 +210,20 @@ export function linkProblems(lines: readonly string[]): LinkProblem[] {
 	const waiting = dependencies(lines);
 
 	for (const each of waiting) {
-		const target = lineOf.get(foldId(each.on));
+		// A reference naming another file cannot be judged from here. The
+		// index knows which files exist and what is in them; this function is
+		// pure and deliberately does not. extension.ts reports those.
+		if (each.on.file !== null) continue;
 
-		if (target === undefined && !byId.has(foldId(each.on))) {
+		const target = lineOf.get(foldId(each.on.id));
+
+		if (target === undefined && !byId.has(foldId(each.on.id))) {
 			found.push({
 				kind: 'unknown-id',
 				line: each.line,
 				start: each.tag.start,
 				end: each.tag.end,
-				message: `Nothing in this file has the id \`${each.on}\`.`,
+				message: `Nothing in this file has the id \`${each.on.id}\`.`,
 			});
 			continue;
 		}
@@ -192,7 +234,7 @@ export function linkProblems(lines: readonly string[]): LinkProblem[] {
 				line: each.line,
 				start: each.tag.start,
 				end: each.tag.end,
-				message: `This waits on \`${each.on}\`, which is already finished. It is not blocked.`,
+				message: `This waits on \`${each.on.id}\`, which is already finished. It is not blocked.`,
 			});
 		}
 	}
@@ -217,7 +259,8 @@ function cycles(lines: readonly string[]): number[] {
 	const lineOf = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
 
 	for (const each of dependencies(lines)) {
-		const target = lineOf.get(foldId(each.on));
+		if (each.on.file !== null) continue;
+		const target = lineOf.get(foldId(each.on.id));
 		if (target !== undefined) edges.set(each.line, [...(edges.get(each.line) ?? []), target]);
 	}
 
@@ -243,14 +286,23 @@ function cycles(lines: readonly string[]): number[] {
 	return [...found].filter((line) => edges.has(line)).sort((a, b) => a - b);
 }
 
-/** Lines whose item is waiting on something that is not finished. */
+/**
+ * Lines whose item is waiting on something in this file that is not finished.
+ *
+ * Same-file only, on purpose. This is the right answer for a document read on
+ * its own, and it is what `collect` uses; WorkspaceIndex resolves the
+ * cross-file references afterwards, because only it knows what other files
+ * exist. The alternative - threading a workspace through every pure function
+ * here - would cost more than the one place that overwrites the answer.
+ */
 export function blocked(lines: readonly string[]): Set<number> {
 	const lineOf = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
 	const status = new Map([...items(lines).values()].map((item) => [item.line, item.status]));
 	const found = new Set<number>();
 
 	for (const each of dependencies(lines)) {
-		const target = lineOf.get(foldId(each.on));
+		if (each.on.file !== null) continue;
+		const target = lineOf.get(foldId(each.on.id));
 		// An unknown id blocks nothing. It is reported as a problem, and
 		// treating it as a block would hide the item behind a typo.
 		if (target === undefined) continue;
