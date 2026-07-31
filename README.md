@@ -321,7 +321,20 @@ An item tagged `#repeat=` is rescheduled when you check it — the checked one s
 [ ] Water the plants -> 2026-08-10 #repeat=weekly
 ```
 
-Intervals are `daily`, `weekly`, `monthly`, `quarterly`, `yearly`, or a count such as `3d`, `2w`, `6m`. The date keeps whichever pattern it was written in, so `-> 2026-01 #repeat=monthly` becomes `-> 2026-02`, a month rather than a day in February. An interval that is not recognised does nothing at all: scheduling something on a date nobody asked for is worse than not scheduling it.
+Intervals are `daily`, `weekly`, `monthly`, `quarterly`, `yearly`, `weekdays`, a named day such as `monday`, or a count such as `3d`, `2w`, `6m`. The date keeps whichever pattern it was written in, so `-> 2026-01 #repeat=monthly` becomes `-> 2026-02`, a month rather than a day in February. An interval that is not recognised does nothing at all: scheduling something on a date nobody asked for is worse than not scheduling it.
+
+`weekdays` skips Saturday and Sunday. A named day lands on the next day of that name, so a Monday item checked on the Wednesday reschedules to the following Monday rather than drifting a day further every time.
+
+### Repeating from completion
+
+An `-after` suffix counts from the day the item was checked rather than from its due date. This is the difference between rent and watering the plants:
+
+| | |
+| --- | --- |
+| `#repeat=7d` | Seven days after it was **due**. Late payment does not move the next rent day. |
+| `#repeat=7d-after` | Seven days after you **checked it**. Water the plants three days late and the next watering is seven days from then, not four days away. |
+
+A suffix rather than the `+7d` that would read better, and the reason is worth knowing: spec §Tag allows only letters, digits, `_` and `-` in an unquoted tag value, so `#repeat=+7d` parses as `#repeat=` with no value at all — silently, which is the format doing exactly what the Problems panel now reports elsewhere. `#repeat="+7d"` would work, and requiring quotes for a common case is worse than a suffix that needs none.
 
 ## Outline and Folding
 

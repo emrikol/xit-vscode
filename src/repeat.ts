@@ -17,14 +17,31 @@
  */
 
 import { STATUS_CLASS } from './checkbox';
-import { Parts, renderDueDate } from './dueDate';
+import { Day, Parts, renderDueDate } from './dueDate';
 import { tagsOn } from './tag';
 
-export type Unit = 'day' | 'week' | 'month' | 'quarter' | 'year';
+export type Unit = 'day' | 'weekday' | 'week' | 'month' | 'quarter' | 'year';
 
 export interface Interval {
 	unit: Unit;
 	count: number;
+	/**
+	 * Advance from the day the item was checked rather than from its due date.
+	 *
+	 * The difference between rent and watering the plants. `7d` means seven
+	 * days after it was due, which is right for rent and wrong for the plants:
+	 * water them three days late and the next watering should be seven days
+	 * from then, not four days away.
+	 *
+	 * Written as an `-after` suffix: `7d-after`, `weekly-after`. A leading `+`
+	 * would read better and is not available - spec §Tag allows only letters,
+	 * digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parses as
+	 * `#repeat=` with no value at all, silently. Requiring `#repeat="+7d"` for
+	 * a common case is worse than a suffix that needs no quotes.
+	 */
+	fromCompletion: boolean;
+	/** ISO weekday, 1 Monday to 7 Sunday, when the interval names a day. */
+	weekday?: number;
 }
 
 const WORDS: Record<string, Unit> = {
@@ -37,6 +54,11 @@ const WORDS: Record<string, Unit> = {
 };
 
 const LETTERS: Record<string, Unit> = { d: 'day', w: 'week', m: 'month', q: 'quarter', y: 'year' };
+
+/** ISO weekday numbers, for `#repeat=monday`. */
+const WEEKDAYS: Record<string, number> = {
+	monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+};
 
 /**
  * The first checkbox on a line, whatever its status. Built from the status set
@@ -55,16 +77,31 @@ const ANY_CHECKBOX = new RegExp(`\\[[${STATUS_CLASS}]\\]`);
 export function parseInterval(value: string | null): Interval | null {
 	if (!value) return null;
 
-	const word = WORDS[value.toLowerCase()];
-	if (word) return { unit: word, count: 1 };
+	// An `-after` suffix means "from when it was checked". Stripped first so
+	// every form below can carry it: `weekly-after`, `7d-after`, `monday-after`.
+	const fromCompletion = /-after$/i.test(value);
+	const rest = fromCompletion ? value.slice(0, -'-after'.length) : value;
+	const lower = rest.toLowerCase();
 
-	const match = /^(\d+)([dwmqy])$/i.exec(value);
+	// Every weekday, skipping Saturday and Sunday. The one interval a plain
+	// count cannot express, and the most common one in a working week.
+	if (lower === 'weekdays') return { unit: 'weekday', count: 1, fromCompletion };
+
+	// A named day. Advancing by a week and then landing on that weekday is
+	// what "every Monday" means, and it self-corrects if the date drifts.
+	const weekday = WEEKDAYS[lower];
+	if (weekday) return { unit: 'week', count: 1, fromCompletion, weekday };
+
+	const word = WORDS[lower];
+	if (word) return { unit: word, count: 1, fromCompletion };
+
+	const match = /^(\d+)([dwmqy])$/i.exec(rest);
 	if (!match) return null;
 
 	const count = Number(match[1]);
 	if (count < 1) return null;
 
-	return { unit: LETTERS[match[2].toLowerCase()], count };
+	return { unit: LETTERS[match[2].toLowerCase()], count, fromCompletion };
 }
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -130,8 +167,24 @@ function addWeeks(parts: Parts, weeks: number): Parts {
  * render the same text and repeat for ever on the same date.
  */
 export function advance(parts: Parts, interval: Interval): Parts {
+	// A named day is the next one of that name, strictly after this date -
+	// not a week on and then the nearest one, which would skip a week
+	// whenever the date had drifted off the named day. From a Wednesday,
+	// "every Monday" means the Monday five days away, not twelve.
+	if (interval.weekday !== undefined && parts.date !== undefined) {
+		const shift = (interval.weekday - weekdayOf(parts) + 7) % 7;
+		return addDays(parts, shift === 0 ? 7 : shift);
+	}
+
 	const next = step(parts, interval);
-	return renderDueDate(next) === renderDueDate(parts) ? step(parts, { unit: ownUnit(parts), count: 1 }) : next;
+	return renderDueDate(next) === renderDueDate(parts)
+		? step(parts, { unit: ownUnit(parts), count: 1, fromCompletion: interval.fromCompletion })
+		: next;
+}
+
+/** ISO weekday of a date-precision `parts`: 1 Monday to 7 Sunday. */
+function weekdayOf(parts: Parts): number {
+	return new Date(Date.UTC(parts.year, parts.month! - 1, parts.date!)).getUTCDay() || 7;
 }
 
 /** The unit a date is written in, which is the smallest step it can take. */
@@ -161,6 +214,20 @@ function step(parts: Parts, { unit, count }: Interval): Parts {
 			: 0;
 		const total = (parts.year * 4) + (parts.quarter - 1) + quarters;
 		return { ...parts, year: Math.floor(total / 4), quarter: (total % 4) + 1 };
+	}
+
+	// Every weekday: step forward `count` days, skipping Saturday and Sunday.
+	// Only a date-precision date has weekdays; anything coarser falls through
+	// to its own unit below, which is what advance() does for any interval a
+	// pattern cannot express.
+	if (parts.date !== undefined && unit === 'weekday') {
+		let moved = parts;
+		for (let taken = 0; taken < count; taken += 1) {
+			do {
+				moved = addDays(moved, 1);
+			} while (weekdayOf(moved) > 5);
+		}
+		return moved;
 	}
 
 	if (parts.date !== undefined && (unit === 'day' || unit === 'week')) {
@@ -194,13 +261,58 @@ export function intervalOn(text: string, tagName: string): Interval | null {
  * subtask - and carries the description, the tags and the advanced date.
  * Returns null when there is nothing to repeat.
  */
-export function nextOccurrence(text: string, tagName: string, dueDate: { start: number; end: number; parts: Parts } | null): string | null {
+export function nextOccurrence(
+	text: string,
+	tagName: string,
+	dueDate: { start: number; end: number; parts: Parts } | null,
+	today?: Day,
+): string | null {
 	const interval = intervalOn(text, tagName);
 	if (!interval) return null;
 
 	const opened = text.replace(ANY_CHECKBOX, '[ ]');
 	if (!dueDate) return opened;
 
-	const moved = renderDueDate(advance(dueDate.parts, interval));
+	// `+7d` counts from the day it was checked rather than from the due date.
+	// The written pattern is kept, so a month-precision date advances from
+	// this month and not from this day: the interval changes where counting
+	// starts, never what the date says.
+	const from = interval.fromCompletion && today !== undefined
+		? atPrecisionOf(today, dueDate.parts)
+		: dueDate.parts;
+
+	const moved = renderDueDate(advance(from, interval));
 	return opened.slice(0, dueDate.start) + moved + opened.slice(dueDate.end);
+}
+
+/**
+ * `day` expressed at the same precision as `like`.
+ *
+ * A completion-relative repeat starts counting from today, but the date it
+ * writes has to look like the one it replaces - a month stays a month.
+ */
+function atPrecisionOf(day: Day, like: Parts): Parts {
+	const year = Math.floor(day / 10000);
+	const month = Math.floor(day / 100) % 100;
+	const date = day % 100;
+
+	if (like.date !== undefined) return { ...like, year, month, date };
+	if (like.month !== undefined) return { ...like, year, month };
+	if (like.quarter !== undefined) return { ...like, year, quarter: Math.floor((month - 1) / 3) + 1 };
+	if (like.week !== undefined) return { ...like, ...isoWeekOf(year, month, date) };
+	return { ...like, year };
+}
+
+/** The ISO week-numbering year and week a date falls in. */
+function isoWeekOf(year: number, month: number, date: number): { year: number; week: number } {
+	// Shift to the Thursday of the same ISO week; its calendar year is the
+	// week-numbering year, which is what makes late December and early
+	// January come out right.
+	const at = new Date(Date.UTC(year, month - 1, date));
+	at.setUTCDate(at.getUTCDate() + 4 - (at.getUTCDay() || 7));
+
+	const firstDay = Date.UTC(at.getUTCFullYear(), 0, 1);
+	const week = Math.ceil(((at.getTime() - firstDay) / 86400000 + 1) / 7);
+
+	return { year: at.getUTCFullYear(), week };
 }

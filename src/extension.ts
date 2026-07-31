@@ -68,7 +68,10 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 			if (readCheckbox(after[line])?.status !== 'x') continue;
 
 			const [due] = dueDatesOn(after[line]);
-			const next = nextOccurrence(after[line], settings.repeatTag, due ?? null);
+			// Today is passed in rather than read inside, so `#repeat=+7d`
+			// can count from the day it was checked and the whole of
+			// src/repeat.ts stays testable without a clock.
+			const next = nextOccurrence(after[line], settings.repeatTag, due ?? null, todayFrom(new Date()));
 			if (next) repeats.set(line, next);
 		}
 	}

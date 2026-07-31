@@ -133,7 +133,7 @@
                 "xit.repeatTag": {
                     "type": "string",
                     "default": "repeat",
-                    "description": "Name of the tag that marks a repeating item. Its value is an interval: daily, weekly, monthly, quarterly, yearly, or a count such as 3d, 2w or 6m."
+                    "description": "Name of the tag that marks a repeating item. Its value is an interval: daily, weekly, monthly, quarterly, yearly, weekdays, a named day such as monday, or a count such as 3d, 2w or 6m. Add an -after suffix — 7d-after — to count from the day the item was checked rather than from its due date."
                 },
                 "xit.diagnostics": {
                     "type": "boolean",

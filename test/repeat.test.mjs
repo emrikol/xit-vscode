@@ -13,11 +13,12 @@ import { createRequire } from 'node:module';
 const require_ = createRequire(import.meta.url);
 const { parseInterval, advance, nextOccurrence } = require_('../out/repeat.js');
 const { dueDatesOn, renderDueDate } = require_('../out/dueDate.js');
+const { tagsOn } = require_('../out/tag.js');
 
 /** The next occurrence of a whole item line. */
-function next(line) {
+function next(line, today) {
 	const [due] = dueDatesOn(line);
-	return nextOccurrence(line, 'repeat', due ?? null);
+	return nextOccurrence(line, 'repeat', due ?? null, today);
 }
 
 /** Advance just the date part of `text`, for the arithmetic tests. */
@@ -28,22 +29,22 @@ function moved(text, interval) {
 
 describe('parsing an interval', () => {
 	it('takes the plain words', () => {
-		assert.deepEqual(parseInterval('daily'), { unit: 'day', count: 1 });
-		assert.deepEqual(parseInterval('weekly'), { unit: 'week', count: 1 });
-		assert.deepEqual(parseInterval('monthly'), { unit: 'month', count: 1 });
-		assert.deepEqual(parseInterval('quarterly'), { unit: 'quarter', count: 1 });
-		assert.deepEqual(parseInterval('yearly'), { unit: 'year', count: 1 });
+		assert.deepEqual(parseInterval('daily'), { unit: 'day', count: 1, fromCompletion: false });
+		assert.deepEqual(parseInterval('weekly'), { unit: 'week', count: 1, fromCompletion: false });
+		assert.deepEqual(parseInterval('monthly'), { unit: 'month', count: 1, fromCompletion: false });
+		assert.deepEqual(parseInterval('quarterly'), { unit: 'quarter', count: 1, fromCompletion: false });
+		assert.deepEqual(parseInterval('yearly'), { unit: 'year', count: 1, fromCompletion: false });
 	});
 
 	it('takes a count and a letter', () => {
-		assert.deepEqual(parseInterval('3d'), { unit: 'day', count: 3 });
-		assert.deepEqual(parseInterval('2w'), { unit: 'week', count: 2 });
-		assert.deepEqual(parseInterval('6m'), { unit: 'month', count: 6 });
+		assert.deepEqual(parseInterval('3d'), { unit: 'day', count: 3, fromCompletion: false });
+		assert.deepEqual(parseInterval('2w'), { unit: 'week', count: 2, fromCompletion: false });
+		assert.deepEqual(parseInterval('6m'), { unit: 'month', count: 6, fromCompletion: false });
 	});
 
 	it('is not case sensitive about the word', () => {
-		assert.deepEqual(parseInterval('Weekly'), { unit: 'week', count: 1 });
-		assert.deepEqual(parseInterval('2W'), { unit: 'week', count: 2 });
+		assert.deepEqual(parseInterval('Weekly'), { unit: 'week', count: 1, fromCompletion: false });
+		assert.deepEqual(parseInterval('2W'), { unit: 'week', count: 2, fromCompletion: false });
 	});
 
 	it('refuses anything else rather than guessing', () => {
@@ -52,6 +53,115 @@ describe('parsing an interval', () => {
 		for (const value of ['sometimes', 'fortnightly', '0d', '-1w', 'w', '3', '3x', '', null]) {
 			assert.equal(parseInterval(value), null, JSON.stringify(value));
 		}
+	});
+});
+
+describe('the new interval forms', () => {
+	it('takes an -after suffix, meaning from the day it was checked', () => {
+		// A leading `+` would read better and is not available: spec §Tag
+		// allows only letters, digits, `_` and `-` in an unquoted value, so
+		// `#repeat=7d-after` parses as `#repeat=` with no value at all, silently.
+		assert.deepEqual(parseInterval('7d-after'), { unit: 'day', count: 7, fromCompletion: true });
+		assert.deepEqual(parseInterval('weekly-after'), { unit: 'week', count: 1, fromCompletion: true });
+		assert.deepEqual(parseInterval('monday-after'), { unit: 'week', count: 1, fromCompletion: true, weekday: 1 });
+	});
+
+	it('is a legal unquoted tag value, which a plus is not', () => {
+		// The reason for the suffix, asserted rather than trusted.
+		assert.equal(tagsOn('[x] W #repeat=7d-after')[0].value, '7d-after');
+		assert.equal(tagsOn('[x] W #repeat=+7d')[0].value, null, 'a plus is silently dropped');
+	});
+
+	it('takes every weekday', () => {
+		assert.deepEqual(parseInterval('weekdays'), { unit: 'weekday', count: 1, fromCompletion: false });
+	});
+
+	it('takes a named day', () => {
+		assert.deepEqual(parseInterval('monday'), { unit: 'week', count: 1, fromCompletion: false, weekday: 1 });
+		assert.deepEqual(parseInterval('Sunday'), { unit: 'week', count: 1, fromCompletion: false, weekday: 7 });
+	});
+
+	it('still refuses what it does not understand', () => {
+		for (const value of ['-after', 'sometimes-after', 'someday', 'weekday', '0d-after']) {
+			assert.equal(parseInterval(value), null, JSON.stringify(value));
+		}
+	});
+});
+
+describe('every weekday', () => {
+	it('skips the weekend', () => {
+		// 2026-08-07 is a Friday, so the next weekday is Monday the 10th.
+		assert.equal(moved('-> 2026-08-07', 'weekdays'), '-> 2026-08-10');
+		assert.equal(moved('-> 2026-08-10', 'weekdays'), '-> 2026-08-11', 'Monday to Tuesday');
+	});
+
+	it('steps off a weekend onto the next working day', () => {
+		// 2026-08-08 is a Saturday.
+		assert.equal(moved('-> 2026-08-08', 'weekdays'), '-> 2026-08-10');
+		assert.equal(moved('-> 2026-08-09', 'weekdays'), '-> 2026-08-10', 'Sunday');
+	});
+});
+
+describe('a named day', () => {
+	it('lands on that weekday', () => {
+		// 2026-08-03 is a Monday; a week on is the 10th, also a Monday.
+		assert.equal(moved('-> 2026-08-03', 'monday'), '-> 2026-08-10');
+	});
+
+	it('corrects a date that has drifted off the day', () => {
+		// Checked late on Wednesday the 5th: a week on is the 12th, and the
+		// Monday of that week is the 10th. Self-correcting rather than
+		// drifting a day further every time.
+		assert.equal(moved('-> 2026-08-05', 'monday'), '-> 2026-08-10');
+	});
+
+	it('leaves a date with no weekday alone', () => {
+		// A month has no weekday to land on, and forcing one would change
+		// what the date says.
+		assert.equal(moved('-> 2026-08', 'monday'), '-> 2026-09');
+	});
+});
+
+describe('repeating from completion', () => {
+	it('counts from the day it was checked, not from the due date', () => {
+		// Watering the plants three days late: the next watering is seven days
+		// from now, not four days away.
+		assert.equal(
+			next('[x] Water the plants -> 2026-08-03 #repeat=7d-after', 20260806),
+			'[ ] Water the plants -> 2026-08-13 #repeat=7d-after',
+		);
+	});
+
+	it('still counts from the due date without the plus', () => {
+		// Rent. Late payment does not move the next rent day.
+		assert.equal(
+			next('[x] Pay rent -> 2026-08-03 #repeat=7d', 20260806),
+			'[ ] Pay rent -> 2026-08-10 #repeat=7d',
+		);
+	});
+
+	it('keeps the written pattern, so a month stays a month', () => {
+		assert.equal(
+			next('[x] Review -> 2026-01 #repeat=1m-after', 20260615),
+			'[ ] Review -> 2026-07 #repeat=1m-after',
+		);
+	});
+
+	it('keeps a week-precision date a week', () => {
+		// 6 August 2026 is in ISO week 32.
+		assert.equal(
+			next('[x] Standup -> 2026-W05 #repeat=1w-after', 20260806),
+			'[ ] Standup -> 2026-W33 #repeat=1w-after',
+		);
+	});
+
+	it('falls back to the due date when no today is given', () => {
+		// The unit tests that do not care about completion pass nothing, and
+		// must keep the old behaviour rather than silently doing nothing.
+		assert.equal(
+			next('[x] Water -> 2026-08-03 #repeat=7d-after'),
+			'[ ] Water -> 2026-08-10 #repeat=7d-after',
+		);
 	});
 });
 
