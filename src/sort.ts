@@ -11,10 +11,19 @@
 
 import { priorityOf } from './checkbox';
 import { commentLines } from './comment';
-import { Day, dueDatesOn } from './dueDate';
+import { Collected, Thresholds, collect, urgencyOf, Urgency } from './collect';
+import { Day } from './dueDate';
 import { Item, items } from './tree';
 
 /** The bounds of the group `line` sits in: consecutive non-blank lines. */
+/**
+ * Thresholds when the caller has none, matching the manifest's defaults.
+ *
+ * Passed in rather than read from settings so this module stays pure, the same
+ * way `problems()` takes its tag names.
+ */
+const DEFAULTS: Thresholds = { today: 0, criticalAfterDays: 14, soonWithinDays: 7 };
+
 export function groupAround(lines: readonly string[], line: number): { start: number; end: number } | null {
 	if (line < 0 || line >= lines.length || lines[line].trim() === '') return null;
 
@@ -27,15 +36,33 @@ export function groupAround(lines: readonly string[], line: number): { start: nu
 }
 
 /**
- * How an item ranks. Worst-first is not the question here; most urgent first
- * is, so a higher priority sorts earlier and an earlier due date sorts earlier.
- *
- * A missing due date sorts last rather than first. An item with no date is not
- * the most urgent thing in the group, it is the least scheduled.
+ * How urgent a group of items is, worst first - the same order the workspace
+ * view uses, so the two cannot disagree about what belongs at the top.
  */
-function rank(lines: readonly string[], item: Item): [number, Day] {
-	const [due] = dueDatesOn(lines[item.line]);
-	return [-priorityOf(lines[item.line]), due ? due.endOfPeriod : Number.MAX_SAFE_INTEGER];
+const ORDER: Urgency[] = ['critical', 'overdue', 'soon', 'later', 'none', 'waiting', 'blocked', 'notYet'];
+
+/**
+ * How an item ranks. Most urgent first, so a higher priority sorts earlier and
+ * an earlier due date sorts earlier.
+ *
+ * Actionability comes first of all. Sorting used to rank on priority and due
+ * date alone, which put an item that cannot be started until 2030 above one
+ * you could do today - the same disagreement the editor decoration had with
+ * the sidebar, in a different place. `urgencyOf` already encodes the answer,
+ * so it is used rather than restated.
+ *
+ * A missing due date sorts last within its band rather than first. An item
+ * with no date is not the most urgent thing in the group, it is the least
+ * scheduled.
+ */
+function rank(lines: readonly string[], collected: Map<number, Collected>, item: Item, thresholds: Thresholds): [number, number, Day] {
+	const found = collected.get(item.line);
+	const urgency = found ? ORDER.indexOf(urgencyOf(found, thresholds)) : ORDER.length;
+	const due = found?.due;
+
+	// From the raw line, not from `description`, which has the checkbox cut
+	// off - and priorityOf reads the marks that follow one.
+	return [urgency, -priorityOf(lines[item.line]), due ? due.endOfPeriod : Number.MAX_SAFE_INTEGER];
 }
 
 /**
@@ -48,7 +75,7 @@ function rank(lines: readonly string[], item: Item): [number, Day] {
  * sorted among themselves, inside the parent's own block, which is what makes
  * the result read the same way it did before, only ordered.
  */
-export function sortGroup(lines: readonly string[], line: number): string[] {
+export function sortGroup(lines: readonly string[], line: number, thresholds: Thresholds = DEFAULTS): string[] {
 	const group = groupAround(lines, line);
 	if (!group) return [...lines];
 
@@ -58,6 +85,7 @@ export function sortGroup(lines: readonly string[], line: number): string[] {
 	if (parked.has(group.start)) return [...lines];
 
 	const all = items(lines);
+	const collected = new Map(collect(lines).map((item) => [item.line, item]));
 
 	/** The block of text an item owns: its own line, and everything under it. */
 	const blockOf = (item: Item): string[] => {
@@ -83,9 +111,14 @@ export function sortGroup(lines: readonly string[], line: number): string[] {
 
 	const sortChildren = (children: readonly number[]): number[] =>
 		[...children].sort((a, b) => {
-			const [priorityA, dueA] = rank(lines, all.get(a)!);
-			const [priorityB, dueB] = rank(lines, all.get(b)!);
-			return priorityA - priorityB || dueA - dueB || a - b;
+			const first = rank(lines, collected, all.get(a)!, thresholds);
+			const second = rank(lines, collected, all.get(b)!, thresholds);
+			for (const [at, value] of first.entries()) {
+				if (value !== second[at]) return value - second[at];
+			}
+			// Stable: equal items keep the order they were written in, so
+			// running this twice changes nothing the second time.
+			return a - b;
 		});
 
 	// The group's own top level: items in it with no parent inside it.

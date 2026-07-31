@@ -414,8 +414,15 @@ async function archiveFinished(editor: vscode.TextEditor) {
 async function sortGroupAtCursor(editor: vscode.TextEditor) {
 	if (editor.document.languageId !== LANGUAGE) return;
 
+	// The same thresholds the sidebar, the status bar and the decorations use,
+	// so all four agree about which items sink to the bottom of a group.
+	const configuration = vscode.workspace.getConfiguration(LANGUAGE);
 	const before = documentLines(editor.document);
-	const after = sortGroup(before, editor.selection.active.line);
+	const after = sortGroup(before, editor.selection.active.line, {
+		today: todayFrom(new Date()),
+		criticalAfterDays: configuration.get<number>('criticallyOverdueAfterDays', 14),
+		soonWithinDays: configuration.get<number>('dueSoonWithinDays', 7),
+	});
 
 	if (after.every((text, line) => text === before[line])) {
 		void vscode.window.showInformationMessage('This group is already in order.');

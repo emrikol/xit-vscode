@@ -183,3 +183,39 @@ describe('a group with a comment in it', () => {
 		assert.deepEqual([...sorted].sort(), [...lines].sort());
 	});
 });
+
+describe('sorting agrees with the sidebar about what you can act on', () => {
+	const TODAY = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
+
+	it('sinks an item that cannot be started yet', () => {
+		// Ranking on priority and due date alone put an item unstartable
+		// until 2030 above one you could do today - the same disagreement the
+		// editor decoration had with the sidebar, in a different place.
+		assert.deepEqual(
+			sortGroup(['[ ] A <- 2030-01-01 -> 2026-01-01', '[ ] B -> 2026-02-01'], 0, TODAY),
+			['[ ] B -> 2026-02-01', '[ ] A <- 2030-01-01 -> 2026-01-01'],
+		);
+	});
+
+	it('sinks a waiting item and a blocked one, however overdue', () => {
+		assert.deepEqual(
+			sortGroup(['[>] Waiting -> 2020-01-01', '[ ] Blocker #id=aaaa',
+				'[ ] Held -> 2020-01-01 #after=aaaa', '[ ] Plain -> 2027-01-01'], 0, TODAY),
+			['[ ] Plain -> 2027-01-01', '[ ] Blocker #id=aaaa',
+				'[>] Waiting -> 2020-01-01', '[ ] Held -> 2020-01-01 #after=aaaa'],
+		);
+	});
+
+	it('still ranks by priority, then due date, inside a band', () => {
+		assert.deepEqual(
+			sortGroup(['[ ] Low -> 2026-08-05', '[ ] !!! High -> 2026-08-05'], 0, TODAY),
+			['[ ] !!! High -> 2026-08-05', '[ ] Low -> 2026-08-05'],
+		);
+	});
+
+	it('is still idempotent with the urgency ranking in play', () => {
+		const lines = ['[>] Waiting', '[ ] !!! Urgent -> 2020-01-01', '[ ] Later <- 2030-01-01'];
+		const once = sortGroup(lines, 0, TODAY);
+		assert.deepEqual(sortGroup(once, 0, TODAY), once);
+	});
+});

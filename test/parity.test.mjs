@@ -61,6 +61,10 @@ const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 }
 const KNOWN = {
 	'urgency | due/start':
 		'the two arrows mean different things - a passed due date is overdue, an unreached start date is not yet actionable',
+	'sortOrder | open [@]/[>]':
+		'waiting is work you cannot act on, so sorting sinks it below the other open statuses - the same order the sidebar uses',
+	'sortOrder | open [?]/[>]':
+		'waiting is work you cannot act on, so sorting sinks it below the other open statuses - the same order the sidebar uses',
 	'postpone | due/start':
 		'postponing a deadline is not saying you may begin later, so only the due date moves (see #88)',
 };

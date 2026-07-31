@@ -65,9 +65,9 @@ const LEDGER = {
 			directive: 'lives in a comment, which folds as a comment' },
 	},
 	sort: {
-		must: { priority: 'sort.test.mjs', due: 'sort.test.mjs', title: 'sort.test.mjs',
-			nesting: 'sort.test.mjs', comment: 'sort.test.mjs' },
-		gap: { start: '#85', status: '#85', ids: '#86' },
+		must: { priority: 'sort.test.mjs', due: 'sort.test.mjs', title: 'sort.test.mjs', nesting: 'sort.test.mjs',
+			comment: 'sort.test.mjs', start: 'sort.test.mjs', status: 'sort.test.mjs' },
+		gap: { ids: '#86' },
 		na: { tags: 'carried with the line', estimate: 'ranking by estimate is not what this sorts by',
 			directive: 'lives in a comment' },
 	},

@@ -438,7 +438,9 @@ Anything inside a comment is left alone, and running it twice does nothing the s
 
 ## Sorting a Group
 
-**xit!: Sort Group** reorders the group the cursor is in: higher priority first, then earlier due date, then the order you wrote them in.
+**xit!: Sort Group** reorders the group the cursor is in: **what you can act on first**, then higher priority, then earlier due date, then the order you wrote them in.
+
+Actionability leads because otherwise an item you cannot start until 2030 outranks one you could do today. Waiting, blocked and not-yet-started items sink to the bottom of the group — the same order the workspace view uses, so the panel and the file cannot disagree about what belongs at the top.
 
 It moves **items**, not lines. A subtask travels with its parent and so does every description continuation, which is the whole difficulty — an item is a block of text, not a row. Every nesting level is sorted within its own parent, so the result reads exactly as it did before, only ordered.
 
