@@ -10,14 +10,24 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT, GRAMMAR_PATH } from './tokenizer.mjs';
 
 const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'));
 const grammar = JSON.parse(readFileSync(GRAMMAR_PATH, 'utf8'));
-const extensionSource = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+/**
+ * Every TypeScript source file, concatenated.
+ *
+ * The extension used to be one file. Commands and settings are now spread
+ * across a handful of modules, and a check that only reads extension.ts
+ * quietly stops covering anything that moved out of it.
+ */
+const extensionSource = readdirSync(resolve(REPO_ROOT, 'src'))
+	.filter((name) => name.endsWith('.ts'))
+	.map((name) => readFileSync(resolve(REPO_ROOT, 'src', name), 'utf8'))
+	.join('\n');
 const testManifestSource = readFileSync(resolve(REPO_ROOT, 'src/test/manifest.ts'), 'utf8');
 
 const LANGUAGE_ID = 'xit';
@@ -392,23 +402,42 @@ describe('overdue due dates', () => {
 		// renders with nothing at all - invisible, with no error anywhere. The
 		// ids are built from a tier name and a part, so this looks for the
 		// pieces rather than for whole literals.
-		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		const source = extensionSource;
 		for (const id of COLOURS) {
 			assert.ok(source.includes(id), `${id} is contributed but never used`);
 		}
 	});
 
-	it('contributes exactly the colours it uses', () => {
-		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		// Command ids share the `xit.` prefix, so they have to come out first.
-		const commands = new Set(manifest.contributes.commands.map((command) => command.command));
-		const used = new Set([...source.matchAll(/'(xit\.[A-Za-z]+)'/g)]
-			.map(([, id]) => id)
-			.filter((id) => !commands.has(id)));
-		const contributed = new Set(manifest.contributes.colors.map((entry) => entry.id));
+	it('declares every xit identifier the source mentions', () => {
+		// Broader than colours on purpose. Every `xit.something` literal in
+		// the source is an identifier VS Code has to know about from the
+		// manifest - a command, a colour, a view, a setting - or a context key
+		// the source itself sets. One that is none of those is a typo, and a
+		// typo here fails silently: the colour resolves to nothing, the
+		// command is never found, the `when` clause is never true.
+		const source = extensionSource;
 
-		for (const id of used) assert.ok(contributed.has(id), `${id} is used but never contributed`);
-		for (const id of contributed) assert.ok(used.has(id), `${id} is contributed but never used`);
+		const declared = new Set([
+			...manifest.contributes.commands.map((entry) => entry.command),
+			...manifest.contributes.colors.map((entry) => entry.id),
+			...Object.values(manifest.contributes.views).flat().map((entry) => entry.id),
+			...Object.keys(manifest.contributes.configuration.properties),
+			// Settings are read without their prefix, so both spellings count.
+			...Object.keys(manifest.contributes.configuration.properties).map((id) => id.replace(/^xit\./, '')),
+		]);
+
+		// Context keys the source sets, and contextValue tags it puts on tree
+		// items. Both are identifiers a `when` clause can name, so they are
+		// declared by being written rather than by appearing in the manifest.
+		const fromSource = new Set([
+			...[...source.matchAll(/setContext',\s*'(xit\.[A-Za-z]+)'/g)].map(([, id]) => id),
+			...[...source.matchAll(/contextValue = '(xit\.[A-Za-z]+)'/g)].map(([, id]) => id),
+		]);
+
+		for (const [, id] of source.matchAll(/'(xit\.[A-Za-z]+)'/g)) {
+			assert.ok(declared.has(id) || fromSource.has(id),
+				`${id} is used in the source but declared nowhere in the manifest`);
+		}
 	});
 
 	it('gives every colour a default for every theme kind', () => {
@@ -449,7 +478,7 @@ describe('overdue due dates', () => {
 	});
 
 	it('reads every setting it contributes', () => {
-		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		const source = extensionSource;
 		for (const id of Object.keys(manifest.contributes.configuration.properties)) {
 			const name = id.replace(/^xit\./, '');
 			assert.ok(source.includes(`'${name}'`), `${id} is contributed but never read`);

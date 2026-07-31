@@ -1,0 +1,14 @@
+<!--
+  Activity bar icon. Deliberately not derived from the [x]it! logo, which the
+  format's author asked to keep unique to the official project: a plain
+  rounded checkbox with a tick, drawn from scratch.
+
+  Monochrome and stroke-only, because VS Code recolours activity bar icons to
+  match the theme and discards anything with its own fill.
+-->
+<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+     fill="none" stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" />
+  <path d="M7.5 12.25 L10.75 15.5 L16.5 8.75" />
+</svg>

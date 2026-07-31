@@ -331,3 +331,24 @@ describe('diagnostics', () => {
 		assert.deepEqual(vscode.languages.getDiagnostics(document.uri), []);
 	});
 });
+
+describe('the workspace view', () => {
+	it('registers its commands', async () => {
+		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();
+		const registered = await vscode.commands.getCommands(true);
+		assert.ok(registered.includes('xit.refreshItems'));
+		assert.ok(registered.includes('xit.toggleDoneItems'));
+	});
+
+	it('refreshes without throwing', async () => {
+		// The index reads through workspace.fs, so this also proves it works
+		// in the web host, where there is no Node and no disk.
+		await vscode.commands.executeCommand('xit.refreshItems');
+	});
+
+	it('finds the items in the workspace folder', async () => {
+		// The test workspace is demo/, which has .xit files with items in it.
+		const found = await vscode.workspace.findFiles('**/*.xit');
+		assert.ok(found.length > 0, 'no .xit files in the test workspace');
+	});
+});

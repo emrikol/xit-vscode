@@ -16,6 +16,8 @@ out/**
 dist/web/test/**
 # the rendered PNGs ship; their SVG sources do not
 assets/*.svg
+# except the activity bar icon, which VS Code recolours and so must be vector
+!assets/activity-bar.svg
 assets/screenshots/**
 node_modules/**
 .gitignore

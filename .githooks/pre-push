@@ -75,7 +75,7 @@ fi
 # list that turns that around. It has already caught .claude/settings.local.json
 # and .vscode-test.mjs.
 unexpected=$(unzip -Z1 "$vsix" | grep -Ev \
-	'^(\[Content_Types\]\.xml|extension\.vsixmanifest|extension/(package\.json|readme\.md|changelog\.md|LICENSE\.txt|language-configuration\.json|snippets\.json|assets/[a-z-]+\.png|dist/([a-z]+/)?extension\.js|syntaxes/[A-Za-z.]+\.json))$' \
+	'^(\[Content_Types\]\.xml|extension\.vsixmanifest|extension/(package\.json|readme\.md|changelog\.md|LICENSE\.txt|language-configuration\.json|snippets\.json|assets/[a-z-]+\.(png|svg)|dist/([a-z]+/)?extension\.js|syntaxes/[A-Za-z.]+\.json))$' \
 	|| true)
 
 if [ -n "$unexpected" ]; then

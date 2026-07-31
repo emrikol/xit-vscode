@@ -8,6 +8,7 @@ import { stamp, isTagName } from './stamp';
 import { nextOccurrence } from './repeat';
 import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
+import { registerWorkspaceView } from './workspaceView';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -438,6 +439,7 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 
 export function activate(context: vscode.ExtensionContext) {
 	registerDiagnostics(context);
+	registerWorkspaceView(context);
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);

@@ -75,7 +75,8 @@
         "vscode-textmate": "^9.3.2"
     },
     "activationEvents": [
-        "onLanguage:xit"
+        "onLanguage:xit",
+        "workspaceContains:**/*.xit"
     ],
     "contributes": {
         "configuration": {
@@ -138,6 +139,12 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a comment that is never closed, and a second due date in an item, which the specification says is disregarded."
+                },
+                "xit.dueSoonWithinDays": {
+                    "type": "number",
+                    "default": 7,
+                    "minimum": 0,
+                    "description": "Days ahead within which a due date counts as due soon, in the workspace view."
                 }
             }
         },
@@ -274,6 +281,26 @@
                 {
                     "command": "xit.shuffle",
                     "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.refreshItems",
+                    "when": "xit.hasItems"
+                },
+                {
+                    "command": "xit.toggleDoneItems",
+                    "when": "xit.hasItems"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "xit.toggleDoneItems",
+                    "when": "view == xit.items",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "xit.refreshItems",
+                    "when": "view == xit.items",
+                    "group": "navigation@2"
                 }
             ]
         },
@@ -289,6 +316,18 @@
             {
                 "title": "Shuffle Checkbox State",
                 "command": "xit.shuffle"
+            },
+            {
+                "command": "xit.refreshItems",
+                "title": "Refresh",
+                "category": "xit!",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "xit.toggleDoneItems",
+                "title": "Show Completed Items",
+                "category": "xit!",
+                "icon": "$(check-all)"
             }
         ],
         "snippets": [
@@ -296,6 +335,25 @@
                 "language": "xit",
                 "path": "./snippets.json"
             }
-        ]
+        ],
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "xit",
+                    "title": "[x]it!",
+                    "icon": "assets/activity-bar.svg"
+                }
+            ]
+        },
+        "views": {
+            "xit": [
+                {
+                    "id": "xit.items",
+                    "name": "Items",
+                    "when": "xit.hasItems",
+                    "icon": "assets/activity-bar.svg"
+                }
+            ]
+        }
     }
 }
