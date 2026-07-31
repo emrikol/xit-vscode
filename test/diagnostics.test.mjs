@@ -11,7 +11,9 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
-const { problems } = createRequire(import.meta.url)('../out/diagnostics.js');
+const require_ = createRequire(import.meta.url);
+const { problems } = require_('../out/diagnostics.js');
+const { items } = require_('../out/tree.js');
 
 /** Problems as "code@line" strings, which read far better than objects. */
 const codes = (lines) => problems(lines).map((problem) => `${problem.code}@${problem.line}`);
@@ -253,5 +255,21 @@ describe('a clean document', () => {
 	it('has nothing to say about it', () => {
 		const lines = ['# Todos', '[ ] One -> 2026-02-28', '\t[x] Two', '', '<!-- parked -->'];
 		assert.deepEqual(problems(lines), []);
+	});
+});
+
+describe('a paragraph break inside an item', () => {
+	it('holds the item together with a visible marker', () => {
+		// An item cannot contain a blank line and that limit stands: an
+		// indent-only line is what the guide's groups/2 rejects, and every
+		// trailing-whitespace stripper deletes it. A visible character on the
+		// continuation needs no change to the format and survives saving.
+		const lines = ['[ ] Write it ...', '    First paragraph.', '    .', '    Second paragraph.'];
+		assert.deepEqual(codes(lines), []);
+	});
+
+	it('really does keep the item whole', () => {
+		const lines = ['[ ] Write it ...', '    First.', '    .', '    Second.'];
+		assert.equal(items(lines).get(0).endLine, 3);
 	});
 });

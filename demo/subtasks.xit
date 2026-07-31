@@ -28,3 +28,10 @@
 [ ] This parent keeps its own level
   [ ] two spaces is reported as cannot-nest
     [ ] four spaces is description text, not a subtask
+
+# A description can hold a paragraph break
+[ ] Write the proposal ...
+    The first paragraph of notes.
+    .
+    The second paragraph. A blank line would end the item, and an
+    indent-only line gets deleted by every whitespace stripper.

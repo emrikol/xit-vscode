@@ -87,6 +87,23 @@ The narrow fix rather than the general one. A backslash escape would be more pow
 
 **`#FF8800` in a description is still a tag,** and that is accepted rather than overlooked. It follows a space, so it is a tag by the format's own rules; it is rare; and the alternative is inventing that escape character. If you need one, quote it in a tag value: `#colour="#FF8800"`.
 
+## Blank Lines Inside an Item
+
+An item cannot contain a blank line. A blank line ends the group, so a description with two paragraphs of notes is not writable — and **this limit stands on purpose.**
+
+The obvious fix is that a continuation line holding only its indentation counts as a blank line within the item. Two things are wrong with it. The syntax guide already considered and rejected it — `groups/2`: "An item cannot contain a blank line, even if the blank line is 'indented' (i.e., has 4 spaces)". And worse, it is invisible: `files.trimTrailingWhitespace`, `editor.trimAutoWhitespace` and every `.editorconfig` doing the same will delete it. A file that silently reformats when you save it is worse than the limit it removes.
+
+There is already a workaround that needs no change to the format at all. Put a visible character on the continuation line:
+
+```
+[ ] Write the proposal ...
+    The first paragraph of notes.
+    .
+    The second paragraph.
+```
+
+A lone `.`, `~` or `|` is ordinary description text, so the item stays whole, nothing is reported, and no whitespace stripper will touch it. That is a better answer than any marker the format could invent, because the format does not have to invent one.
+
 ## Migrating an Older File
 
 Three forks changed what an existing `.xit` file means: nesting became one tab per level, titles became marked, and priority lost its dots. **xit!: Migrate to the Current Format** applies all three in one pass, because three passes over the same files would be worse than any of the changes.
