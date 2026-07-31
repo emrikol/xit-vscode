@@ -277,7 +277,7 @@ Only the impossible date and an unrecognised line are errors. Turn the lot off w
 
 ## Completion Dates and Repeats
 
-Both use tags rather than new syntax, so a file using them still reads correctly in every other [x]it! tool.
+Both use tags rather than new syntax, because **syntax is for what you author and tags are for what the editor records**. A completion date is not something you type to plan; it is something the tool writes down for you.
 
 `xit.stampCompletionDate`, **off by default**, records when an item was checked and removes the record if it is reopened. `xit.completionDateTag` names the tag, default `done`. This is the format author's own suggestion, from [#59](https://github.com/jotaen/xit/discussions/59): `[ ] Paint the room #created=2023-02-01 #completed=2023-03-04`.
 
@@ -341,14 +341,35 @@ One structural implementation, one oracle, and code only where a grammar cannot 
 
 **Where duplication is forced, it is detected rather than avoided.** The decoration has to find due dates itself, and VS Code exposes no API for reading TextMate tokens from an extension, so there is no shared source to be had. `test/dueDate.test.mjs` runs the whole corpus through both the grammar and the TypeScript matcher and fails on one character of disagreement. Two other things in this repo are held the same way: the manifest literals in `src/test/manifest.ts` against `package.json`, and the test-file list in `src/test/index.ts` against `src/test/*.test.ts`.
 
+### Arrows for what you author, tags for what the tool records
+
+The rule that decides whether a new field gets syntax or a tag.
+
+`->` due and `<-` start are things you type to plan. `#done=`, `#created=` and the bookkeeping around `#repeat=` are things the editor writes down for you. A tag *describes*; syntax is for what you *author*.
+
+The rule exists because it was nearly broken without one. A start date moved from `#start=` to `<-` on the grounds that a start date and a due date are the same kind of thing — and by that argument `#done=` is also a date and should also be an arrow, which is wrong. Authorship is what actually separates them.
+
+There is a second reason to keep tags cheap. Adding one character to the status set touched eleven hand-written patterns across the grammar, the TypeScript and a test. Every syntax element is permanent cost in places that must not drift; a tag costs nothing, because the tag rule already matches anything you invent.
+
 ### Divergences from upstream, on purpose
 
 Kept here so they are not silently "fixed". Each is also recorded where it lives, with the discussion it came from.
 
+Four are this fork changing the format on purpose, now that compatibility with other [x]it! tools is not a goal:
+
+- **Subtasks.** An item indented under another, one tab per level. [Discussion #2](https://github.com/jotaen/xit/discussions/2), the most-upvoted open request on the format.
+- **Marked titles.** `# Groceries`, so a mistyped checkbox is an error rather than a silent heading.
+- **A sixth status,** `[>]` waiting.
+- **Priority without dots.** The dots were alignment padding; alignment is a rendering job.
+- **Comments** (`<!--` … `-->`).
+
+The rest are places the specification, the syntax guide and `xit-sublime` disagree with each other, and the specification wins:
+
 - **A tag must follow a space or punctuation**, so `a#tag` holds no tag. The spec is silent, and jotaen answered [#51](https://github.com/jotaen/xit/discussions/51) with "Currently, yes" — but his own `xit-sublime` rule carries the same lookbehind, so the reference implementation disagrees with the answer.
 - **Additional spaces before a priority are allowed.** Spec §Item: "Additional space characters MAY appear." The syntax guide says the opposite and marks the line invalid.
 - **A malformed priority does not invalidate the checkbox.** The guide drops all highlighting from `[ ] .!. Invalid`; nothing in the spec says a bad priority unmakes a checkbox, and `xit-sublime` agrees with us here.
-- **Comments** (`<!--` … `-->`) are a fork of the format, not part of it.
+
+`test/conformance.test.mjs` holds the full list with the reasoning, and fails if a divergence appears that is not written down — or if one written down stops diverging.
 
 `npm run open-web` serves the conformance fixture and `npm run open-web:demo` serves `demo/showcase.xit`, both in a real VS Code in the browser with this extension loaded. That is the only way to check what the grammar actually looks like rather than what it ought to look like.
 

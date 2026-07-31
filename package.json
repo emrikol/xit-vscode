@@ -118,7 +118,7 @@
                 "xit.stampCompletionDate": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Record when an item was completed, as a tag on its first line. Removed again if the item is reopened. Uses a tag rather than new syntax, so other [x]it! tools still read the file."
+                    "description": "Record when an item was completed, as a tag on its first line. Removed again if the item is reopened. A tag rather than new syntax, because syntax is for what you author and tags are for what the editor records."
                 },
                 "xit.completionDateTag": {
                     "type": "string",

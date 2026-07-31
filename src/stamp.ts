@@ -9,9 +9,18 @@
  *
  *   [ ] Paint the room #created=2023-02-01 #completed=2023-03-04
  *
- * Those are ordinary tags, so this costs no divergence at all and every other
- * xit tool still reads the file correctly. That is the whole appeal, and the
- * reason not to be tempted into a dedicated syntax for it.
+ * Those are ordinary tags. That used to be justified as compatibility - every
+ * other xit tool still reads the file - and that reason is gone, because this
+ * fork has since changed the format in four other places on purpose.
+ *
+ * The reason that survives is better. Arrows for what you author, tags for
+ * what the tool records: `-> ` due and `<- ` start are what you type to plan,
+ * and a completion date is what the editor writes down for you. A tag
+ * describes; syntax is for what you author. See the README.
+ *
+ * The second reason is cost. Adding one character to the status set touched
+ * eleven hand-written patterns across the grammar, the TypeScript and a test.
+ * Syntax is permanent cost in places that must not drift. A tag is free.
  */
 
 import { Day } from './dueDate';
