@@ -170,6 +170,9 @@
 					"include": "#due-date"
 				},
 				{
+					"include": "#url"
+				},
+				{
 					"include": "#tag"
 				}
 			]
@@ -194,6 +197,9 @@
 			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?>]\\](?=[^\\S\\n]|$))|(?!    (?=.*\\S)))",
 			"patterns": [
 				{
+					"include": "#url"
+				},
+				{
 					"include": "#tag"
 				}
 			]
@@ -212,6 +218,11 @@
 					"name": "comment.block.documentation.xit markup.other.task.tag.xit markup.other.task.tag.value.xit"
 				}
 			}
+		},
+		"url": {
+			"comment": "A URL, matched before #tag so its fragment is not read as one. The format has no escaping and says so - the guide's tags/8, \"Backslashes don't have special meaning\" - so `https://example.com/#top` used to hold the tag `#top`. Most links escape by luck, because a tag needs a space or punctuation before the hash and `docs#installation` has a letter there; a bare fragment after a slash does not. Consuming the whole link first is how TextMate says \"not here\", and it costs no new punctuation and nothing for anyone to learn. Deliberately blunt: scheme then non-space, because the job is to cover what a person would call a link rather than to validate one. See src/tag.ts, which carries the same rule and is pinned to this one by test/tag.test.mjs.",
+			"name": "markup.underline.link.xit markup.other.task.url.xit",
+			"match": "\\b[a-zA-Z][a-zA-Z\\d+.-]*://\\S*"
 		}
 	}
 }

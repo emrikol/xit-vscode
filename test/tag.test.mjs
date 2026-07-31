@@ -52,6 +52,34 @@ describe('reading tags', () => {
 	});
 });
 
+describe('a hash inside a URL', () => {
+	it('is a fragment, not a tag', () => {
+		// The format has no escaping, and says so on purpose - the guide's
+		// tags/8, "Backslashes don't have special meaning". That is fine until
+		// you paste a link, and then `#top` was a tag.
+		assert.deepEqual(tagsOn('[ ] Read https://example.com/#top').map((tag) => tag.text), []);
+		assert.deepEqual(tagsOn('[ ] Read http://a.example/x/#anchor').map((tag) => tag.text), []);
+	});
+
+	it('does not stop a real tag later on the line', () => {
+		assert.deepEqual(
+			tagsOn('[ ] Read https://example.com/#top and file it #later').map((tag) => tag.text),
+			['#later'],
+		);
+	});
+
+	it('leaves a link with no fragment alone', () => {
+		assert.deepEqual(tagsOn('[ ] Read https://example.com/docs #reading').map((tag) => tag.text), ['#reading']);
+	});
+
+	it('still reads a colour as a tag, which is accepted and documented', () => {
+		// The narrow fix, not the general one. `#FF8800` after a space is a
+		// tag by the format's own rules, it is rare, and fixing it would mean
+		// inventing an escape character everyone has to think about.
+		assert.deepEqual(tagsOn('[ ] Colour is #FF8800').map((tag) => tag.text), ['#FF8800']);
+	});
+});
+
 describe('case', () => {
 	it('folds names, because the spec says they are case-insensitive', () => {
 		assert.equal(on('[ ] #Work')[0].key, on('[ ] #work')[0].key);

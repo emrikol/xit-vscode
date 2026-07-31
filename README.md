@@ -32,6 +32,7 @@ If the colors and looks of the syntax highlighting is not correct or as fancy as
             // - markup.other.task.checkbox.in-question.xit
             // - markup.other.task.checkbox.waiting.xit
             // - markup.other.task.invalid.xit
+            // - markup.other.task.url.xit
             // - markup.other.task.description.closed.xit
             // - markup.other.task.priority.xit
             // - markup.other.task.date.xit
@@ -71,6 +72,20 @@ If closed tasks (completed/obsolete) are not striketroughed, then you may want t
     }
 }
 ```
+
+## Links
+
+A URL in a description is highlighted as one, and its fragment is not read as a tag.
+
+```
+[ ] Read https://example.com/docs/#installation
+```
+
+Without this, `#installation` was a tag. The format has no escaping at all and says so on purpose — the syntax guide's `tags/8`: "Backslashes don't have special meaning, i.e. escaping a quotation is not supported." Most links escape by luck, because a tag needs a space or punctuation before the hash and `docs#installation` has a letter there. A bare fragment after a slash does not.
+
+The narrow fix rather than the general one. A backslash escape would be more powerful, would contradict a rule the format states, and would add a character you have to think about in every description. Consuming the whole link first fixes the case that actually happens and asks nobody to learn anything.
+
+**`#FF8800` in a description is still a tag,** and that is accepted rather than overlooked. It follows a space, so it is a tag by the format's own rules; it is rare; and the alternative is inventing that escape character. If you need one, quote it in a tag value: `#colour="#FF8800"`.
 
 ## Migrating an Older File
 

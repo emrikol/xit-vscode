@@ -47,6 +47,36 @@ export interface Tag {
  * Including the lookbehind, which is a deliberate divergence from the spec in
  * its own right - see the grammar's comment and discussion #51.
  */
+/**
+ * A URL, so its fragment is not read as a tag.
+ *
+ * The format has no escaping at all, and says so on purpose: the guide's
+ * `tags/8`, "Backslashes don't have special meaning, i.e. escaping a quotation
+ * is not supported." That is fine until you paste a link:
+ *
+ *     [ ] Read https://example.com/#top     → `#top` was a tag
+ *
+ * Most links escape by luck, because `docs#installation` has a letter before
+ * the hash and a tag needs a space or punctuation there. A bare fragment after
+ * a slash does not.
+ *
+ * The narrow fix rather than the general one. A backslash escape would be more
+ * powerful, would contradict a rule the format states, and would add a
+ * character everyone has to think about in every description. This fixes the
+ * case that actually happens and asks nobody to learn anything.
+ *
+ * `scheme://` and then non-space, which is deliberately blunt: the point is to
+ * cover the run of text a person would call a link, not to validate one.
+ * `#FF8800` in a description is still read as a tag, and that is accepted and
+ * documented - it is rare, and it is what the format's own rules say.
+ */
+const URL = /\b[a-zA-Z][a-zA-Z\d+.-]*:\/\/\S*/g;
+
+/** Half-open offset ranges covered by a URL on `line`. */
+function urlRanges(line: string): [number, number][] {
+	return [...line.matchAll(URL)].map((match) => [match.index, match.index + match[0].length]);
+}
+
 const TAG = new RegExp(
 	'(?<=[\\s\\p{P}])'
 	+ '#(?<name>[\\p{L}\\d_-]+)'
@@ -77,9 +107,13 @@ function unquote(value: string): string {
 /** Every tag on a line, in order. */
 export function tagsOn(line: string): Tag[] {
 	const found: Tag[] = [];
+	const links = urlRanges(line);
 
 	TAG.lastIndex = 0;
 	for (let match = TAG.exec(line); match; match = TAG.exec(line)) {
+		// A `#` inside a URL is a fragment, not a tag. See URL above.
+		if (links.some(([start, end]) => match!.index >= start && match!.index < end)) continue;
+
 		const name = match.groups!.name;
 		const raw = match.groups!.value;
 		const value = raw === undefined ? null : unquote(raw);

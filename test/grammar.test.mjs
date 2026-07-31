@@ -692,3 +692,21 @@ describe('title after a closed item', () => {
 		assert.ok(scoped(lines[1], STRIKETHROUGH).length > 0);
 	});
 });
+
+describe('urls (fork: so a fragment is not a tag)', () => {
+	it('does not read a fragment as a tag', async () => {
+		await assertNoScope('[ ] Read https://example.com/#top', TAG);
+	});
+
+	it('scopes the whole link', async () => {
+		await assertScope('[ ] Read https://example.com/#top', 'task.url', 'https://example.com/#top');
+	});
+
+	it('leaves a real tag after a link alone', async () => {
+		await assertScope('[ ] Read https://example.com/#top and file it #later', TAG, '#later');
+	});
+
+	it('still reads a colour as a tag, which is accepted and documented', async () => {
+		await assertScope('[ ] Colour is #FF8800', TAG, '#FF8800');
+	});
+});
