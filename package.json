@@ -273,7 +273,7 @@
                 "extensions": [
                     ".xit"
                 ],
-                "firstLine": "^\\[[ x@~?]\\](\\s|$)",
+                "firstLine": "^\\[[ x@~?>]\\](\\s|$)",
                 "configuration": "./language-configuration.json",
                 "icon": {
                     "light": "./assets/file-icon-light.png",

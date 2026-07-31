@@ -12,8 +12,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
 
 import { REPO_ROOT, GRAMMAR_PATH } from './tokenizer.mjs';
+
+const { STATUSES, STATUS_CLASS } = createRequire(import.meta.url)('../out/checkbox.js');
 
 const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'));
 const grammar = JSON.parse(readFileSync(GRAMMAR_PATH, 'utf8'));
@@ -329,10 +332,33 @@ describe('first-line detection', () => {
 	const firstLine = new RegExp(manifest.contributes.languages[0].firstLine);
 
 	it('recognises a file that opens with any checkbox', () => {
-		for (const status of [' ', 'x', '@', '~', '?']) {
+		// Over STATUSES, not over a list written out here. It used to be
+		// `[' ', 'x', '@', '~', '?']`, frozen at the five the specification
+		// has, and when this fork added `[>]` the manifest and this list were
+		// both left behind - so the test went on passing while `[>] Waiting`
+		// was the one opening line the extension would not recognise. A test
+		// that hardcodes the set it is checking certifies the omission.
+		for (const status of STATUSES) {
 			assert.match(`[${status}] An item`, firstLine, `[${status}] was not recognised`);
 			assert.match(`[${status}]`, firstLine, `a bare [${status}] was not recognised`);
 		}
+	});
+
+	it('spells exactly the status set, no more and no less', () => {
+		// The behavioural check above proves every status is accepted. This
+		// proves nothing else is, which is the half that would otherwise let
+		// the class drift wider than the format - `[a]` is not a checkbox and
+		// a file opening with one is not an xit file.
+		//
+		// package.json is a twelfth place the status set lives as a literal,
+		// after the eleven in the grammar and the TypeScript. It cannot import
+		// STATUS_CLASS any more than the grammar can, so it is detected here
+		// instead - the same house pattern as test/checkbox.test.mjs.
+		const [, body] = /^\^\\\[\[([^\]]*)\]\\\]/.exec(manifest.contributes.languages[0].firstLine) ?? [];
+		assert.ok(body !== undefined, 'firstLine is no longer a checkbox character class; this check needs rewriting');
+
+		const found = [...body.replace(/\\(.)/g, '$1')].sort().join('');
+		assert.equal(found, [...STATUSES].sort().join(''), `firstLine matches [${body}]; STATUSES is [${STATUS_CLASS}]`);
 	});
 
 	it('recognises the first line of the reference fixture', () => {
