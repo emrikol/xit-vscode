@@ -97,8 +97,12 @@ describe('extra due dates', () => {
 		assert.deepEqual(codes(['[ ] Parent -> 2026-01-01', '\t[ ] Child -> 2026-02-02']), []);
 	});
 
-	it('is only a hint, because nothing is actually wrong', () => {
-		assert.equal(problems(['[ ] x -> 2026-01-01 -> 2026-02-02'])[0].severity, 'hint');
+	it('is a warning, because silence is the problem', () => {
+		// It was a hint, on the grounds that nothing is actually wrong. But
+		// silent disregard is the worst property a plain-text format can have,
+		// because nothing compiles it: you wrote a due date, the file kept it,
+		// and nothing uses it. A hint is not visible enough to say that.
+		assert.equal(problems(['[ ] x -> 2026-01-01 -> 2026-02-02'])[0].severity, 'warning');
 	});
 });
 
@@ -154,6 +158,62 @@ describe('an indent that cannot nest', () => {
 
 	it('says nothing about a line with no checkbox on it', () => {
 		assert.deepEqual(codes(['[ ] Parent', '  just some indented prose']), []);
+	});
+});
+
+describe('a tag value that is thrown away', () => {
+	it('reports a quote that never closes', () => {
+		// Spec §Tag, and the guide's tags/9: "If the closing quote is missing
+		// (or doesn't match), the value is disregarded altogether." The tag
+		// survives and the value vanishes, in silence.
+		assert.deepEqual(codes(['[ ] Do this #note="unterminated']), ['dropped-tag-value@0']);
+		assert.deepEqual(codes(["[ ] Do this #note='unterminated"]), ['dropped-tag-value@0']);
+	});
+
+	it('reports a quote closed by the wrong character', () => {
+		assert.deepEqual(codes(['[ ] Do this #note="mismatched\'']), ['dropped-tag-value@0']);
+	});
+
+	it('says nothing about a value that closes properly', () => {
+		assert.deepEqual(codes(['[ ] Do this #note="all fine" #other=\'also fine\'']), []);
+	});
+
+	it('says nothing about an unquoted value', () => {
+		assert.deepEqual(codes(['[ ] Do this #note=plain', '[ ] And this #note=']), []);
+	});
+});
+
+describe('exclamation marks that are not a priority', () => {
+	it('reports marks with no space after them', () => {
+		// The guide's priority/5: "If the space between priority and
+		// description is missing, the exclamation mark is treated as part of
+		// the description."
+		assert.deepEqual(codes(['[ ] !This has regular priority']), ['not-a-priority@0']);
+	});
+
+	it('reports a second run right after the priority', () => {
+		// The guide's priority/6: "Any exclamation marks after the priority
+		// don't belong to the priority anymore."
+		assert.deepEqual(codes(['[ ] ! !!! This is important']), ['not-a-priority@0']);
+	});
+
+	it('points at the marks that do nothing, not at the priority that works', () => {
+		const [problem] = problems(['[ ] ! !!! This is important']);
+		assert.equal(problem.start, 6, 'the second run starts at 6');
+		assert.equal(problem.end, 9);
+	});
+
+	it('leaves prose alone', () => {
+		// "finish this today!" is a sentence. A diagnostic that fires on prose
+		// is a diagnostic people turn off, so only marks at the very start of
+		// the description count.
+		assert.deepEqual(codes(['[ ] ! Finish this today!']), []);
+		assert.deepEqual(codes(['[ ] !! This ! is also important']), []);
+		assert.deepEqual(codes(['[ ] Do it! Really!']), []);
+	});
+
+	it('says nothing about a well-formed priority', () => {
+		assert.deepEqual(codes(['[ ] !!! Ship it']), []);
 	});
 });
 

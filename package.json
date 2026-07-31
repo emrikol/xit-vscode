@@ -138,7 +138,7 @@
                 "xit.diagnostics": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a comment that is never closed, and a second due date in an item, which the specification says is disregarded."
+                    "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a line that is not an item, a title or a comment, an indent that cannot nest, a comment that is never closed, and the four places the format disregards what you wrote without saying so — a second due date, a tag value whose quote never closes, and exclamation marks that do not form a priority."
                 },
                 "xit.dueSoonWithinDays": {
                     "type": "number",

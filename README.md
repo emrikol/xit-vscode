@@ -251,7 +251,19 @@ The syntax highlighting cannot check everything the specification asks for, and 
 
 No regular expression counts the days in February, so `-> 2026-02-31` highlights as a perfectly good due date. It is now reported as a problem instead. So are a checkbox that was clearly meant to be one and is not, a comment that is never closed and so silently swallows the rest of the file, and a second due date in an item — legal, and disregarded, which is the part nobody expects.
 
-Only the impossible date is an error. Turn the lot off with `xit.diagnostics`.
+### Things the format disregards without telling you
+
+Four rules quietly throw away what you wrote. Silent disregard is the worst property a plain-text format can have, because nothing compiles it: you wrote a due date, the file kept it, and nothing uses it. All four are now reported.
+
+| Code | What is disregarded |
+| --- | --- |
+| `extra-due-date` | A second due date in an item. Spec §Description: any others "MUST be disregarded". |
+| `dropped-tag-value` | A quoted tag value whose quote never closes, or closes with the other quote character. The guide's `tags/9`: "the value is disregarded altogether". |
+| `not-a-priority` | Exclamation marks with no space after them, or a second run right after the priority. The guide's `priority/5` and `priority/6`. |
+
+`not-a-priority` deliberately ignores any later `!` in a description. "Finish this today!" is a sentence, and a diagnostic that fires on prose is a diagnostic you turn off.
+
+Only the impossible date and an unrecognised line are errors. Turn the lot off with `xit.diagnostics`.
 
 ## Completion Dates and Repeats
 
