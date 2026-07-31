@@ -33,6 +33,14 @@ export interface Item {
 	/** Line number of the enclosing item, or null at the top level. */
 	readonly parent: number | null;
 	readonly children: number[];
+	/**
+	 * Last line this item owns: its own line, its description continuations,
+	 * and everything nested under it.
+	 *
+	 * What the Outline and the folding ranges are built from, so it is worked
+	 * out here once rather than by each of them.
+	 */
+	endLine: number;
 }
 
 /**
@@ -66,20 +74,34 @@ export function items(lines: readonly string[]): Map<number, Item> {
 	// Items still open above the current line, shallowest first.
 	let ancestors: Item[] = [];
 
+	/** Close every ancestor not still open at `line`, ending it on the line before. */
+	const closeThrough = (keep: (item: Item) => boolean, line: number) => {
+		while (ancestors.length && !keep(ancestors[ancestors.length - 1])) {
+			ancestors.pop()!.endLine = line - 1;
+		}
+	};
+
 	for (const [line, text] of lines.entries()) {
 		if (text.trim() === '') {
-			ancestors = [];
+			closeThrough(() => false, line);
 			continue;
 		}
 
 		const checkbox = readCheckbox(text);
-		if (!checkbox) continue;
+
+		if (!checkbox) {
+			// A continuation extends whatever it is indented under. A line in
+			// column zero is a title or prose, and ends everything.
+			if (!/^[^\S\n]/.test(text)) closeThrough(() => false, line);
+			else if (ancestors.length) ancestors[ancestors.length - 1].endLine = line;
+			continue;
+		}
 
 		// The parent is the nearest item above whose indentation is a proper
 		// prefix of this line's. Anything else is a sibling or a cousin, and is
 		// finished as far as this line is concerned.
 		const indent = text.slice(0, checkbox.column);
-		while (ancestors.length && !isDeeper(indent, ancestors[ancestors.length - 1].indent)) ancestors.pop();
+		closeThrough((item) => isDeeper(indent, item.indent), line);
 
 		const parent = ancestors[ancestors.length - 1] ?? null;
 		const item: Item = {
@@ -88,11 +110,22 @@ export function items(lines: readonly string[]): Map<number, Item> {
 			status: checkbox.status,
 			parent: parent ? parent.line : null,
 			children: [],
+			endLine: line,
 		};
 
 		parent?.children.push(line);
 		found.set(line, item);
 		ancestors.push(item);
+	}
+
+	closeThrough(() => false, lines.length);
+
+	// An ancestor's range has to cover its descendants', which the loop above
+	// only gets right for the deepest one on the stack at any moment.
+	for (const item of [...found.values()].sort((a, b) => b.line - a.line)) {
+		if (item.parent === null) continue;
+		const parent = found.get(item.parent)!;
+		parent.endLine = Math.max(parent.endLine, item.endLine);
 	}
 
 	return found;

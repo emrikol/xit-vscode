@@ -179,3 +179,32 @@ describe('subtasks', () => {
 		);
 	});
 });
+
+describe('outline', () => {
+	/** The symbols VS Code itself builds, through the registered provider. */
+	async function symbolsFor(content: string) {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
+		await vscode.window.showTextDocument(document);
+		return vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
+			'vscode.executeDocumentSymbolProvider', document.uri) ?? [];
+	}
+
+	it('is registered, and groups items under their title', async () => {
+		const symbols = await symbolsFor('Reading list\n[ ] A book\n[x] Another');
+		assert.equal(symbols.length, 1);
+		assert.equal(symbols[0].name, 'Reading list');
+		assert.deepEqual(symbols[0].children.map(s => s.name), ['[ ] A book', '[x] Another']);
+	});
+
+	it('nests subtasks', async () => {
+		const [parent] = await symbolsFor('[ ] Parent\n  [x] Child');
+		assert.equal(parent.name, '[ ] Parent');
+		assert.deepEqual(parent.children.map(s => s.name), ['[x] Child']);
+	});
+
+	it('selects the checkbox when a symbol is picked', async () => {
+		const [item] = await symbolsFor('[ ] Do this');
+		assert.equal(item.selectionRange.start.character, 0);
+		assert.equal(item.selectionRange.end.character, 3);
+	});
+});

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { readCheckbox, readStatus, writeStatus, toggle, shuffle, Status } from './checkbox';
 import { selectedLines } from './selection';
 import { cascade } from './tree';
+import { outline, Node } from './outline';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -260,8 +261,50 @@ function registerOverdueDecoration(context: vscode.ExtensionContext) {
 	refreshAll();
 }
 
+/**
+ * Fill the Outline panel, Go to Symbol and the breadcrumbs.
+ *
+ * All three come from one provider. The structure is src/outline.ts, which is
+ * the same tree the subtask nesting is built on - the panel showing subtasks
+ * under their parents is the payoff for that rather than extra work.
+ */
+function registerOutline(context: vscode.ExtensionContext) {
+	const toSymbol = (node: Node): vscode.DocumentSymbol => {
+		const symbol = new vscode.DocumentSymbol(
+			node.name,
+			node.detail,
+			// There is no checkbox kind, and mapping each status onto some
+			// unrelated kind for the sake of different icons would put an Enum
+			// icon beside an obsolete item and explain nothing. One kind for
+			// items, one for titles; the status is in the name, where it reads
+			// without relying on an icon or a colour.
+			node.kind === 'title' ? vscode.SymbolKind.Namespace : vscode.SymbolKind.Boolean,
+			// The full extent, so collapsing in the panel collapses the item
+			// with its subtasks and continuations...
+			new vscode.Range(node.line, 0, node.endLine, Number.MAX_SAFE_INTEGER),
+			// ...but clicking selects only the checkbox, or the title itself.
+			new vscode.Range(node.line, node.selectionStart, node.line, node.selectionEnd),
+		);
+
+		symbol.children = node.children.map(toSymbol);
+		return symbol;
+	};
+
+	context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(
+		{ language: LANGUAGE },
+		{
+			provideDocumentSymbols(document) {
+				const lines: string[] = [];
+				for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+				return outline(lines).map(toSymbol);
+			},
+		},
+	));
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	registerOverdueDecoration(context);
+	registerOutline(context);
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 
