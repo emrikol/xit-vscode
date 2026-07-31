@@ -133,6 +133,11 @@
                     "type": "string",
                     "default": "repeat",
                     "description": "Name of the tag that marks a repeating item. Its value is an interval: daily, weekly, monthly, quarterly, yearly, or a count such as 3d, 2w or 6m."
+                },
+                "xit.diagnostics": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Report problems the syntax highlighting cannot show: a due date the calendar does not have, something shaped like a checkbox that is not one, a comment that is never closed, and a second due date in an item, which the specification says is disregarded."
                 }
             }
         },

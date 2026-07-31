@@ -7,6 +7,7 @@ import { folds } from './folding';
 import { stamp, isTagName } from './stamp';
 import { nextOccurrence } from './repeat';
 import { dueDatesOn } from './dueDate';
+import { problems, Severity } from './diagnostics';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -380,7 +381,63 @@ function registerFolding(context: vscode.ExtensionContext) {
 	));
 }
 
+/**
+ * Report the rules the grammar cannot express.
+ *
+ * Chiefly one specification MUST - "The due date value MUST be representable
+ * by the gregorian calendar" - which no regular expression can check, because
+ * counting the days in February is not something they do.
+ */
+function registerDiagnostics(context: vscode.ExtensionContext) {
+	const collection = vscode.languages.createDiagnosticCollection(LANGUAGE);
+	context.subscriptions.push(collection);
+
+	const SEVERITY: Record<Severity, vscode.DiagnosticSeverity> = {
+		error: vscode.DiagnosticSeverity.Error,
+		warning: vscode.DiagnosticSeverity.Warning,
+		hint: vscode.DiagnosticSeverity.Hint,
+	};
+
+	function check(document: vscode.TextDocument) {
+		if (document.languageId !== LANGUAGE) return;
+
+		if (!vscode.workspace.getConfiguration(LANGUAGE).get<boolean>('diagnostics', true)) {
+			collection.delete(document.uri);
+			return;
+		}
+
+		const lines: string[] = [];
+		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+
+		collection.set(document.uri, problems(lines).map((problem) => {
+			const diagnostic = new vscode.Diagnostic(
+				new vscode.Range(problem.line, problem.start, problem.line, problem.end),
+				problem.message,
+				SEVERITY[problem.severity],
+			);
+			diagnostic.source = 'xit';
+			diagnostic.code = problem.code;
+			return diagnostic;
+		}));
+	}
+
+	const checkAll = () => vscode.workspace.textDocuments.forEach(check);
+
+	context.subscriptions.push(
+		vscode.workspace.onDidOpenTextDocument(check),
+		vscode.workspace.onDidChangeTextDocument((event) => check(event.document)),
+		// Otherwise a closed document's problems stay in the panel for ever.
+		vscode.workspace.onDidCloseTextDocument((document) => collection.delete(document.uri)),
+		vscode.workspace.onDidChangeConfiguration((event) => {
+			if (event.affectsConfiguration(`${LANGUAGE}.diagnostics`)) checkAll();
+		}),
+	);
+
+	checkAll();
+}
+
 export function activate(context: vscode.ExtensionContext) {
+	registerDiagnostics(context);
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);

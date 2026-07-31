@@ -301,3 +301,33 @@ describe('repeating items', () => {
 		assert.equal(editor.document.lineCount, 1);
 	});
 });
+
+describe('diagnostics', () => {
+	/** Wait for the diagnostics to settle, since they arrive asynchronously. */
+	async function problemsFor(content: string) {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
+		await vscode.window.showTextDocument(document);
+
+		for (let attempt = 0; attempt < 40; attempt++) {
+			const found = vscode.languages.getDiagnostics(document.uri);
+			if (found.length) return found;
+			await new Promise(resolve => setTimeout(resolve, 50));
+		}
+		return vscode.languages.getDiagnostics(document.uri);
+	}
+
+	it('reports a date the calendar does not have', async () => {
+		const [problem] = await problemsFor('[ ] Do this -> 2026-02-31');
+		assert.ok(problem, 'no diagnostic was reported');
+		assert.equal(problem.code, 'impossible-date');
+		assert.equal(problem.severity, vscode.DiagnosticSeverity.Error);
+		assert.equal(problem.source, 'xit');
+	});
+
+	it('says nothing about a clean document', async () => {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Fine -> 2026-02-28' });
+		await vscode.window.showTextDocument(document);
+		await new Promise(resolve => setTimeout(resolve, 200));
+		assert.deepEqual(vscode.languages.getDiagnostics(document.uri), []);
+	});
+});
