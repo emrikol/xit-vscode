@@ -63,8 +63,6 @@ const KNOWN = {
 		'the two arrows mean different things - a passed due date is overdue, an unreached start date is not yet actionable',
 	'postpone | due/start':
 		'postponing a deadline is not saying you may begin later, so only the due date moves (see #88)',
-	'outline | due/start':
-		'GAP, tracked as #84: the due date is lifted into `detail`, the start date is left in the name',
 };
 
 /** Every reader that turns a document into something structured. */

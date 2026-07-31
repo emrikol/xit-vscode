@@ -123,3 +123,31 @@ describe('outline', () => {
 		assert.deepEqual(outline(['', '   ', '']), []);
 	});
 });
+
+describe('both arrows are lifted out of the name', () => {
+	it('shows a start date in the detail, like a due date', () => {
+		// The due date was lifted and the start date was not, so `<- 2026-09-01`
+		// sat in the item name while `-> 2026-09-30` did not. Found by the
+		// sibling check in test/parity.test.mjs.
+		const [node] = outline(['[ ] Book the venue <- 2026-09-01 -> 2026-09-30 #release']);
+		assert.equal(node.name, '[ ] Book the venue #release');
+		assert.equal(node.detail, '<- 2026-09-01  -> 2026-09-30');
+	});
+
+	it('shows whichever one is there', () => {
+		assert.equal(outline(['[ ] Only due -> 2026-01-01'])[0].detail, '-> 2026-01-01');
+		assert.equal(outline(['[ ] Only start <- 2026-01-01'])[0].detail, '<- 2026-01-01');
+		assert.equal(outline(['[ ] Neither'])[0].detail, '');
+	});
+
+	it('cuts back to front, so the second arrow is not mangled', () => {
+		// Removing the earlier one first would move the later one and take the
+		// wrong characters out. Either written order has to work.
+		for (const line of [
+			'[ ] Ship it <- 2026-08-01 -> 2026-08-14 #release',
+			'[ ] Ship it -> 2026-08-14 <- 2026-08-01 #release',
+		]) {
+			assert.equal(outline([line])[0].name, '[ ] Ship it #release', line);
+		}
+	});
+});

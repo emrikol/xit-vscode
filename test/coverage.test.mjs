@@ -49,9 +49,9 @@ const source = (file) => readFileSync(new URL(`./${file}`, import.meta.url), 'ut
 
 const LEDGER = {
 	outline: {
-		must: { status: 'outline.test.mjs', due: 'outline.test.mjs', tags: 'outline.test.mjs',
+		must: { status: 'outline.test.mjs', due: 'outline.test.mjs', start: 'outline.test.mjs', tags: 'outline.test.mjs',
 			title: 'outline.test.mjs', comment: 'outline.test.mjs', nesting: 'outline.test.mjs' },
-		gap: { start: '#84' },
+		gap: {},
 		na: { priority: 'stays in the description text, which the name shows verbatim',
 			ids: 'a tag like any other in the name', estimate: 'a tag like any other in the name',
 			directive: 'lives in a comment, which the outline already skips' },

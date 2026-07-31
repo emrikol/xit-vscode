@@ -8,7 +8,7 @@
 
 import { readCheckbox, Status } from './checkbox';
 import { items } from './tree';
-import { dueDatesOn } from './dueDate';
+import { dueDatesOn, startDatesOn } from './dueDate';
 import { commentLines } from './comment';
 import { isTitle, titleText } from './title';
 
@@ -49,20 +49,27 @@ export function outline(lines: readonly string[]): Node[] {
 		const item = all.get(line)!;
 		const text = lines[line];
 		const [due] = dueDatesOn(text);
+		const [start] = startDatesOn(text);
 
-		// The due date is lifted out into `detail`, so it is not printed twice
-		// on the same row. Cut by offset rather than by replacing the text,
-		// because the same string can legitimately appear in a description.
-		const body = text.slice(item.indent.length + 3);
+		// Both arrows are lifted out into `detail`, so neither is printed
+		// twice on the same row. Cut by offset rather than by replacing the
+		// text, because the same string can legitimately appear in a
+		// description - and back to front, because removing the earlier one
+		// first would move the later one. src/collect.ts does the same, and
+		// this used to lift only the due date, leaving `<- 2026-09-01` sitting
+		// in the name.
 		const from = item.indent.length + 3;
-		const description = (due
-			? body.slice(0, due.start - from) + body.slice(due.end - from)
-			: body
-		).replace(/\s+/g, ' ').trim();
+		const cuts = [due, start]
+			.filter((date): date is NonNullable<typeof date> => date !== undefined)
+			.sort((a, b) => b.start - a.start);
+
+		let body = text.slice(from);
+		for (const cut of cuts) body = body.slice(0, cut.start - from) + body.slice(cut.end - from);
+		const description = body.replace(/\s+/g, ' ').trim();
 
 		return {
 			name: `[${item.status}] ${description}`.trimEnd(),
-			detail: due ? due.text : '',
+			detail: [start?.text, due?.text].filter(Boolean).join('  '),
 			kind: 'item',
 			status: item.status,
 			line,
