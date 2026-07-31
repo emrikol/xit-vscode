@@ -64,11 +64,23 @@ function registerEditorCommand(
  * instead of restating one it does.
  */
 function registerOverdueDecoration(context: vscode.ExtensionContext) {
+	// Background and border, not a foreground colour. A decoration's `color`
+	// wins over the TextMate token, so recolouring the text replaced the
+	// theme's date colour instead of adding to it: an overdue date stopped
+	// reading as a date at all. A background leaves the grammar's colour
+	// alone, so the two signals stack.
+	//
+	// The border is not decoration. See test/contrast.test.mjs: a background
+	// wash strong enough to reach the 3:1 that WCAG asks of a non-text
+	// indicator pushes the text below the 4.5:1 it asks of body text, in
+	// every default theme. The two cannot both be met with a wash alone. The
+	// border carries the indicator contrast instead, where it sits beside the
+	// text rather than behind it.
 	const decoration = vscode.window.createTextEditorDecorationType({
-		color: new vscode.ThemeColor('xit.overdueDueDate'),
-		// So the marking survives a theme that colours nothing, and so it
-		// reads on a screenshot in greyscale.
-		fontWeight: 'bold',
+		backgroundColor: new vscode.ThemeColor('xit.overdueDueDateBackground'),
+		border: '1px solid',
+		borderColor: new vscode.ThemeColor('xit.overdueDueDateBorder'),
+		borderRadius: '3px',
 	});
 	context.subscriptions.push(decoration);
 

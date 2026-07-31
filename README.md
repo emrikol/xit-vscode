@@ -106,7 +106,11 @@ This is the format author's own suggestion for keeping a list inside a larger do
 
 ## Overdue Dates
 
-A due date whose period has passed is marked. Turn it off with `xit.overdueDueDates`, and recolour it with the `xit.overdueDueDate` theme colour, which defaults to whatever your theme uses for warnings.
+A due date whose period has passed is marked with a tinted background and a border. Turn it off with `xit.overdueDueDates`, and recolour it with the `xit.overdueDueDateBackground` and `xit.overdueDueDateBorder` theme colours.
+
+The background is translucent and there is no foreground colour, on purpose: a decoration's `color` overrides the theme's own colour for the date, so recolouring the text would make an overdue date stop looking like a date. A background adds a signal instead of replacing one.
+
+The border is not decoration either. WCAG asks 4.5:1 for body text and 3:1 for a non-text indicator, and across VS Code's default themes those cannot both be met by a background alone — by the time the wash is strong enough for the highlight to reach even 2:1 against the editor background, the date itself is down to 3.5:1. The border carries the indicator contrast beside the text rather than behind it. `test/contrast.test.mjs` computes both ratios for all eight default themes on every commit.
 
 A due date names a period, not always a day, so it counts as passed only once the whole period has ended:
 

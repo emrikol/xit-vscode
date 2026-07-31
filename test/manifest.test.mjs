@@ -373,26 +373,44 @@ describe('icons', () => {
 });
 
 describe('overdue due dates', () => {
-	const COLOUR = 'xit.overdueDueDate';
+	const COLOURS = ['xit.overdueDueDateBackground', 'xit.overdueDueDateBorder'];
 
-	it('contributes the colour the decoration asks for', () => {
+	it('contributes every colour the decoration asks for', () => {
 		// createTextEditorDecorationType takes a ThemeColor by id. An id that
 		// nothing contributes resolves to undefined, and the decoration then
-		// renders in the default foreground - invisible, with no error.
-		const colour = manifest.contributes.colors?.find((entry) => entry.id === COLOUR);
-		assert.ok(colour, `${COLOUR} is not contributed`);
-		assert.ok(colour.description?.length > 0);
-
+		// renders with nothing at all - invisible, with no error anywhere.
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		assert.match(source, new RegExp(`ThemeColor\\('${COLOUR.replace('.', '\\.')}'\\)`));
+
+		for (const id of COLOURS) {
+			const colour = manifest.contributes.colors?.find((entry) => entry.id === id);
+			assert.ok(colour, `${id} is not contributed`);
+			assert.ok(colour.description?.length > 0);
+			assert.match(source, new RegExp(`ThemeColor\\('${id.replace(/\./g, '\\.')}'\\)`), `${id} is contributed but never used`);
+		}
 	});
 
-	it('gives the colour a default for every theme kind', () => {
+	it('asks for no colour it does not contribute', () => {
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		const asked = [...source.matchAll(/ThemeColor\('([^']+)'\)/g)].map(([, id]) => id);
+		const contributed = new Set(manifest.contributes.colors.map((entry) => entry.id));
+
+		for (const id of asked) {
+			// Only ids this extension owns; a built-in theme colour is fine to
+			// reference without contributing it.
+			if (!id.startsWith('xit.')) continue;
+			assert.ok(contributed.has(id), `${id} is used but never contributed`);
+		}
+	});
+
+	it('gives every colour a default for every theme kind', () => {
 		// Without a default for a kind, the colour is unset in themes of that
-		// kind and the decoration silently does nothing there.
-		const colour = manifest.contributes.colors.find((entry) => entry.id === COLOUR);
-		for (const kind of ['dark', 'light', 'highContrast', 'highContrastLight']) {
-			assert.ok(colour.defaults?.[kind], `${COLOUR} has no default for ${kind} themes`);
+		// kind and the decoration silently does nothing there. High contrast
+		// light is the one usually forgotten.
+		for (const id of COLOURS) {
+			const colour = manifest.contributes.colors.find((entry) => entry.id === id);
+			for (const kind of ['dark', 'light', 'highContrast', 'highContrastLight']) {
+				assert.ok(colour.defaults?.[kind], `${id} has no default for ${kind} themes`);
+			}
 		}
 	});
 

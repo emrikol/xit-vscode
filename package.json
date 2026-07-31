@@ -90,8 +90,18 @@
         },
         "colors": [
             {
-                "id": "xit.overdueDueDate",
-                "description": "Foreground colour of a due date whose period has passed.",
+                "id": "xit.overdueDueDateBackground",
+                "description": "Background of a due date whose period has passed. Translucent, so the theme's own colour for the date shows through.",
+                "defaults": {
+                    "dark": "#CCA70055",
+                    "light": "#BF880355",
+                    "highContrast": "#FFCC0055",
+                    "highContrastLight": "#BF880355"
+                }
+            },
+            {
+                "id": "xit.overdueDueDateBorder",
+                "description": "Border around a due date whose period has passed. This is what carries the contrast: a background alone cannot be strong enough to see without making the date itself hard to read.",
                 "defaults": {
                     "dark": "editorWarning.foreground",
                     "light": "editorWarning.foreground",
