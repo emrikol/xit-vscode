@@ -162,16 +162,50 @@ export function tags(lines: readonly string[]): TagAt[] {
 }
 
 /** Every distinct tag in a document, by folded name, with the values seen for each. */
-export function tagIndex(lines: readonly string[]): Map<string, Set<string>> {
-	const index = new Map<string, Set<string>>();
+export interface TagUsage {
+	/** How often each spelling of the name was seen, so the common one wins. */
+	spellings: Map<string, number>;
+	/** Every value the tag was given, unfolded: spec §Tag folds names, not values. */
+	values: Set<string>;
+}
+
+/**
+ * Every tag in a document, by folded name, with its spellings and its values.
+ *
+ * Richer than `tagIndex` because completion needs two things a set of values
+ * cannot give it: which spelling to insert for a name that is written both
+ * `#Work` and `#work`, and which values belong to which name.
+ */
+export function tagUsage(lines: readonly string[]): Map<string, TagUsage> {
+	const usage = new Map<string, TagUsage>();
 
 	for (const line of lines) {
 		for (const tag of tagsOn(line)) {
-			const values = index.get(tag.key) ?? new Set<string>();
-			if (tag.value !== null) values.add(tag.value);
-			index.set(tag.key, values);
+			const found = usage.get(tag.key) ?? { spellings: new Map<string, number>(), values: new Set<string>() };
+			found.spellings.set(tag.name, (found.spellings.get(tag.name) ?? 0) + 1);
+			if (tag.value !== null) found.values.add(tag.value);
+			usage.set(tag.key, found);
 		}
 	}
 
-	return index;
+	return usage;
+}
+
+/**
+ * The most common spelling of a folded tag name.
+ *
+ * Ties are broken by code-unit order, not by `localeCompare`. Two reasons, and
+ * the second is the one that matters: an index built from a workspace has no
+ * meaningful file order to fall back on, and a locale-aware comparison would
+ * make the same workspace suggest a different spelling on another machine.
+ * Same reasoning as `foldName` using plain `toLowerCase`.
+ */
+export function commonSpelling(usage: TagUsage): string {
+	return [...usage.spellings.entries()]
+		.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))[0][0];
+}
+
+/** Every tag in a document, by folded name, with the values it was given. */
+export function tagIndex(lines: readonly string[]): Map<string, Set<string>> {
+	return new Map([...tagUsage(lines)].map(([key, usage]) => [key, usage.values]));
 }

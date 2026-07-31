@@ -165,7 +165,7 @@ function registerStatusBar(context: vscode.ExtensionContext, index: WorkspaceInd
 	update();
 }
 
-export function registerWorkspaceView(context: vscode.ExtensionContext) {
+export function registerWorkspaceView(context: vscode.ExtensionContext): WorkspaceIndex {
 	const index = new WorkspaceIndex();
 	const provider = new Provider(index);
 
@@ -196,9 +196,16 @@ export function registerWorkspaceView(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		index,
 		view,
-		vscode.commands.registerCommand('xit.refreshItems', () => void index.refresh()),
+		// Returns the promise rather than firing and forgetting, so anything
+		// that needs the index warm - a test, a command chained after it -
+		// can await the command and actually get a refreshed index.
+		vscode.commands.registerCommand('xit.refreshItems', () => index.refresh()),
 		vscode.commands.registerCommand('xit.toggleDoneItems', () => provider.toggleDone()),
 	);
 
 	void index.refresh();
+
+	// Handed back so completion can read the same index rather than building a
+	// second one. One reader of the file system, one debounce, one truth.
+	return index;
 }

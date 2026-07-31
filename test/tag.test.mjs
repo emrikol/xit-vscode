@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { tokenize, scoped } from './tokenizer.mjs';
 import { corpusAspects } from './corpus.test.mjs';
 
-const { tagsOn, tags, tagIndex, foldName } = createRequire(import.meta.url)('../out/tag.js');
+const { tagsOn, tags, tagIndex, foldName, tagUsage, commonSpelling } = createRequire(import.meta.url)('../out/tag.js');
 
 const on = (line) => tagsOn(line);
 
@@ -181,5 +181,36 @@ describe('the TypeScript matcher and the grammar agree', () => {
 		assert.ok(compared > 150, `only ${compared} lines compared`);
 		assert.deepEqual(disagreements, [],
 			`src/tag.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+	});
+});
+
+describe('what completion draws on', () => {
+	it('records every spelling of a folded name', () => {
+		const usage = tagUsage(['[ ] a #Work', '[ ] b #work', '[ ] c #work']);
+		assert.deepEqual([...usage.keys()], ['work']);
+		assert.deepEqual([...usage.get('work').spellings.entries()], [['Work', 1], ['work', 2]]);
+	});
+
+	it('offers the commonest spelling', () => {
+		assert.equal(commonSpelling(tagUsage(['[ ] a #Work', '[ ] b #work', '[ ] c #work']).get('work')), 'work');
+		assert.equal(commonSpelling(tagUsage(['[ ] a #Work', '[ ] b #Work', '[ ] c #work']).get('work')), 'Work');
+	});
+
+	it('breaks a tie alphabetically, not by which file was read first', () => {
+		// An index built from a workspace has no meaningful order to fall back
+		// on, so the answer must not depend on one.
+		assert.equal(commonSpelling(tagUsage(['[ ] a #Work', '[ ] b #work']).get('work')), 'Work');
+		assert.equal(commonSpelling(tagUsage(['[ ] b #work', '[ ] a #Work']).get('work')), 'Work');
+	});
+
+	it('keeps values case-sensitive, because the spec says so', () => {
+		// Spec §Tag: the name is case-insensitive, the value is not.
+		const usage = tagUsage(['[ ] a #size=S', '[ ] b #size=s']);
+		assert.deepEqual([...usage.get('size').values].sort(), ['S', 's']);
+	});
+
+	it('gives a tag with no value an empty value set, not a missing entry', () => {
+		const usage = tagUsage(['[ ] a #plain']);
+		assert.deepEqual([...usage.get('plain').values], []);
 	});
 });

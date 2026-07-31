@@ -11,10 +11,13 @@
 import * as vscode from 'vscode';
 
 import { Collected, collect } from './collect';
+import { TagUsage, tagUsage } from './tag';
 
 export interface FileItems {
 	uri: vscode.Uri;
 	items: Collected[];
+	/** Tags in this file, for completion. Kept here because only the index has read every file. */
+	tags: Map<string, TagUsage>;
 }
 
 const PATTERN = '**/*.xit';
@@ -59,6 +62,28 @@ export class WorkspaceIndex implements vscode.Disposable {
 		);
 	}
 
+	/**
+	 * Every tag in the workspace, merged across files.
+	 *
+	 * Merged here rather than per file because a tag invented in one file
+	 * should be offered in every other - that is what makes tags worth using
+	 * across a workspace instead of decaying into near-duplicates.
+	 */
+	tags(): Map<string, TagUsage> {
+		const merged = new Map<string, TagUsage>();
+
+		for (const file of this.files.values()) {
+			for (const [key, usage] of file.tags) {
+				const found = merged.get(key) ?? { spellings: new Map<string, number>(), values: new Set<string>() };
+				for (const [name, count] of usage.spellings) found.spellings.set(name, (found.spellings.get(name) ?? 0) + count);
+				for (const value of usage.values) found.values.add(value);
+				merged.set(key, found);
+			}
+		}
+
+		return merged;
+	}
+
 	/** Every file with items in it, in a stable order. */
 	all(): FileItems[] {
 		return [...this.files.values()].sort((a, b) => a.uri.toString().localeCompare(b.uri.toString()));
@@ -90,7 +115,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private fromDocument(document: vscode.TextDocument) {
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
-		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines) });
+		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines), tags: tagUsage(lines) });
 	}
 
 	private async read(uri: vscode.Uri): Promise<void> {
@@ -103,8 +128,8 @@ export class WorkspaceIndex implements vscode.Disposable {
 
 		try {
 			const bytes = await vscode.workspace.fs.readFile(uri);
-			const text = new TextDecoder().decode(bytes);
-			this.files.set(uri.toString(), { uri, items: collect(text.split(/\r?\n/)) });
+			const lines = new TextDecoder().decode(bytes).split(/\r?\n/);
+			this.files.set(uri.toString(), { uri, items: collect(lines), tags: tagUsage(lines) });
 		} catch {
 			// Deleted between being found and being read, or unreadable. Not
 			// worth a message: the watcher will bring it back if it returns.

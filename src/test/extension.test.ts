@@ -391,3 +391,40 @@ describe('xit.migrate', () => {
 		assert.equal(editor.document.getText(), current);
 	});
 });
+
+describe('tag completion', () => {
+	/**
+	 * The completions this extension contributes, through the registered
+	 * provider.
+	 *
+	 * Filtered by kind, not by label. executeCompletionItemProvider merges in
+	 * VS Code's own word-based suggestions, which are Text and which include
+	 * every word in the open documents - so "book" comes back whether or not
+	 * anything here offered it. Names are Keyword and values are Value.
+	 */
+	async function completionsFor(content: string, line: number, character: number) {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
+		await vscode.window.showTextDocument(document);
+		const list = await vscode.commands.executeCommand<vscode.CompletionList>(
+			'vscode.executeCompletionItemProvider', document.uri, new vscode.Position(line, character));
+
+		return (list?.items ?? [])
+			.filter(item => item.kind === vscode.CompletionItemKind.Keyword || item.kind === vscode.CompletionItemKind.Value)
+			.map(item => typeof item.label === 'string' ? item.label : item.label.label);
+	}
+
+	it('offers tag names from the workspace after a hash', async () => {
+		// The test workspace is demo/, whose files carry real tags. Drawing on
+		// the workspace rather than the open document is the whole point: a tag
+		// invented in one file should be offered in every other.
+		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();
+		await vscode.commands.executeCommand('xit.refreshItems');
+
+		const labels = await completionsFor('[ ] Something #', 0, 15);
+		assert.ok(labels.includes('book'), `no #book among ${JSON.stringify(labels)}`);
+	});
+
+	it('offers no tags where there is no hash to complete', async () => {
+		assert.deepEqual(await completionsFor('[ ] Something', 0, 13), []);
+	});
+});

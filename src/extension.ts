@@ -10,6 +10,8 @@ import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { registerWorkspaceView } from './workspaceView';
+import { WorkspaceIndex } from './workspaceIndex';
+import { commonSpelling, foldName } from './tag';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -133,6 +135,61 @@ function registerEditorCommand(
 		if (!editor) return;
 		return run(editor);
 	}));
+}
+
+/**
+ * Complete tag names and values from the whole workspace.
+ *
+ * `tagUsage` had been written and tested and wired to nothing, and the
+ * internal `xit.suggest` command opened VS Code's suggest widget with nothing
+ * behind it. This is what goes behind it.
+ *
+ * Drawn from the workspace index rather than the open document, so a tag
+ * invented in one file is offered in every other. That is the thing that makes
+ * tags worth using across a workspace instead of decaying into near-duplicates
+ * nobody can group by.
+ *
+ * Names fold case and values do not - spec §Tag - so a name written `#Work`
+ * and `#work` is offered once, spelled whichever way is commoner, while
+ * `#size=S` and `#size=s` are two different values and both are offered.
+ */
+function registerCompletion(context: vscode.ExtensionContext, index: WorkspaceIndex) {
+	context.subscriptions.push(vscode.languages.registerCompletionItemProvider(LANGUAGE, {
+		provideCompletionItems(document, position) {
+			const upToCursor = document.lineAt(position.line).text.slice(0, position.character);
+			const usage = index.tags();
+
+			// After `#name=`, the values that name has been given.
+			const value = /#([\p{L}\d_-]+)=([\p{L}\d_-]*)$/u.exec(upToCursor);
+			if (value) {
+				const found = usage.get(foldName(value[1]));
+				if (!found) return [];
+
+				return [...found.values].sort().map((text) => {
+					const item = new vscode.CompletionItem(text, vscode.CompletionItemKind.Value);
+					item.detail = `#${value[1]}`;
+					return item;
+				});
+			}
+
+			// After `#`, the names in use. The `#` is already typed, so the
+			// insert text is the name alone or it would be doubled.
+			if (!/#[\p{L}\d_-]*$/u.test(upToCursor)) return [];
+
+			return [...usage.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, found]) => {
+				const spelling = commonSpelling(found);
+				const item = new vscode.CompletionItem(spelling, vscode.CompletionItemKind.Keyword);
+				// Sorted and filtered by the folded name, so typing `#WOR`
+				// still finds a tag written `#work`.
+				item.filterText = key;
+				item.sortText = key;
+				item.detail = found.values.size > 0
+					? `${found.values.size} value${found.values.size === 1 ? '' : 's'} in use`
+					: undefined;
+				return item;
+			});
+		},
+	}, '#', '='));
 }
 
 /** What the postpone picker offers, in the order it offers them. */
@@ -539,7 +596,7 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 
 export function activate(context: vscode.ExtensionContext) {
 	registerDiagnostics(context);
-	registerWorkspaceView(context);
+	registerCompletion(context, registerWorkspaceView(context));
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);

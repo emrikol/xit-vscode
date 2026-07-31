@@ -303,6 +303,14 @@ Checked and obsolete items are hidden; the toolbar toggles them back. Both count
 
 This is the part that makes a plain-text todo list bearable across more than one file. Three people built it outside VS Code before this existed: a shell script in [#12](https://github.com/jotaen/xit/discussions/12), an HTML view in [#7](https://github.com/jotaen/xit/discussions/7), and a whole terminal UI in [#38](https://github.com/jotaen/xit/discussions/38), whose author described his todos as "littered with undone, forgotten `[ ] things`".
 
+## Tag Completion
+
+Type `#` in an xit file and the tag names already in use are offered. Type `#name=` and the values that name has been given are offered.
+
+They come from **the whole workspace**, not just the open file, which is the point: a tag invented in one file is offered in every other. That is what keeps tags worth grouping by instead of letting them decay into `#work`, `#Work` and `#wrok`.
+
+Names fold case and values do not, because the specification says so — §Tag makes names case-insensitive and values case-sensitive. So a name written both `#Work` and `#work` is offered once, spelled whichever way you use more often, while `#size=S` and `#size=s` are two different values and both are offered. Ties in spelling are broken by code-unit order rather than by locale, so the same workspace suggests the same spelling on every machine.
+
 ## Postponing
 
 **xit!: Postpone** pushes the due date of the selected items forward — tomorrow, in three days, next week, next Monday, or next month.
