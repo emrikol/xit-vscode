@@ -208,3 +208,23 @@ describe('outline', () => {
 		assert.equal(item.selectionRange.end.character, 3);
 	});
 });
+
+describe('folding', () => {
+	async function foldsFor(content: string) {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
+		await vscode.window.showTextDocument(document);
+		const ranges = await vscode.commands.executeCommand<vscode.FoldingRange[]>(
+			'vscode.executeFoldingRangeProvider', document.uri);
+		return (ranges ?? []).map(r => `${r.start}-${r.end}`).sort();
+	}
+
+	it('is registered, and folds an item with its subtasks', async () => {
+		const ranges = await foldsFor('[ ] Parent\n  [x] One\n  [ ] Two');
+		assert.ok(ranges.includes('0-2'), `expected 0-2 among ${ranges.join(', ')}`);
+	});
+
+	it('folds a comment block', async () => {
+		const ranges = await foldsFor('[ ] Before\n<!--\nparked\n-->');
+		assert.ok(ranges.includes('1-3'), `expected 1-3 among ${ranges.join(', ')}`);
+	});
+});

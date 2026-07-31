@@ -9,6 +9,7 @@
 import { readCheckbox, Status } from './checkbox';
 import { items } from './tree';
 import { dueDatesOn } from './dueDate';
+import { commentLines } from './comment';
 
 export interface Node {
 	/** Shown in the panel. Carries the checkbox, so status reads without colour. */
@@ -24,21 +25,6 @@ export interface Node {
 	selectionStart: number;
 	selectionEnd: number;
 	children: Node[];
-}
-
-/** Lines inside a `<!--` … `-->` block, which hold no structure. */
-function commentLines(lines: readonly string[]): Set<number> {
-	const inside = new Set<number>();
-	let open = false;
-
-	for (const [line, text] of lines.entries()) {
-		if (!open && /^<!--/.test(text)) open = true;
-		if (open) inside.add(line);
-		// Both markers may sit on one line, so this is checked after opening.
-		if (open && /-->[^\S\n]*$/.test(text)) open = false;
-	}
-
-	return inside;
 }
 
 /** Spec §Title: one line, not starting with a blank or `[`. */

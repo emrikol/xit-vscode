@@ -3,6 +3,7 @@ import { readCheckbox, readStatus, writeStatus, toggle, shuffle, Status } from '
 import { selectedLines } from './selection';
 import { cascade } from './tree';
 import { outline, Node } from './outline';
+import { folds } from './folding';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -302,9 +303,39 @@ function registerOutline(context: vscode.ExtensionContext) {
 	));
 }
 
+/**
+ * Collapse an item with its subtasks, a group, or a comment block.
+ *
+ * VS Code folds by indentation with no provider at all, and folds this format
+ * wrong: it cannot tell a description continuation from a subtask, it does not
+ * know that a blank line ends an item, and it has never heard of `<!--`.
+ */
+function registerFolding(context: vscode.ExtensionContext) {
+	context.subscriptions.push(vscode.languages.registerFoldingRangeProvider(
+		{ language: LANGUAGE },
+		{
+			provideFoldingRanges(document) {
+				const lines: string[] = [];
+				for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+
+				return folds(lines).map((fold) => new vscode.FoldingRange(
+					fold.start,
+					fold.end,
+					// Comment is the only kind VS Code has that fits. An item
+					// and a group are neither imports nor a region, and
+					// claiming otherwise would put them under "Fold All
+					// Regions", which is not what anyone means by it.
+					fold.kind === 'comment' ? vscode.FoldingRangeKind.Comment : undefined,
+				));
+			},
+		},
+	));
+}
+
 export function activate(context: vscode.ExtensionContext) {
 	registerOverdueDecoration(context);
 	registerOutline(context);
+	registerFolding(context);
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 
