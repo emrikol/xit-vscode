@@ -14,6 +14,7 @@
 
 import { Status } from './checkbox';
 import { commentLines } from './comment';
+import { directives } from './directive';
 import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { estimateOn } from './estimate';
 import { tags } from './tag';
@@ -46,6 +47,9 @@ export interface Collected {
  */
 export function collect(lines: readonly string[], estimateTag = 'est'): Collected[] {
 	const parked = commentLines(lines);
+	// Tags the file declares about itself, which every item inherits. See
+	// src/directive.ts: a work.xit should not need `#work` on every line.
+	const inherited = directives(lines).tags;
 	const all = items(lines);
 	const allTags = tags(lines);
 
@@ -85,7 +89,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 				description,
 				due: due ? { text: due.text, endOfPeriod: due.endOfPeriod } : null,
 				start: start ? { text: start.text, startOfPeriod: startOfPeriod(start.parts) } : null,
-				tags: [...new Set(allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key))],
+				tags: [...new Set([...inherited, ...allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key)])],
 				estimate: estimateOn(text, estimateTag),
 				parent: item.parent,
 				children: item.children,

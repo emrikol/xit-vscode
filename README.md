@@ -311,6 +311,24 @@ They come from **the whole workspace**, not just the open file, which is the poi
 
 Names fold case and values do not, because the specification says so — §Tag makes names case-insensitive and values case-sensitive. So a name written both `#Work` and `#work` is offered once, spelled whichever way you use more often, while `#size=S` and `#size=s` are two different values and both are offered. Ties in spelling are broken by code-unit order rather than by locale, so the same workspace suggests the same spelling on every machine.
 
+## What a File Says About Itself
+
+A comment can carry a directive, and it applies to the whole file.
+
+```
+<!-- xit: tags=work, client-acme -->
+<!-- xit: archive=Done -->
+```
+
+| Key | What it does |
+| --- | --- |
+| `tags` | Every item in the file inherits these tags. A `work.xit` does not need `#work` on two hundred lines. |
+| `archive` | Names the group finished items are archived under, beating `xit.archiveTitle`. The setting is one answer for every file; this is the file's answer for itself. |
+
+A comment is where this costs least. Comments are already a fork of the specification, so a file using them already reads wrong in other [x]it! tools and a directive inside one adds no new breakage. It also means the whole thing is invisible to the grammar, the outline and the diagnostics without any of them being taught about it — they already skip comments.
+
+**An unknown key is ignored, in silence and on purpose.** A directive written for a later version must not break an earlier one, and reporting it would make every new key a breaking change for anyone who has not updated. A tag name the format could not express is ignored for the opposite reason: a directive must not be able to declare something you could not have written by hand.
+
 ## Time Estimates
 
 `#est=2h` on an item, and the workspace view totals each group beside its count.

@@ -16,6 +16,7 @@
  */
 
 import { commentLines } from './comment';
+import { directives } from './directive';
 import { isTitle, markTitle, titleText } from './title';
 import { Item, items } from './tree';
 
@@ -52,6 +53,12 @@ function isArchivable(item: Item, all: Map<number, Item>): boolean {
 export function archive(lines: readonly string[], title: string): Archived {
 	const all = items(lines);
 	const parked = commentLines(lines);
+
+	// A file may name its own archive group, which beats the setting: the
+	// setting is one answer for every file, and this is the file's answer for
+	// itself. See src/directive.ts.
+	const declared = directives(lines).archive;
+	if (declared !== null) title = declared;
 
 	// Where the archive already starts, if it does. Everything from there on
 	// is left untouched, which is what makes this idempotent.
