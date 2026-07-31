@@ -303,6 +303,15 @@ A tag rather than an arrow, unlike the start date. The rule says syntax is for w
 
 ## Completion Dates and Repeats
 
+| Setting | Default | |
+| --- | --- | --- |
+| `xit.stampCompletionDate` | `false` | Record when an item was checked. |
+| `xit.completionDateTag` | `done` | Name of that tag. |
+| `xit.stampCreationDate` | `false` | Record when an item was written. |
+| `xit.creationDateTag` | `created` | Name of that tag. |
+| `xit.repeatItems` | `true` | Insert the next occurrence when a repeating item is checked. The tag is the opt-in, so this only affects items that have one. |
+| `xit.repeatTag` | `repeat` | Name of the tag that marks a repeating item. |
+
 Both use tags rather than new syntax, because **syntax is for what you author and tags are for what the editor records**. A completion date is not something you type to plan; it is something the tool writes down for you.
 
 `xit.stampCompletionDate`, **off by default**, records when an item was checked and removes the record if it is reopened. `xit.completionDateTag` names the tag, default `done`. This is the format author's own suggestion, from [#59](https://github.com/jotaen/xit/discussions/59): `[ ] Paint the room #created=2023-02-01 #completed=2023-03-04`.
@@ -405,6 +414,7 @@ If the colors and looks of the syntax highlighting is not correct or as fancy as
             // - markup.other.task.description.closed.xit
             // - markup.other.task.priority.xit
             // - markup.other.task.date.xit
+            // - markup.other.task.start.xit
             // - markup.other.task.tag.xit
             // - markup.other.task.tag.name.xit
             // - markup.other.task.tag.value.xit

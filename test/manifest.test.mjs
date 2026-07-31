@@ -595,3 +595,53 @@ describe('commands', () => {
 		}
 	});
 });
+
+describe('the README keeps up with what is contributed', () => {
+	// Documentation drifts silently, and this repo has been caught by it: the
+	// opening paragraph claimed the extension implemented the specification
+	// "plus comments" long after ten deliberate forks had landed, and three
+	// settings and a scope had never been written up at all.
+	const readme = readFileSync(resolve(REPO_ROOT, 'README.md'), 'utf8');
+
+	it('mentions every setting it contributes', () => {
+		const missing = Object.keys(manifest.contributes.configuration.properties)
+			.filter((key) => !readme.includes(key));
+		assert.deepEqual(missing, [], `settings nobody documented: ${missing.join(', ')}`);
+	});
+
+	it('documents every scope the grammar emits', () => {
+		// The customisation section is the only place these are listed, and a
+		// scope nobody can name is a scope nobody can restyle.
+		const emitted = new Set();
+		(function walk(node) {
+			if (!node || typeof node !== 'object') return;
+			for (const [key, value] of Object.entries(node)) {
+				if (key === 'name' && typeof value === 'string') {
+					value.split(' ').filter((scope) => scope.startsWith('markup.other')).forEach((scope) => emitted.add(scope));
+				} else walk(value);
+			}
+		})(JSON.parse(readFileSync(resolve(REPO_ROOT, 'syntaxes/xit.tmLanguage.json'), 'utf8')));
+
+		const missing = [...emitted].filter((scope) => !readme.includes(scope));
+		assert.deepEqual(missing, [], `scopes nobody documented: ${missing.join(', ')}`);
+	});
+
+	it('links only to headings that exist', () => {
+		const anchors = new Set([...readme.matchAll(/^#{1,3} (.+)$/gm)]
+			.map(([, heading]) => `#${heading.toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/ /g, '-')}`));
+		const broken = [...new Set([...readme.matchAll(/\]\((#[a-z0-9-]+)\)/g)].map(([, link]) => link))]
+			.filter((link) => !anchors.has(link));
+
+		assert.deepEqual(broken, [], `links to headings that are not there: ${broken.join(', ')}`);
+	});
+
+	it('lists every section in its contents', () => {
+		// Twenty-nine sections and a contents listing five is worse than no
+		// contents at all, which is what this had.
+		const sections = [...readme.matchAll(/^## (.+)$/gm)].map(([, heading]) => heading);
+		const listed = readme.slice(0, readme.indexOf('\n## '));
+		const missing = sections.filter((heading) => !listed.includes(`[${heading}]`));
+
+		assert.deepEqual(missing, [], `sections missing from the contents: ${missing.join(', ')}`);
+	});
+});
