@@ -1,9 +1,9 @@
 /**
  * Repeating items.
  *
- * Discussion #5, answered with a tag convention rather than new syntax:
- * `#repeat=weekly` is already a valid tag with a valid value, so a file using
- * it still reads correctly in every other xit tool.
+ * Discussion #5, answered with a tag convention rather than new syntax -
+ * because a tag costs nothing where syntax costs a rule in three places that
+ * must not drift, not because of compatibility, which this fork gave up.
  */
 
 import { describe, it } from 'node:test';

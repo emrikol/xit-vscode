@@ -73,9 +73,11 @@ const NESTABLE = /^\t*$/;
  * width made the deeper-looking line the shallower one - and it is kept
  * because it is still the correct test and costs nothing.
  *
- * A space-indented checkbox is not lost by this: items() records every line
- * that holds one, and indentation only decides parentage, so such a line
- * becomes a sibling rather than a child. src/diagnostics.ts reports it.
+ * A space-indented checkbox is not lost by this. An indent that cannot nest -
+ * one to three spaces, or tabs mixed with spaces - is still recorded as an
+ * item, so it becomes a sibling rather than a child, and src/diagnostics.ts
+ * reports it. Four spaces is different: that is a description continuation,
+ * and isContinuation below is where it is turned away.
  */
 function isDeeper(inner: string, outer: string): boolean {
 	return inner.length > outer.length && inner.startsWith(outer) && NESTABLE.test(inner);

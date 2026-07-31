@@ -51,8 +51,8 @@ export const STATUS_CLASS = STATUSES.map((status) => status.replace(/[\\\]^-]/g,
  * requires a space between the checkbox and whatever follows it.
  *
  * The leading indentation is this fork's subtasks (discussion #2). It is
- * deliberately more permissive here than in the grammar, which asks for two
- * spaces or a tab and an item above to nest under. Highlighting has to be
+ * deliberately more permissive here than in the grammar, which asks for one
+ * tab per level and an item above to nest under. Highlighting has to be
  * strict about that, because it is describing the format. A command does not:
  * toggling a checkbox the grammar declined to colour is harmless, and
  * refusing to would be baffling.

@@ -10,7 +10,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT, GRAMMAR_PATH } from './tokenizer.mjs';
@@ -670,5 +670,75 @@ describe('the changelog stays readable', () => {
 		});
 
 		assert.deepEqual(repeated, [], `a release repeats a heading: ${repeated.join(', ')}`);
+	});
+});
+
+describe('nothing still describes a rule this fork retired', () => {
+	/**
+	 * Rules that were changed, and the phrase that would only appear in prose
+	 * written before the change.
+	 *
+	 * This exists because the same stale claim survived in two files after
+	 * being fixed in a third: `#repeat=` was still justified as "reads
+	 * correctly in every other xit tool" hours after compatibility stopped
+	 * being a goal. Behaviour is covered by seven hundred tests; the sentences
+	 * describing it were covered by nobody noticing.
+	 *
+	 * History is allowed and wanted - "the earlier rule here was two or more
+	 * spaces" explains why the code looks as it does. So each retired rule
+	 * lists the files permitted to mention it, and anywhere else is a claim
+	 * rather than a recollection.
+	 */
+	const RETIRED = [
+		{
+			phrase: 'reads correctly in every other',
+			retired: 'compatibility with other [x]it! tools stopped being a goal',
+			history: [],
+		},
+		{
+			phrase: 'two or more spaces',
+			retired: 'nesting became one tab per level',
+			history: ['src/tree.ts', 'src/diagnostics.ts', 'test/conformance.test.mjs',
+				'test/diagnostics.test.mjs', 'test/grammar.test.mjs', 'README.md', 'syntaxes/xit.tmLanguage.json'],
+		},
+		{
+			phrase: 'two spaces or a tab',
+			retired: 'nesting became one tab per level',
+			history: [],
+		},
+	];
+
+	const FILES = [
+		...readdirSync(resolve(REPO_ROOT, 'src')).filter((name) => name.endsWith('.ts')).map((name) => `src/${name}`),
+		...readdirSync(resolve(REPO_ROOT, 'test')).filter((name) => name.endsWith('.mjs')).map((name) => `test/${name}`),
+		'README.md', 'CHANGELOG.md', 'package.json', 'syntaxes/xit.tmLanguage.json',
+		// This file spells the retired phrases out in order to look for them.
+	].filter((file) => file !== 'test/manifest.test.mjs');
+
+	it('states no rule that has been replaced', () => {
+		const stale = [];
+		for (const { phrase, retired, history } of RETIRED) {
+			for (const file of FILES) {
+				if (history.includes(file)) continue;
+				if (readFileSync(resolve(REPO_ROOT, file), 'utf8').includes(phrase)) {
+					stale.push(`  ${file} still says ${JSON.stringify(phrase)}, but ${retired}`);
+				}
+			}
+		}
+		assert.deepEqual(stale, [], `prose describing a retired rule:\n${stale.join('\n')}`);
+	});
+
+	it('keeps the history it allows, so the list cannot rot into noise', () => {
+		// A file listed as history that no longer mentions the phrase means
+		// the entry is stale and should go, or the explanation was lost.
+		const empty = [];
+		for (const { phrase, history } of RETIRED) {
+			for (const file of history) {
+				if (!readFileSync(resolve(REPO_ROOT, file), 'utf8').includes(phrase)) {
+					empty.push(`  ${file} no longer mentions ${JSON.stringify(phrase)}; drop it from the list`);
+				}
+			}
+		}
+		assert.deepEqual(empty, [], `stale entries in the history list:\n${empty.join('\n')}`);
 	});
 });

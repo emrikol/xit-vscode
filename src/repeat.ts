@@ -11,9 +11,13 @@
  *
  *   [ ] Water the plants -> 2026-08-03 #repeat=weekly
  *
- * `#repeat=weekly` is already a valid tag with a valid value, so a file using
- * this still reads correctly in every other xit tool. It just will not
- * reschedule anything there.
+ * A tag rather than syntax, and the reason has changed since this was written.
+ * It used to be compatibility - `#repeat=weekly` is an ordinary tag, so other
+ * xit tools still read the file. This fork has since changed the format in ten
+ * places on purpose, so that argument is spent. What survives is the rule in
+ * the README: arrows for what you author, tags for what the tool records, and
+ * a tag costs nothing where syntax costs a rule in three places that must not
+ * drift.
  */
 
 import { STATUS_CLASS } from './checkbox';
