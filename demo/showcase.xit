@@ -1,4 +1,4 @@
-Reading list
+# Reading list
 
 [ ] The Design of Everyday Things #book
 [x] Thinking in Systems #book #reread
@@ -7,7 +7,7 @@ Reading list
 [~] Yet another framework tutorial #video
 [?] Something about type theory -> 2026-Q4
 
-Work
+# Work
 
 [ ] ! Ship the release notes -> 2026-08-14 #release
 [ ] .! Reply to the accessibility report #a11y #priority="high"
@@ -24,7 +24,7 @@ Work
     [ ] Find out whose mug this is
 -->
 
-House
+# House
 
 [ ] Replace the hallway bulb
 [ ] Book the boiler service -> 2026-10-01 #home

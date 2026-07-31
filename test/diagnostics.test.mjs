@@ -75,10 +75,11 @@ describe('malformed checkboxes', () => {
 		assert.deepEqual(codes(['[ ] [ ] Description text [ ]']), []);
 	});
 
-	it('leaves a title starting with a bracket alone', () => {
-		// "[Todos]" is not a title per spec §Title, and it is not an attempt
-		// at a checkbox either. Two brackets round a word is not a near miss.
-		assert.deepEqual(codes(['[Todos]']), []);
+	it('does not call a bracketed word a near-miss checkbox', () => {
+		// Two brackets round a word is not an attempt at a checkbox, so it
+		// gets the general error rather than the specific one. It is still
+		// reported: since titles are marked, "[Todos]" is not anything.
+		assert.deepEqual(codes(['[Todos]']), ['unrecognised-line@0']);
 	});
 });
 
@@ -156,9 +157,41 @@ describe('an indent that cannot nest', () => {
 	});
 });
 
+describe('a line that is not anything', () => {
+	it('reports what used to be silently promoted to a heading', () => {
+		// The reason titles are marked. Each of these read as a title before,
+		// so the task vanished from every list rather than looking wrong.
+		for (const text of ['- [ ] Buy milk', '* [ ] Call Sam', 'My TODO list']) {
+			assert.deepEqual(codes([text]), ['unrecognised-line@0'], text);
+		}
+	});
+
+	it('says nothing about a marked title', () => {
+		assert.deepEqual(codes(['# Todos', '[ ] One']), []);
+	});
+
+	it('prefers the specific message where there is one', () => {
+		// A near-miss checkbox gets the checkbox message rather than the
+		// general one. Two errors on one line would be noise, and the
+		// specific one is the one that says what to do.
+		assert.deepEqual(codes(['[ x] Typo']), ['malformed-checkbox@0']);
+	});
+
+	it('says nothing about an indented line, which is a continuation', () => {
+		// Column zero only, matching the grammar's invalid rule. The two have
+		// to agree about which lines are wrong, or the squiggles and the
+		// colours contradict each other.
+		assert.deepEqual(codes(['[ ] Item ...', '    ... and more']), []);
+	});
+
+	it('says nothing about a blank line or one inside a comment', () => {
+		assert.deepEqual(codes(['[ ] One', '', '<!--', 'parked prose', '-->']), []);
+	});
+});
+
 describe('a clean document', () => {
 	it('has nothing to say about it', () => {
-		const lines = ['Todos', '[ ] One -> 2026-02-28', '\t[x] Two', '', '<!-- parked -->'];
+		const lines = ['# Todos', '[ ] One -> 2026-02-28', '\t[x] Two', '', '<!-- parked -->'];
 		assert.deepEqual(problems(lines), []);
 	});
 });

@@ -31,6 +31,7 @@ If the colors and looks of the syntax highlighting is not correct or as fancy as
             // - markup.other.task.checkbox.obsolete.xit
             // - markup.other.task.checkbox.in-question.xit
             // - markup.other.task.checkbox.waiting.xit
+            // - markup.other.task.invalid.xit
             // - markup.other.task.description.closed.xit
             // - markup.other.task.priority.xit
             // - markup.other.task.date.xit
@@ -70,6 +71,32 @@ If closed tasks (completed/obsolete) are not striketroughed, then you may want t
     }
 }
 ```
+
+## Titles
+
+A title is marked with `#` and a space.
+
+```
+# Groceries
+[ ] Milk
+[ ] Bread
+```
+
+The specification defines a title by what it is *not* — it "MUST NOT start with a blank character or the opening square bracket character `[`", and that is the whole rule. So the format has no invalid state for a line: anything that fails to be an item is silently promoted to a heading. These all became titles:
+
+```
+- [ ] Buy milk
+* [ ] Call Sam
+x] Slip
+```
+
+The first two are what anyone with Markdown habits types. None of them appeared in the workspace view, and none of them looked wrong — a heading in the Outline looks exactly like a heading you meant. The failure is not a mis-rendered line, it is a lost task.
+
+With a marker, a line is a title, an item, a continuation, a comment, or an error you can see. Anything else is highlighted as `markup.other.task.invalid.xit` and reported as `unrecognised-line`.
+
+The space after the `#` is what keeps a title clear of a tag: a tag needs a name character straight after the hash, so `# Groceries` can never be one, and `#groceries` alone on a line is an error rather than a heading that happens to look like a tag. A bare `#` is a legal title with no name, because the specification already lets a group be headed by nothing in particular.
+
+**This is a fork of the format,** and it costs four entries in the conformance allowlist — the guide writes its four headline examples unmarked. It refunded two: both places where the guide called a line invalid and we called it a title, because the guide adds "A headline must be separated by a blank line from a preceding item" and the specification says no such thing. With a marker there is nothing left to argue about.
 
 ## Waiting
 
@@ -115,7 +142,7 @@ A fenced code block tagged `xit` is highlighted inside any Markdown file.
 Notes from the meeting.
 
 ```xit
-Follow-ups
+# Follow-ups
 [ ] ! Write it up -> 2026-08-14 #work
 [x] Book the room
 ```

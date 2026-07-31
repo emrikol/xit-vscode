@@ -113,27 +113,37 @@ const KNOWN = {
 	// description continuation cannot begin with a literal "[ ]" at a tab
 	// indent.
 
-	// The fourth place the guide is stricter than the specification, found
-	// only once this suite started comparing headlines at all.
+	// Titles are marked in this fork, and these four are the whole price.
 	//
-	// The guide: "A headline must be separated by a blank line from a
-	// preceding item", so the middle line here is invalid:
+	// The specification defines a title by what it is not - "a single line of
+	// text that MUST NOT start with a blank character or the opening square
+	// bracket character `[`" - which leaves the format with no invalid state
+	// for a line. Anything failing to be an item is silently promoted to a
+	// heading, so `- [ ] Buy milk`, `* [ ] Call Sam` and `x] Slip` all read as
+	// titles, and the task disappears from every list. That is a lost task
+	// rather than a mis-rendered line, and it is what the marker buys.
 	//
-	//   [ ] Do this
-	//   Todos
-	//   [ ] Do this
+	// See src/title.ts. The corpus writes its headlines unmarked, so each one
+	// is now `invalid` here instead. Four lines, in three aspects, and every
+	// other example in the guide is untouched.
+	'groups/3:0#missing-headline': 'this fork marks a title with `# `; the guide writes them unmarked',
+	'groups/4:0#missing-headline': 'this fork marks a title with `# `; the guide writes them unmarked',
+	'encoding/0:0#missing-headline': 'this fork marks a title with `# `; the guide writes them unmarked',
+	'encoding/0:4#missing-headline': 'this fork marks a title with `# `; the guide writes them unmarked',
+
+	// Two entries used to sit here, `groups/6:1#extra-headline` and
+	// `description/7:1#extra-headline`, and they are gone for a good reason
+	// rather than a convenient one.
 	//
-	// The spec says no such thing. Its entire rule for a title is "a single
-	// line of text that MUST NOT start with a blank character or the opening
-	// square bracket character `[`". By that text this is a title, and the
-	// same reasoning covers a failed continuation that lost its indentation -
-	// "invalid (no space)" is, read literally, a title too.
+	// Both were places the guide called a line invalid and we called it a
+	// title, because the guide adds "A headline must be separated by a blank
+	// line from a preceding item" and the specification says no such thing.
+	// We followed the specification and diverged from the guide.
 	//
-	// Following the guide would need the grammar to know what came before a
-	// line, which is exactly the kind of context TextMate makes expensive, in
-	// service of a rule the normative document does not contain.
-	'groups/6:1#extra-headline': 'spec §Title has no blank-line rule; the guide adds one',
-	'description/7:1#extra-headline': 'spec §Title has no blank-line rule; an unindented line is a title',
+	// With a marker there is no argument left. An unmarked line is not a
+	// title whatever precedes it, so both lines are invalid here too, which is
+	// what the guide wanted - by a rule it never had to state. Marking titles
+	// cost four divergences and refunded two.
 };
 
 /** Character offsets on a line that carry `scope`. */

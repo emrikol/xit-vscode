@@ -11,6 +11,9 @@
 		},
 		{
 			"include": "#title"
+		},
+		{
+			"include": "#invalid"
 		}
 	],
 	"repository": {
@@ -21,9 +24,14 @@
 			"end": "-->[^\\S\\n]*$"
 		},
 		"title": {
-			"comment": "Spec §Title: a single line that MUST NOT start with a blank character or `[`.",
+			"comment": "A marked title, and a fork of the specification. Spec §Title defines a title by what it is not - \"MUST NOT start with a blank character or `[`\" - which leaves the format with no invalid state for a line: anything that fails to be an item is silently promoted to a heading, so `- [ ] Buy milk` becomes one and the task disappears. A marker turns that into an error you can see. `#` then a space, or `#` alone: the space is what keeps it clear of a tag, since a tag needs a name character straight after the hash. See src/title.ts.",
 			"name": "markup.underline.xit markup.other.task.title.xit",
-			"match": "^[^\\s\\[].*"
+			"match": "^#(?=[^\\S\\n]|$).*"
+		},
+		"invalid": {
+			"comment": "A line that is not a comment, not an item, and not a title. This rule only exists because titles are marked; without a marker every one of these would be a heading. It must come last in the top-level patterns, so it only sees what the others declined. Continuation lines never reach it - they are matched inside the item rule - and neither do blank lines, which match nothing at all.",
+			"name": "invalid.illegal.xit markup.other.task.invalid.xit",
+			"match": "^\\S.*"
 		},
 		"item": {
 			"patterns": [

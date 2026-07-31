@@ -195,7 +195,7 @@ describe('outline', () => {
 	}
 
 	it('is registered, and groups items under their title', async () => {
-		const symbols = await symbolsFor('Reading list\n[ ] A book\n[x] Another');
+		const symbols = await symbolsFor('# Reading list\n[ ] A book\n[x] Another');
 		assert.equal(symbols.length, 1);
 		assert.equal(symbols[0].name, 'Reading list');
 		assert.deepEqual(symbols[0].children.map(s => s.name), ['[ ] A book', '[x] Another']);

@@ -520,21 +520,41 @@ describe('subtasks (fork, discussion #2)', () => {
 	});
 });
 
-describe('title (spec §Title)', () => {
-	it('matches a line that does not start with a blank or a bracket', async () => {
-		await assertScope('My TODO list', TITLE, 'My TODO list');
-		await assertScope('今日は', TITLE, '今日は');
+describe('title (fork: marked, see src/title.ts)', () => {
+	it('matches a marked line', async () => {
+		await assertScope('# My TODO list', TITLE, '# My TODO list');
+		await assertScope('# 今日は', TITLE, '# 今日は');
+	});
+
+	it('matches a bare marker, which heads a group with no name', async () => {
+		await assertScope('#', TITLE, '#');
+	});
+
+	it('does not match an unmarked line, which is the whole point', async () => {
+		// Spec §Title defines a title by what it is not, which leaves the
+		// format with no invalid state for a line. These all read as titles
+		// before the marker, and the first two are what Markdown habits type.
+		for (const line of ['My TODO list', '- [ ] Buy milk', '* [ ] Call Sam', 'x] Slip']) {
+			await assertNoScope(line, TITLE);
+		}
+	});
+
+	it('reports an unmarked line as invalid instead', async () => {
+		for (const line of ['My TODO list', '- [ ] Buy milk', 'x] Slip']) {
+			await assertScope(line, 'markup.other.task.invalid', line);
+		}
 	});
 
 	it('does not match a line starting with a blank character', async () => {
-		await assertNoScope(' Todos', TITLE);
-		await assertNoScope('    Todos', TITLE);
+		await assertNoScope(' # Todos', TITLE);
+		await assertNoScope('    # Todos', TITLE);
 	});
 
-	it('does not match a line starting with an opening bracket', async () => {
-		// Spec: a title "MUST NOT start with a blank character or the
-		// opening square bracket character `[`".
-		await assertNoScope('[Todos]', TITLE);
+	it('does not match a tag, which needs no space after the hash', async () => {
+		// `#[\p{L}\d_-]+` wants a name character straight after the hash, so
+		// the space is what keeps the two apart. A bare tag on its own line is
+		// an error rather than a heading that looks like a tag.
+		await assertNoScope('#groceries', TITLE);
 	});
 });
 
@@ -571,13 +591,13 @@ describe('comment (fork spec v1.2 §Comment)', () => {
 	});
 
 	it('keeps blank lines inside the comment', async () => {
-		const lines = await tokenize('<!--\n\n-->\nTitle');
+		const lines = await tokenize('<!--\n\n-->\n# Title');
 		assert.deepEqual(scoped(lines[3], COMMENT), []);
-		assert.equal(onlyScoped(lines[3], TITLE), 'Title');
+		assert.equal(onlyScoped(lines[3], TITLE), '# Title');
 	});
 
 	it('runs to the end of the file when never closed', async () => {
-		const lines = await tokenize('<!--\n[ ] Never comes back\nTitle');
+		const lines = await tokenize('<!--\n[ ] Never comes back\n# Title');
 		assert.deepEqual(scoped(lines[1], CHECKBOX), []);
 		assert.deepEqual(scoped(lines[2], TITLE), []);
 	});
@@ -648,8 +668,8 @@ describe('title after a closed item', () => {
 		// after a closed item it ran past the blank line and painted the next
 		// title as description. TextMate only tests the end of the innermost
 		// rule on the stack, so relying on the item to pop it was not enough.
-		const lines = await tokenize('[x] Done\n\nA new title\n[ ] Next');
-		assert.deepEqual(scoped(lines[2], TITLE), ['A new title']);
+		const lines = await tokenize('[x] Done\n\n# A new title\n[ ] Next');
+		assert.deepEqual(scoped(lines[2], TITLE), ['# A new title']);
 		assert.deepEqual(scoped(lines[2], STRIKETHROUGH), []);
 		assert.deepEqual(scoped(lines[1], STRIKETHROUGH), [], 'the blank line is not part of the item');
 	});

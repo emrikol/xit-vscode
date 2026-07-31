@@ -28,7 +28,7 @@ describe('outline', () => {
 	it('puts items under the title above them', () => {
 		// Spec §Group: "any consecutive number of items … that MAY be preceded
 		// by one title".
-		assert.deepEqual(shape(outline(['Reading list', '[ ] A book', '[x] Another'])), [
+		assert.deepEqual(shape(outline(['# Reading list', '[ ] A book', '[x] Another'])), [
 			'Reading list',
 			'\t[ ] A book',
 			'\t[x] Another',
@@ -45,12 +45,12 @@ describe('outline', () => {
 	});
 
 	it('starts a new section at each title', () => {
-		const lines = ['First', '[ ] One', '', 'Second', '[ ] Two'];
+		const lines = ['# First', '[ ] One', '', '# Second', '[ ] Two'];
 		assert.deepEqual(shape(outline(lines)), ['First', '\t[ ] One', 'Second', '\t[ ] Two']);
 	});
 
 	it('keeps items before any title at the top level', () => {
-		assert.deepEqual(shape(outline(['[ ] Loose', 'A title', '[ ] Owned'])), [
+		assert.deepEqual(shape(outline(['[ ] Loose', '# A title', '[ ] Owned'])), [
 			'[ ] Loose',
 			'A title',
 			'\t[ ] Owned',
@@ -94,13 +94,13 @@ describe('outline', () => {
 	});
 
 	it('covers a title to the end of its group', () => {
-		const [title] = outline(['Todos', '[ ] One', '\t[ ] Nested', '', 'Next', '[ ] Two']);
+		const [title] = outline(['# Todos', '[ ] One', '\t[ ] Nested', '', '# Next', '[ ] Two']);
 		assert.equal(title.endLine, 2);
 	});
 
 	it('gives an empty group a title covering only itself', () => {
 		// Spec §Group: a title may be followed by no items at all.
-		const [title] = outline(['Empty Group']);
+		const [title] = outline(['# Empty Group']);
 		assert.equal(title.endLine, 0);
 		assert.deepEqual(title.children, []);
 	});

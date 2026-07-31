@@ -1,4 +1,4 @@
-Subtasks are a fork of the format
+# Subtasks are a fork of the format
 [ ] Ship the release
 	[x] Write the notes
 	[x] Tag the commit
@@ -7,24 +7,24 @@ Subtasks are a fork of the format
 	[x] Move the plants
 	[x] Find whose mug that is
 
-One tab per level, to any depth
+# One tab per level, to any depth
 [ ] Any depth works
 	[ ] One tab
 		[ ] Two tabs
 			[ ] Three
 
-A subtask keeps its own due date
+# A subtask keeps its own due date
 [ ] Parent -> 2026-12-31
 	[ ] Child has its own -> 2026-08-14
 	[ ] So does this one -> 2026-09-01
 
-Descriptions continue with four spaces, or a tab
+# Descriptions continue with four spaces, or a tab
 [ ] This one has a description ...
 	... continued with a tab
 	[ ] and a subtask under that
 		... which continues too
 
-Spaces do not nest, and the Problems panel says so
+# Spaces do not nest, and the Problems panel says so
 [ ] This parent keeps its own level
   [ ] two spaces is reported as cannot-nest
     [ ] four spaces is description text, not a subtask

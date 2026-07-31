@@ -1,21 +1,21 @@
-Overdue on 2026-07-31
+# Overdue on 2026-07-31
 [ ] Yesterday -> 2026-07-30
 [ ] Nine days ago -> 2026-07-22
 
-Critically overdue, more than 14 days
+# Critically overdue, more than 14 days
 [ ] Last month -> 2026-06
 [ ] Last quarter -> 2026-Q2
 [ ] Last year -> 2025
 [ ] A week in January -> 2026-W02
 
-Not overdue on 2026-07-31
+# Not overdue on 2026-07-31
 [ ] Today, the last day of the period -> 2026-07-31
 [ ] Later this year -> 2026-08-14
 [ ] This month -> 2026-07
 [ ] This quarter -> 2026-Q3
 [ ] This year -> 2026
 
-Only the first due date of an item counts
+# Only the first due date of an item counts
 [ ] The second one is disregarded -> 2020-01-01 -> 2019-01-01
 [ ] A date only on a continuation line ...
     ... is still the first one, so it counts -> 2019-01-01

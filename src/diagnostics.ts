@@ -19,6 +19,7 @@
 import { STATUSES, readCheckbox } from './checkbox';
 import { commentLines } from './comment';
 import { dueDatesOn } from './dueDate';
+import { MARKER, isTitle } from './title';
 import { items } from './tree';
 
 export type Severity = 'error' | 'warning' | 'hint';
@@ -129,6 +130,26 @@ export function problems(lines: readonly string[]): Problem[] {
 				severity: 'warning',
 				code: 'malformed-checkbox',
 				message: `A checkbox is exactly three characters: \`[\`, one of \`${STATUSES.join('')}\`, then \`]\`, followed by a space or the end of the line.`,
+			});
+			continue;
+		}
+
+		// A line that is not a comment, not an item, and not a title. Titles
+		// are marked in this fork, which is the only reason this state exists
+		// at all - before the marker, every one of these was a heading.
+		//
+		// Column zero only, matching the grammar's `invalid` rule exactly. An
+		// indented line is a description continuation, and the two must agree
+		// about which lines are wrong or the squiggles and the colours would
+		// contradict each other.
+		if (text.trim() !== '' && /^\S/.test(text) && !all.has(line) && !isTitle(text)) {
+			found.push({
+				line,
+				start: 0,
+				end: text.length,
+				severity: 'error',
+				code: 'unrecognised-line',
+				message: `This is not an item, a title or a comment. A title starts with \`${MARKER} \`; an item starts with a checkbox; a description continues on the next line indented by four spaces or a tab.`,
 			});
 		}
 	}

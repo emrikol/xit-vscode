@@ -11,17 +11,13 @@
 
 import { items } from './tree';
 import { commentBlocks, commentLines } from './comment';
+import { isTitle } from './title';
 
 export interface Fold {
 	/** First line of the range, which stays visible when collapsed. */
 	start: number;
 	end: number;
 	kind: 'item' | 'group' | 'comment';
-}
-
-/** Spec §Title: one line, not starting with a blank or `[`. */
-function isTitle(text: string): boolean {
-	return /^[^\s[]/.test(text);
 }
 
 function isBlank(text: string): boolean {

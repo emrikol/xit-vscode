@@ -10,6 +10,7 @@ import { readCheckbox, Status } from './checkbox';
 import { items } from './tree';
 import { dueDatesOn } from './dueDate';
 import { commentLines } from './comment';
+import { isTitle, titleText } from './title';
 
 export interface Node {
 	/** Shown in the panel. Carries the checkbox, so status reads without colour. */
@@ -27,10 +28,6 @@ export interface Node {
 	children: Node[];
 }
 
-/** Spec §Title: one line, not starting with a blank or `[`. */
-function isTitle(text: string): boolean {
-	return /^[^\s[]/.test(text);
-}
 
 /**
  * The document as a tree of titles and items.
@@ -93,7 +90,7 @@ export function outline(lines: readonly string[]): Node[] {
 		if (readCheckbox(text) || !isTitle(text)) continue;
 
 		title = {
-			name: text.trim(),
+			name: titleText(text),
 			detail: '',
 			kind: 'title',
 			status: null,

@@ -73,19 +73,19 @@ describe('folding groups', () => {
 	it('folds a title with its items', () => {
 		// Spec §Group: "any consecutive number of items ... that MAY be
 		// preceded by one title".
-		assert.deepEqual(shape(['Todos', '[ ] One', '[ ] Two']), ['group 0-2']);
+		assert.deepEqual(shape(['# Todos', '[ ] One', '[ ] Two']), ['group 0-2']);
 	});
 
 	it('ends a group at a blank line', () => {
-		assert.deepEqual(shape(['First', '[ ] One', '', 'Second', '[ ] Two']), ['group 0-1', 'group 3-4']);
+		assert.deepEqual(shape(['# First', '[ ] One', '', '# Second', '[ ] Two']), ['group 0-1', 'group 3-4']);
 	});
 
 	it('ends a group at the next title', () => {
-		assert.deepEqual(shape(['First', '[ ] One', 'Second', '[ ] Two']), ['group 0-1', 'group 2-3']);
+		assert.deepEqual(shape(['# First', '[ ] One', '# Second', '[ ] Two']), ['group 0-1', 'group 2-3']);
 	});
 
 	it('offers nothing for a title with no items', () => {
-		assert.deepEqual(shape(['Empty Group']), []);
+		assert.deepEqual(shape(['# Empty Group']), []);
 	});
 
 	it('offers nothing for items with no title', () => {
@@ -97,7 +97,7 @@ describe('folding groups', () => {
 
 describe('folding a whole document', () => {
 	it('sorts ranges by where they start', () => {
-		const lines = ['Todos', '[ ] Parent', '\t[x] Child', '', '<!--', 'parked', '-->'];
+		const lines = ['# Todos', '[ ] Parent', '\t[x] Child', '', '<!--', 'parked', '-->'];
 		assert.deepEqual(shape(lines), ['group 0-2', 'item 1-2', 'comment 4-6']);
 	});
 
