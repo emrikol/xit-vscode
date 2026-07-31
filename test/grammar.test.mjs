@@ -237,6 +237,30 @@ describe('tag (spec §Tag)', () => {
 		await assertScope('[ ] #გამარჯობა', TAG, '#გამარჯობა');
 	});
 
+	it('must follow a space or punctuation, which the spec does not require', async () => {
+		// A deliberate divergence. Read Discussion #51 before changing it.
+		//
+		// Asked directly whether "[ ] This item has a#tag" contains a tag,
+		// jotaen answered "Currently, yes", and listed the consequences as
+		// downsides he accepts: "[ ] Change my master password to be
+		// bN144#y6Q!Jc" recognises "#y6Q" as a tag, and a URL fragment such as
+		// ".../foo/#some-anchor" is a tag too. The spec is silent on what may
+		// come before a "#", so read literally it agrees with him.
+		//
+		// We keep the lookbehind anyway, because his own xit-sublime rule has
+		// it - character for character, `(?<=[\s\p{P}])\#[\p{L}\d_-]+` - so
+		// the reference implementation contradicts the answer. By his stated
+		// rule his plugin should colour "#y6Q" in that password, and it does
+		// not. Following the prose over the implementation would make
+		// highlighting worse in exactly the case he calls a downside.
+		//
+		// The URL case still matches, because "/" is punctuation. That one is
+		// unavoidable without teaching the grammar about URLs.
+		await assertNoScope('[ ] Change my master password to be bN144#y6Q!Jc', TAG);
+		await assertNoScope('[ ] This item has a#tag', TAG);
+		await assertScope('[ ] This item has a #tag', TAG, '#tag');
+	});
+
 	it('stops at punctuation', async () => {
 		await assertScope('[ ] This is a #tag.', TAG, '#tag');
 		await assertScope('[ ] #t-a-g!', TAG, '#t-a-g');
