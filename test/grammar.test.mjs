@@ -108,32 +108,45 @@ describe('priority (spec §Priority)', () => {
 		await assertScope('[ ] !!!!!!!!!! Super important', PRIORITY, '!!!!!!!!!!');
 	});
 
-	it('accepts dot padding on one side', async () => {
-		// Spec: "The dots MUST appear either before or after the exclamation mark(s)."
-		await assertScope('[ ] ..! Important', PRIORITY, '..!');
-		await assertScope('[ ] !!. More important', PRIORITY, '!!.');
+	it('has no dot padding, which is a fork', async () => {
+		// Spec §Priority allows "any number of exclamation marks (`!`) and
+		// dots (`.`)", and the guide's priority/1 says what the dots do:
+		// "The priority can be padded with dots on either side." They are
+		// alignment filler, so the exclamation marks line up in a column -
+		// visual presentation stored in the file. Three of the guide's seven
+		// priority rules exist only to police the padding.
+		//
+		// A decoration can draw the column and put nothing in the document,
+		// so the dots are gone and only the exclamation marks are read.
+		// `!!.` gives no priority at all rather than `!!`, and that falls out
+		// of a rule already there: the guide's priority/5, "If the space
+		// between priority and description is missing, the exclamation mark is
+		// treated as part of the description." With the dots gone, a dot after
+		// the marks is exactly that missing space.
+		await assertNoScope('[ ] ..! Important', PRIORITY);
+		await assertNoScope('[ ] !!. More important', PRIORITY);
+		await assertScope('[ ] !! More important', PRIORITY, '!!');
 	});
 
-	it('rejects dots on both sides', async () => {
-		await assertNoScope('[ ] .!. Invalid', PRIORITY);
-		await assertNoScope('[ ] !.! Invalid', PRIORITY);
+	it('rejects dots wherever they appear', async () => {
+		for (const line of ['[ ] .!. Invalid', '[ ] !.! Invalid', '[ ] ..! Padded', '[ ] ... Not important', '[ ] . Not important']) {
+			await assertNoScope(line, PRIORITY);
+		}
 	});
 
-	it('accepts dots on their own', async () => {
-		// Spec: "It MUST contain any number of exclamation marks (`!`) and
-		// dots (`.`)." Any number includes none, so dots with no exclamation
-		// mark are a priority of zero importance rather than not a priority.
-		// The syntax guide shows "[ ] ... This is not important" with the dots
-		// marked as one, and jotaen's own Sublime rule is `((!*)(\.*)|(\.*)(!*))`,
-		// which matches them too. This test used to assert the opposite.
-		await assertScope('[ ] ... Not important', PRIORITY, '...');
-		await assertScope('[ ] . Not important', PRIORITY, '.');
+	it('needs at least one exclamation mark', async () => {
+		// The dots used to carry a priority of zero importance on their own,
+		// which is what the guide shows and what jotaen's Sublime rule
+		// `((!*)(\.*)|(\.*)(!*))` matches. With the padding gone there is
+		// nothing left for them to mean.
+		await assertNoScope('[ ] ... Not important', PRIORITY);
+		await assertScope('[ ] ! Important', PRIORITY, '!');
 	});
 
 	it('allows additional spaces before it', async () => {
 		// Spec §Item: "(Additional space characters MAY appear.)"
 		await assertScope('[ ]    ! Do something', PRIORITY, '!');
-		await assertScope('[ ]   !!. Do something', PRIORITY, '!!.');
+		await assertScope('[ ]   !! Do something', PRIORITY, '!!');
 	});
 
 	it('must be a separate token', async () => {

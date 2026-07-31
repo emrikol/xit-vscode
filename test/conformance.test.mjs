@@ -78,8 +78,36 @@ const KNOWN = {
 	// Worth raising on Discussion #63, which asks for exactly this: "If you'd
 	// like something to be added (or corrected), please post it into this
 	// issue here as comment."
+	// Only the exclamation-mark line is left. `[ ]    . Do something` no longer
+	// holds a priority for us at all, now that dots are gone, so it stopped
+	// being a disagreement about spacing and became one about dots - covered
+	// by the block below rather than here.
 	'priority/3:0#extra-priority@7': 'spec §Item allows additional spaces; the guide says it does not',
-	'priority/3:1#extra-priority@7': 'spec §Item allows additional spaces; the guide says it does not',
+
+	// This fork has dropped the dots from priority, and these five lines are
+	// what that costs.
+	//
+	// The guide's priority/1 says what the dots are for: "The priority can be
+	// padded with dots on either side." They are alignment filler, so the
+	// exclamation marks line up in a column. That is visual presentation
+	// stored in the document, and three of the guide's seven priority rules -
+	// priority/1, priority/3 and priority/4 - exist only to police it.
+	//
+	// An editor can draw that column with a decoration and put nothing in the
+	// file, which is what decorations are for and what the overdue marking
+	// already does. So priority is exclamation marks, and `..!`, `!!.`, `...`
+	// and a bare `.` are description text.
+	'priority/1:0#priority@4': 'this fork has no dot padding; `..!` is description text',
+	// `!!.` gives no priority rather than `!!`, which falls out of a rule the
+	// guide already has: priority/5, "If the space between priority and
+	// description is missing, the exclamation mark is treated as part of the
+	// description." With the dots gone, a dot after the marks is that missing
+	// space, so no new rule was needed to say what `!!.` means.
+	'priority/1:1#priority@4': 'this fork has no dot padding; `!!.` has no space, so it is description',
+	'priority/1:2#priority@4': 'this fork has no dot padding; `...` is not a priority',
+	'priority/2:1#priority@4': 'this fork has no dot padding; a bare `.` is not a priority',
+	'priority/6:2#priority@4': 'this fork has no dot padding; the priority is `!`, not `!.`',
+	'priority/6:3#priority@4': 'this fork has no dot padding; a bare `.` is not a priority',
 
 	// The guide drops the checkbox highlighting from a line whose priority is
 	// malformed, marking the whole line invalid. Nothing in the spec says a

@@ -175,8 +175,8 @@
 			]
 		},
 		"priority": {
-			"comment": "Spec §Priority: \"any number of exclamation marks (`!`) and dots (`.`)\", with the dots on one side only. Any number includes none, so `...` on its own is a priority with an importance of zero; the syntax guide shows it as one. Spec §Item allows additional space characters between the checkbox and the priority, so the separator is `[^\\S\\n]+` rather than a single space.",
-			"match": "(?<=^\\[[ x@~?>]\\])[^\\S\\n]+((?:!+\\.*)|(?:\\.+!*))(?=[^\\S\\n]|$)",
+			"comment": "Priority is exclamation marks, and this fork has dropped the dots. Spec §Priority allows \"any number of exclamation marks (`!`) and dots (`.`)\" with the dots on one side only, and the guide's priority/1 says why they exist: \"The priority can be padded with dots on either side\" - they are alignment filler, so the exclamation marks line up in a column. That is visual presentation stored in the file, and three of the guide's seven priority rules exist only to police it. An editor can draw the column with a decoration and put nothing in the document, which is what decorations are for. Spec §Item allows additional space characters between the checkbox and the priority, so the separator is `[^\\S\\n]+` rather than a single space.",
+			"match": "(?<=^\\[[ x@~?>]\\])[^\\S\\n]+(!+)(?=[^\\S\\n]|$)",
 			"captures": {
 				"1": {
 					"name": "markup.deleted.xit markup.other.task.priority.xit"

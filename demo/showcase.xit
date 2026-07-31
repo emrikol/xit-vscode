@@ -10,7 +10,7 @@
 # Work
 
 [ ] ! Ship the release notes -> 2026-08-14 #release
-[ ] .! Reply to the accessibility report #a11y #priority="high"
+[ ] !! Reply to the accessibility report #a11y #priority="high"
 [@] Rewrite the onboarding docs -> 2026-W34
     Half of it is still the 2023 wording
 [x] Cut the 0.1.0 tag #release

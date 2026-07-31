@@ -98,6 +98,24 @@ The space after the `#` is what keeps a title clear of a tag: a tag needs a name
 
 **This is a fork of the format,** and it costs four entries in the conformance allowlist — the guide writes its four headline examples unmarked. It refunded two: both places where the guide called a line invalid and we called it a title, because the guide adds "A headline must be separated by a blank line from a preceding item" and the specification says no such thing. With a marker there is nothing left to argue about.
 
+## Priority
+
+Priority is exclamation marks. `[ ] !!! Ship it` is more urgent than `[ ] ! Ship it`.
+
+**The dots are gone, and that is a fork.** The specification allows "any number of exclamation marks (`!`) and dots (`.`)" with the dots on one side only, and the syntax guide says what they are for: "The priority can be padded with dots on either side." They are alignment filler, so the marks line up in a column:
+
+```
+[ ] ...! Low
+[ ] ..!! Medium
+[ ] !!!! Urgent
+```
+
+That is visual presentation stored in the document, and it is not cheap: three of the guide's seven priority rules exist only to police the padding, and two of the divergences this fork already carried were arguments about it. Alignment is a rendering concern, and an editor can draw a column with a decoration without putting a character in the file.
+
+To be clear about what is built: the dots are no longer read, and **no alignment decoration is drawn yet**. If you want the column back, that is a decoration to write, not a change to the format.
+
+One thing falls out for free. `[ ] !!. Do this` has no priority at all rather than a priority of `!!`, and no new rule was needed to say so — the guide already has "If the space between priority and description is missing, the exclamation mark is treated as part of the description", and with the dots gone a dot after the marks is exactly that missing space.
+
 ## Waiting
 
 `[>]` means the item should happen, you cannot act on it, and someone or something else holds it.
