@@ -24,6 +24,7 @@ const TAG = 'task.tag';
 const TAG_VALUE = 'task.tag.value';
 const TITLE = 'task.title';
 const COMMENT = 'markup.other.comment';
+const STRIKETHROUGH = 'markup.strikethrough';
 
 /** Assert that `line` carries exactly one token run scoped `fragment`, equal to `expected`. */
 async function assertScope(line, fragment, expected) {
@@ -442,6 +443,37 @@ describe('subtasks (fork, discussion #2)', () => {
 	it('carries the closed styling into a subtask', async () => {
 		const lines = await tokenize('[ ] Parent\n  [x] Done child');
 		assert.deepEqual(scoped(lines[1], CHECKED), ['[x]']);
+	});
+
+	it('does not strike through an open subtask of a closed parent', async () => {
+		// A closed item's description is struck through. A subtask is not part
+		// of that description, and an open one under a checked parent is not
+		// done. This was wrong at first: the strikethrough was a contentName
+		// on the whole item, which paints everything between begin and end,
+		// and TextMate scopes are additive so the subtask could not undo it.
+		const lines = await tokenize('[x] Closed parent\n  [ ] Still open');
+		assert.deepEqual(scoped(lines[1], STRIKETHROUGH), []);
+	});
+
+	it('strikes through a subtask that is closed in its own right', async () => {
+		const lines = await tokenize('[x] Closed parent\n  [x] Also done\n    its continuation');
+		assert.ok(scoped(lines[1], STRIKETHROUGH).length > 0);
+		assert.ok(scoped(lines[2], STRIKETHROUGH).length > 0);
+	});
+
+	it('resumes the parent description after a subtask', async () => {
+		// Four spaces, not two. Two is a legal subtask indent but not a legal
+		// continuation - the spec asks for exactly four spaces, and this fork
+		// adds a tab, nothing else.
+		const lines = await tokenize('[x] Closed ...\n    [ ] open subtask\n    ... and more description');
+		assert.deepEqual(scoped(lines[1], STRIKETHROUGH), []);
+		assert.ok(scoped(lines[2], STRIKETHROUGH).length > 0, 'the description should be struck again');
+	});
+
+	it('does not continue a description at a subtask indent', async () => {
+		// Two spaces nests an item; it does not continue a description.
+		const lines = await tokenize('[ ] Item ...\n  ... two spaces is not a continuation -> 2026-01-31');
+		assert.deepEqual(scoped(lines[1], DATE), []);
 	});
 });
 
