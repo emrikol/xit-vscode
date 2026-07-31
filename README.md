@@ -101,16 +101,17 @@ format, so other [x]it! tools will not understand them. See
 ```sh
 npm install            # also installs the git hooks
 npm test               # build, then run the unit tests
-npm run test:integration   # run the tests inside a real VS Code
+npm run test:web       # run the integration tests in a headless browser
+npm run test:integration   # run the same tests in desktop VS Code
 npm run open-web:demo  # serve a real VS Code in the browser, on demo/
 npm run icons          # re-render the icons from their SVG sources
 ```
 
 `npm install` points `core.hooksPath` at `.githooks`, so the hooks install
 themselves with no extra dependency. `pre-commit` runs the unit tests.
-`pre-push` runs those, then the integration tests, then confirms the
-extension still packages, which catches manifest mistakes the tests cannot
-see. Both take `--no-verify` if you need to get past them.
+`pre-push` runs those, then `test:web`, then confirms the extension still
+packages, which catches manifest mistakes the tests cannot see. Both take
+`--no-verify` if you need to get past them.
 
 The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`,
 the same libraries VS Code uses, so they exercise the real Oniguruma engine
@@ -118,9 +119,42 @@ rather than JavaScript's regular expressions. The conformance fixture is the
 reference `test.xit` from
 [jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
 
-The integration tests run inside an Extension Development Host with
-`@vscode/test-cli`, which downloads a real VS Code on first use and caches it
-in `.vscode-test/`.
+### The two integration runs
+
+`src/test/extension.test.ts` is one suite that runs in both extension hosts.
+
+- **`npm run test:web`** bundles it for a web worker and runs it in a headless
+  Chromium through `@vscode/test-web`. Nothing appears on screen. This is the
+  one on the pre-push hook.
+- **`npm run test:integration`** runs it in desktop Electron through
+  `@vscode/test-cli`. It opens a real VS Code window that takes focus for a
+  few seconds. Run it by hand before anything that matters.
+
+The desktop run cannot be made quiet, and it is worth writing down why so
+nobody spends an afternoon on it again. `@vscode/test-electron` has no
+headless mode on any platform; it launches the real application. On Linux the
+usual answer is to run it under `xvfb`, a virtual X display. macOS has no
+equivalent: its window server is not detachable, and there is no
+`xvfb-run` for Quartz. Hiding the window is not an option either, because the
+tests need a focused editor. Hence the split.
+
+Two things about the web run are easy to get wrong:
+
+- `--headless` has to be passed explicitly. `@vscode/test-web` documents it as
+  defaulting to true when `--extensionTestsPath` is given, and on the command
+  line it does not: `minimist` is told `headless` is a boolean flag, and
+  minimist sets an absent boolean flag to `false` rather than `undefined`, so
+  the `options.headless ?? …` fallback never fires. A test in
+  `test/manifest.test.mjs` keeps the flag in the script.
+- `src/test/index.ts` lists its test files one `import()` at a time. esbuild
+  has no equivalent of the `require.context` glob the official sample uses, so
+  a new test file that nobody adds to that list would never run and the suite
+  would still report green. `test/bundle.test.mjs` compares the list against
+  `src/test/*.test.ts`.
+
+Neither host may see Node. The tests read no files and call no `require`; the
+handful of manifest values they need are literals in `src/test/manifest.ts`,
+checked against `package.json` by the unit suite.
 
 `npm run open-web` serves the conformance fixture and `npm run open-web:demo`
 serves `demo/showcase.xit`, both in a real VS Code in the browser with this

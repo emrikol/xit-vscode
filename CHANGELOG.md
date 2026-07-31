@@ -13,9 +13,10 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   is ignored by the web extension host entirely.
 - An extension icon and a file icon for `.xit` files. The artwork is
   deliberately generic; the [x]it! logo belongs to the official project.
-- Integration tests, run in a real Extension Development Host with
-  `@vscode/test-cli`, covering activation, command registration and the
-  edits themselves.
+- Integration tests, run in a real Extension Development Host, covering
+  activation, command registration and the edits themselves. One suite runs
+  in both hosts: `npm run test:web` in a headless Chromium, and
+  `npm run test:integration` in desktop Electron.
 - Manifest and bundle tests, so a contributed path that does not exist, a
   keybinding for a command that was never contributed, or a Node builtin in
   the web bundle fail on commit rather than at run time.
@@ -95,7 +96,11 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
   added beside it.
 - Git hooks run the suite before a commit, and the suite, the integration
   tests and a packaging check before a push. They install themselves on
-  `npm install` through `core.hooksPath`, with no extra dependency.
+  `npm install` through `core.hooksPath`, with no extra dependency. The push
+  hook runs the integration tests in a headless browser rather than in
+  desktop Electron, which opened a VS Code window that took focus mid-push.
+  `@vscode/test-electron` has no headless mode on any platform and macOS has
+  no xvfb to hide it behind, so the desktop run stays a manual command.
 - The extension is bundled with esbuild instead of shipped as raw `tsc`
   output, so activation loads one file rather than one per module.
 - Manifest metadata the Marketplace uses: `license`, `keywords`, `homepage`,
