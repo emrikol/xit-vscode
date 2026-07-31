@@ -16,6 +16,7 @@
  */
 
 import { STATUS_CLASS } from './checkbox';
+import { lastDayOfMonth } from './calendar';
 
 /** A local calendar day, as YYYYMMDD, which compares correctly as a number. */
 export type Day = number;
@@ -85,19 +86,16 @@ export function renderDueDate(parts: Parts): string {
  * stops a date mixing `-` and `/` separators.
  */
 const VALUE =
-	'(?<year>\\d{4})'
-	+ '(?:(?<sep>[-/])(?:'
-	+ '(?<month>0[1-9]|1[0-2])(?:\\k<sep>(?<date>0[1-9]|[1-2]\\d|3[0-1]))?'
-	+ '|W(?<week>0[1-9]|[1-4]\\d|5[0-3])'
-	+ '|Q(?<quarter>[1-4])'
-	+ '))?';
+	'(?<year>\\d{4})' +
+	'(?:(?<sep>[-/])(?:' +
+	'(?<month>0[1-9]|1[0-2])(?:\\k<sep>(?<date>0[1-9]|[1-2]\\d|3[0-1]))?' +
+	'|W(?<week>0[1-9]|[1-4]\\d|5[0-3])' +
+	'|Q(?<quarter>[1-4])' +
+	'))?';
 
 /** An arrow rule: the same date value, the same boundaries, a different arrow. */
 function arrow(prefix: string): RegExp {
-	return new RegExp(
-		`(?<![^\\s\\p{P}])(?<![-/])${prefix} ${VALUE}(?![-/])(?=[\\p{P} ]|$)`,
-		'gu',
-	);
+	return new RegExp(`(?<![^\\s\\p{P}])(?<![-/])${prefix} ${VALUE}(?![-/])(?=[\\p{P} ]|$)`, 'gu');
 }
 
 const DUE_DATE = arrow('->');
@@ -141,16 +139,6 @@ const CONTINUATION = /^[^\S\n]+(?=.*\S)/;
  * checking they agreed.
  */
 const CHECKBOX = new RegExp(`^[^\\S\\n]*\\[[${STATUS_CLASS}]\\](?=[^\\S\\n]|$)`);
-
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-function isLeapYear(year: number): boolean {
-	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-function lastDayOfMonth(year: number, month: number): number {
-	return month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
-}
 
 function day(year: number, month: number, date: number): Day {
 	return year * 10000 + month * 100 + date;

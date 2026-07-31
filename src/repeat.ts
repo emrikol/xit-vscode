@@ -21,8 +21,9 @@
  */
 
 import { STATUS_CLASS } from './checkbox';
-import { Day, Parts, dueDatesOn, renderDueDate, startDatesOn } from './dueDate';
+import { type Day, type Parts, dueDatesOn, renderDueDate, startDatesOn } from './dueDate';
 import { tagsOn } from './tag';
+import { isLeapYear, lastDayOfMonth } from './calendar';
 
 export type Unit = 'day' | 'weekday' | 'week' | 'month' | 'quarter' | 'year';
 
@@ -64,7 +65,13 @@ const LETTERS: Record<string, Unit> = { d: 'day', w: 'week', m: 'month', q: 'qua
 
 /** ISO weekday numbers, for `#repeat=monday`. */
 const WEEKDAYS: Record<string, number> = {
-	monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 7,
+	monday: 1,
+	tuesday: 2,
+	wednesday: 3,
+	thursday: 4,
+	friday: 5,
+	saturday: 6,
+	sunday: 7,
 };
 
 /**
@@ -111,16 +118,6 @@ export function parseInterval(value: string | null): Interval | null {
 	return { unit: LETTERS[match[2].toLowerCase()], count, fromCompletion };
 }
 
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-function isLeapYear(year: number): boolean {
-	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-function lastDayOfMonth(year: number, month: number): number {
-	return month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
-}
-
 /**
  * How many ISO weeks a year has: 52, or 53 when it starts on a Thursday, or on
  * a Wednesday in a leap year.
@@ -131,7 +128,7 @@ function weeksInYear(year: number): number {
 }
 
 function addMonths(parts: Parts, months: number): Parts {
-	const total = (parts.year * 12) + (parts.month! - 1) + months;
+	const total = parts.year * 12 + (parts.month! - 1) + months;
 	const year = Math.floor(total / 12);
 	const month = (total % 12) + 1;
 
@@ -142,8 +139,27 @@ function addMonths(parts: Parts, months: number): Parts {
 	return { ...parts, year, month, date };
 }
 
-function addDays(parts: Parts, days: number): Parts {
-	const moved = new Date(Date.UTC(parts.year, parts.month! - 1, parts.date!) + days * 86400000);
+/**
+ * A date written to the day, which is the only precision that has weekdays or
+ * can move by them.
+ *
+ * Every caller below already tested `parts.date !== undefined`, and the test
+ * proved nothing to the compiler, so each use re-asserted `month!` and `date!`
+ * - four assertions standing in for one invariant that was never written down.
+ * This writes it down once.
+ */
+interface DateParts extends Parts {
+	month: number;
+	date: number;
+}
+
+/** Whether a date is written to the day. A day implies the month holding it. */
+function isDatePrecision(parts: Parts): parts is DateParts {
+	return parts.date !== undefined && parts.month !== undefined;
+}
+
+function addDays(parts: DateParts, days: number): DateParts {
+	const moved = new Date(Date.UTC(parts.year, parts.month - 1, parts.date) + days * 86400000);
 	return {
 		...parts,
 		year: moved.getUTCFullYear(),
@@ -178,7 +194,7 @@ export function advance(parts: Parts, interval: Interval): Parts {
 	// not a week on and then the nearest one, which would skip a week
 	// whenever the date had drifted off the named day. From a Wednesday,
 	// "every Monday" means the Monday five days away, not twelve.
-	if (interval.weekday !== undefined && parts.date !== undefined) {
+	if (interval.weekday !== undefined && isDatePrecision(parts)) {
 		const shift = (interval.weekday - weekdayOf(parts) + 7) % 7;
 		return addDays(parts, shift === 0 ? 7 : shift);
 	}
@@ -190,8 +206,8 @@ export function advance(parts: Parts, interval: Interval): Parts {
 }
 
 /** ISO weekday of a date-precision `parts`: 1 Monday to 7 Sunday. */
-function weekdayOf(parts: Parts): number {
-	return new Date(Date.UTC(parts.year, parts.month! - 1, parts.date!)).getUTCDay() || 7;
+function weekdayOf(parts: DateParts): number {
+	return new Date(Date.UTC(parts.year, parts.month - 1, parts.date)).getUTCDay() || 7;
 }
 
 /** The unit a date is written in, which is the smallest step it can take. */
@@ -206,20 +222,23 @@ function ownUnit(parts: Parts): Unit {
 function step(parts: Parts, { unit, count }: Interval): Parts {
 	// A week-precision date only moves in weeks; nothing else is expressible.
 	if (parts.week !== undefined) {
-		const weeks = unit === 'week' ? count
-			: unit === 'month' ? count * 4
-			: unit === 'quarter' ? count * 13
-			: unit === 'year' ? count * 52
-			: 0;
+		const weeks =
+			unit === 'week'
+				? count
+				: unit === 'month'
+					? count * 4
+					: unit === 'quarter'
+						? count * 13
+						: unit === 'year'
+							? count * 52
+							: 0;
 		return addWeeks(parts, weeks || Math.max(1, Math.round(count / 7)));
 	}
 
 	if (parts.quarter !== undefined) {
-		const quarters = unit === 'quarter' ? count
-			: unit === 'year' ? count * 4
-			: unit === 'month' ? Math.round(count / 3)
-			: 0;
-		const total = (parts.year * 4) + (parts.quarter - 1) + quarters;
+		const quarters =
+			unit === 'quarter' ? count : unit === 'year' ? count * 4 : unit === 'month' ? Math.round(count / 3) : 0;
+		const total = parts.year * 4 + (parts.quarter - 1) + quarters;
 		return { ...parts, year: Math.floor(total / 4), quarter: (total % 4) + 1 };
 	}
 
@@ -227,7 +246,7 @@ function step(parts: Parts, { unit, count }: Interval): Parts {
 	// Only a date-precision date has weekdays; anything coarser falls through
 	// to its own unit below, which is what advance() does for any interval a
 	// pattern cannot express.
-	if (parts.date !== undefined && unit === 'weekday') {
+	if (isDatePrecision(parts) && unit === 'weekday') {
 		let moved = parts;
 		for (let taken = 0; taken < count; taken += 1) {
 			do {
@@ -237,15 +256,12 @@ function step(parts: Parts, { unit, count }: Interval): Parts {
 		return moved;
 	}
 
-	if (parts.date !== undefined && (unit === 'day' || unit === 'week')) {
+	if (isDatePrecision(parts) && (unit === 'day' || unit === 'week')) {
 		return addDays(parts, unit === 'day' ? count : count * 7);
 	}
 
 	if (parts.month !== undefined) {
-		const months = unit === 'month' ? count
-			: unit === 'quarter' ? count * 3
-			: unit === 'year' ? count * 12
-			: 0;
+		const months = unit === 'month' ? count : unit === 'quarter' ? count * 3 : unit === 'year' ? count * 12 : 0;
 		return addMonths(parts, months);
 	}
 
@@ -288,9 +304,7 @@ export function nextOccurrence(
 	// The written pattern is kept, so a month-precision date advances from
 	// this month and not from this day: the interval changes where counting
 	// starts, never what the date says.
-	const from = interval.fromCompletion && today !== undefined
-		? atPrecisionOf(today, dueDate.parts)
-		: dueDate.parts;
+	const from = interval.fromCompletion && today !== undefined ? atPrecisionOf(today, dueDate.parts) : dueDate.parts;
 
 	const moved = renderDueDate(advance(from, interval));
 	const rescheduled = opened.slice(0, dueDate.start) + moved + opened.slice(dueDate.end);
@@ -319,11 +333,7 @@ function withStartMoved(text: string, interval: Interval): string {
 
 /** Whichever of two same-precision dates falls later. */
 function laterOf(a: Parts, b: Parts): Parts {
-	const rank = (parts: Parts) => [
-		parts.year,
-		parts.quarter ?? parts.month ?? parts.week ?? 0,
-		parts.date ?? 0,
-	];
+	const rank = (parts: Parts) => [parts.year, parts.quarter ?? parts.month ?? parts.week ?? 0, parts.date ?? 0];
 
 	const [first, second] = [rank(a), rank(b)];
 	for (const [at, value] of first.entries()) {

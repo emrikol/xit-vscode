@@ -308,8 +308,15 @@ describe('a value one of our own tags cannot read', () => {
 
 	it('follows the configured tag name', () => {
 		const renamed = { repeat: 'every', estimate: 'est', completion: 'done', creation: 'created' };
-		assert.deepEqual(problems(['[ ] x #every=sometimes'], renamed).map((one) => one.code), ['unrecognised-value']);
-		assert.deepEqual(problems(['[ ] x #repeat=sometimes'], renamed).map((one) => one.code), [], 'the old name is just a tag now');
+		assert.deepEqual(
+			problems(['[ ] x #every=sometimes'], renamed).map((one) => one.code),
+			['unrecognised-value'],
+		);
+		assert.deepEqual(
+			problems(['[ ] x #repeat=sometimes'], renamed).map((one) => one.code),
+			[],
+			'the old name is just a tag now',
+		);
 	});
 
 	it('points at the tag, not the line', () => {

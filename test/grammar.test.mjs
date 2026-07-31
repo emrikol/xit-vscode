@@ -48,7 +48,7 @@ describe('checkbox (spec §Checkbox)', () => {
 		await assertScope('[?] In question', IN_QUESTION, '[?]');
 	});
 
-	it('recognises waiting, which is this fork\'s own', async () => {
+	it("recognises waiting, which is this fork's own", async () => {
 		await assertScope('[>] Waiting', WAITING, '[>]');
 	});
 
@@ -129,7 +129,13 @@ describe('priority (spec §Priority)', () => {
 	});
 
 	it('rejects dots wherever they appear', async () => {
-		for (const line of ['[ ] .!. Invalid', '[ ] !.! Invalid', '[ ] ..! Padded', '[ ] ... Not important', '[ ] . Not important']) {
+		for (const line of [
+			'[ ] .!. Invalid',
+			'[ ] !.! Invalid',
+			'[ ] ..! Padded',
+			'[ ] ... Not important',
+			'[ ] . Not important',
+		]) {
 			await assertNoScope(line, PRIORITY);
 		}
 	});
@@ -423,7 +429,14 @@ describe('subtasks (fork, discussion #2)', () => {
 		// The structural half of this is asserted in test/checkbox.test.mjs by
 		// comparing the grammar's rules against STATUSES; this is the half
 		// that checks it actually tokenizes.
-		for (const [status, scope] of [[' ', OPEN], ['x', CHECKED], ['@', ONGOING], ['~', OBSOLETE], ['?', IN_QUESTION], ['>', WAITING]]) {
+		for (const [status, scope] of [
+			[' ', OPEN],
+			['x', CHECKED],
+			['@', ONGOING],
+			['~', OBSOLETE],
+			['?', IN_QUESTION],
+			['>', WAITING],
+		]) {
 			const lines = await tokenize(`[ ] Parent\n\t[${status}] Child`);
 			assert.deepEqual(scoped(lines[1], scope), [`[${status}]`], `nested [${status}]`);
 		}

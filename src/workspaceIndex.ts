@@ -10,9 +10,9 @@
 
 import * as vscode from 'vscode';
 
-import { Collected, collect, isOpen } from './collect';
-import { Reference, foldId, identities } from './link';
-import { TagUsage, tagUsage } from './tag';
+import { type Collected, collect, isOpen } from './collect';
+import { type Reference, foldId, identities } from './link';
+import { type TagUsage, tagUsage } from './tag';
 
 export interface FileItems {
 	uri: vscode.Uri;
@@ -146,7 +146,8 @@ export class WorkspaceIndex implements vscode.Disposable {
 		for (const file of this.files.values()) {
 			for (const [key, usage] of file.tags) {
 				const found = merged.get(key) ?? { spellings: new Map<string, number>(), values: new Set<string>() };
-				for (const [name, count] of usage.spellings) found.spellings.set(name, (found.spellings.get(name) ?? 0) + count);
+				for (const [name, count] of usage.spellings)
+					found.spellings.set(name, (found.spellings.get(name) ?? 0) + count);
 				for (const value of usage.values) found.values.add(value);
 				merged.set(key, found);
 			}
@@ -193,7 +194,12 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private fromDocument(document: vscode.TextDocument) {
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
-		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines, estimateTag(), dateTags()), tags: tagUsage(lines), ids: idsIn(lines) });
+		this.files.set(document.uri.toString(), {
+			uri: document.uri,
+			items: collect(lines, estimateTag(), dateTags()),
+			tags: tagUsage(lines),
+			ids: idsIn(lines),
+		});
 	}
 
 	private async read(uri: vscode.Uri): Promise<void> {
@@ -207,7 +213,12 @@ export class WorkspaceIndex implements vscode.Disposable {
 		try {
 			const bytes = await vscode.workspace.fs.readFile(uri);
 			const lines = new TextDecoder().decode(bytes).split(/\r?\n/);
-			this.files.set(uri.toString(), { uri, items: collect(lines, estimateTag(), dateTags()), tags: tagUsage(lines), ids: idsIn(lines) });
+			this.files.set(uri.toString(), {
+				uri,
+				items: collect(lines, estimateTag(), dateTags()),
+				tags: tagUsage(lines),
+				ids: idsIn(lines),
+			});
 		} catch {
 			// Deleted between being found and being read, or unreadable. Not
 			// worth a message: the watcher will bring it back if it returns.

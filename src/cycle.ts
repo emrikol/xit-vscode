@@ -11,7 +11,7 @@
  * Kept free of the `vscode` module so it can be unit tested, like the rest.
  */
 
-import { Day, daysBetween } from './dueDate';
+import { type Day, daysBetween } from './dueDate';
 import { foldName, tagsOn } from './tag';
 
 /** A date as `stamp` writes one, or null. */

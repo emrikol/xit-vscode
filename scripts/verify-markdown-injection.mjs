@@ -41,13 +41,21 @@ async function findMarkdownGrammar() {
 
 	if (existsSync(root)) {
 		for (const build of await readdir(root)) {
-			candidates.push(resolve(root, build,
-				'Visual Studio Code.app/Contents/Resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json'));
-			candidates.push(resolve(root, build,
-				'resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json'));
+			candidates.push(
+				resolve(
+					root,
+					build,
+					'Visual Studio Code.app/Contents/Resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json',
+				),
+			);
+			candidates.push(
+				resolve(root, build, 'resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json'),
+			);
 		}
 	}
-	candidates.push('/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json');
+	candidates.push(
+		'/Applications/Visual Studio Code.app/Contents/Resources/app/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json',
+	);
 
 	const found = candidates.find((path) => existsSync(path));
 	if (!found) {
@@ -108,8 +116,7 @@ const lines = document.map((line) => {
 	return result.tokens.map((token) => ({ text: line.slice(token.startIndex, token.endIndex), scopes: token.scopes }));
 });
 
-const has = (index, fragment) =>
-	lines[index].some((token) => token.scopes.some((scope) => scope.includes(fragment)));
+const has = (index, fragment) => lines[index].some((token) => token.scopes.some((scope) => scope.includes(fragment)));
 
 const checks = [
 	['item inside the fence is an xit checkbox', has(6, 'markup.other.task.checkbox.open')],
@@ -134,4 +141,4 @@ if (failed.length) {
 	console.error('and injectTo in package.json.');
 	process.exit(1);
 }
-console.log('\nAll checks passed against VS Code\'s own Markdown grammar.');
+console.log("\nAll checks passed against VS Code's own Markdown grammar.");

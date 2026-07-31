@@ -18,8 +18,7 @@ const ANY_CHECKBOX = new RegExp(`\\[[${STATUS_CLASS}]\\]`);
 /** Apply a cascade to a document, so a test can assert on the result. */
 function applied(lines, changed) {
 	const updates = cascade(lines, changed);
-	return lines.map((text, line) =>
-		updates.has(line) ? text.replace(ANY_CHECKBOX, `[${updates.get(line)}]`) : text);
+	return lines.map((text, line) => (updates.has(line) ? text.replace(ANY_CHECKBOX, `[${updates.get(line)}]`) : text));
 }
 
 describe('reading the nesting', () => {
@@ -201,8 +200,10 @@ describe('auto-checking a parent', () => {
 
 	it('handles several edits at once without contradicting itself', () => {
 		// Toggling a whole selection is one edit over many lines.
-		const after = applied(['[ ] Parent', '\t[ ] One', '\t[ ] Two'].map((line, i) =>
-			i === 0 ? line : line.replace('[ ]', '[x]')), [1, 2]);
+		const after = applied(
+			['[ ] Parent', '\t[ ] One', '\t[ ] Two'].map((line, i) => (i === 0 ? line : line.replace('[ ]', '[x]'))),
+			[1, 2],
+		);
 		assert.equal(after[0], '[x] Parent');
 	});
 });

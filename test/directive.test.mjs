@@ -61,7 +61,7 @@ describe('reading a directive', () => {
 });
 
 describe('what a directive changes', () => {
-	it('gives every item the file\'s tags', () => {
+	it("gives every item the file's tags", () => {
 		// The point: a work.xit should not need #work on every line.
 		const [item] = collect(['<!-- xit: tags=work -->', '[ ] Do this']);
 		assert.deepEqual(item.tags, ['work']);
@@ -72,7 +72,7 @@ describe('what a directive changes', () => {
 		assert.deepEqual(item.tags, ['work']);
 	});
 
-	it('adds to the item\'s own rather than replacing them', () => {
+	it("adds to the item's own rather than replacing them", () => {
 		const [item] = collect(['<!-- xit: tags=work -->', '[ ] Do this #urgent']);
 		assert.deepEqual(item.tags.sort(), ['urgent', 'work']);
 	});
@@ -125,10 +125,11 @@ describe('a declared tag is offered by completion', () => {
 	it('counts as used, even where no item writes it', () => {
 		// Otherwise the tag on *every* item in a file is the one you cannot
 		// autocomplete, which is the wrong way round.
-		assert.deepEqual(
-			[...tagUsage(['<!-- xit: tags=work, client-acme -->', '[ ] Do this #urgent']).keys()].sort(),
-			['client-acme', 'urgent', 'work'],
-		);
+		assert.deepEqual([...tagUsage(['<!-- xit: tags=work, client-acme -->', '[ ] Do this #urgent']).keys()].sort(), [
+			'client-acme',
+			'urgent',
+			'work',
+		]);
 	});
 
 	it('loses to the spelling the items actually use', () => {

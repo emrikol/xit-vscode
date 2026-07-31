@@ -9,11 +9,11 @@
 
 import * as vscode from 'vscode';
 
-import { Collected, Urgency, isOpen, overdueCount, totalEstimate, urgencyOf } from './collect';
+import { type Collected, type Urgency, isOpen, overdueCount, totalEstimate, urgencyOf } from './collect';
 import { formatCycleTime } from './cycle';
 import { formatEstimate } from './estimate';
 import { todayFrom } from './dueDate';
-import { Grouping, TagChoice, UNTAGGED, byTag, describeSelection, matchesTags, tagChoices } from './filter';
+import { type Grouping, type TagChoice, UNTAGGED, byTag, describeSelection, matchesTags, tagChoices } from './filter';
 import { WorkspaceIndex } from './workspaceIndex';
 
 /** Groups, in the order they appear. Worst first: that is the question being asked. */
@@ -35,11 +35,18 @@ const GROUPS: { urgency: Urgency; label: string }[] = [
 const RANK = new Map(GROUPS.map((group, at) => [group.urgency, at]));
 
 class Group {
-	constructor(readonly label: string, readonly rows: Row[]) {}
+	constructor(
+		readonly label: string,
+		readonly rows: Row[],
+	) {}
 }
 
 class Row {
-	constructor(readonly uri: vscode.Uri, readonly item: Collected, readonly urgency: Urgency) {}
+	constructor(
+		readonly uri: vscode.Uri,
+		readonly item: Collected,
+		readonly urgency: Urgency,
+	) {}
 }
 
 type Element = Group | Row;
@@ -104,14 +111,14 @@ class Provider implements vscode.TreeDataProvider<Element> {
 			// it is six hours plus however long four other things take, so
 			// the leftovers are named rather than dropped.
 			const { minutes, unestimated } = totalEstimate(element.rows.map((row) => row.item));
-			const total = minutes > 0
-				? unestimated > 0 ? `${formatEstimate(minutes)} + ${unestimated}` : formatEstimate(minutes)
-				: '';
+			const total =
+				minutes > 0 ? (unestimated > 0 ? `${formatEstimate(minutes)} + ${unestimated}` : formatEstimate(minutes)) : '';
 
 			item.description = [String(element.rows.length), total].filter(Boolean).join('  ');
-			item.tooltip = minutes > 0 && unestimated > 0
-				? `${formatEstimate(minutes)} estimated, and ${unestimated} item${unestimated === 1 ? '' : 's'} with no estimate.`
-				: undefined;
+			item.tooltip =
+				minutes > 0 && unestimated > 0
+					? `${formatEstimate(minutes)} estimated, and ${unestimated} item${unestimated === 1 ? '' : 's'} with no estimate.`
+					: undefined;
 			item.contextValue = 'xit.group';
 			return item;
 		}
@@ -131,11 +138,11 @@ class Provider implements vscode.TreeDataProvider<Element> {
 		const shown = !isOpen(item) && item.took !== null ? formatCycleTime(item.took) : when;
 		row.description = [shown, file].filter(Boolean).join('  ');
 		row.tooltip = new vscode.MarkdownString(
-			`${item.description || '_no description_'}\n\n`
-			+ (item.start ? `Not before \`${item.start.text.slice(3)}\`\n\n` : '')
-			+ (item.due ? `Due \`${item.due.text.slice(3)}\`\n\n` : '')
-			+ (item.took !== null ? `Took ${formatCycleTime(item.took)}\n\n` : '')
-			+ `${uri.path}:${item.line + 1}`,
+			`${item.description || '_no description_'}\n\n` +
+				(item.start ? `Not before \`${item.start.text.slice(3)}\`\n\n` : '') +
+				(item.due ? `Due \`${item.due.text.slice(3)}\`\n\n` : '') +
+				(item.took !== null ? `Took ${formatCycleTime(item.took)}\n\n` : '') +
+				`${uri.path}:${item.line + 1}`,
 		);
 		row.resourceUri = uri;
 		row.contextValue = 'xit.item';
@@ -144,7 +151,10 @@ class Provider implements vscode.TreeDataProvider<Element> {
 			// to Definition does.
 			command: 'vscode.open',
 			title: 'Open',
-			arguments: [uri, { selection: new vscode.Range(item.line, 0, item.line, 0) } satisfies vscode.TextDocumentShowOptions],
+			arguments: [
+				uri,
+				{ selection: new vscode.Range(item.line, 0, item.line, 0) } satisfies vscode.TextDocumentShowOptions,
+			],
 		};
 
 		return row;
@@ -191,17 +201,18 @@ class Provider implements vscode.TreeDataProvider<Element> {
 			// because an item under two tags is the same row in both and has to
 			// rank the same way in each.
 			const ranked = [...rows].sort((a, b) => RANK.get(a.urgency)! - RANK.get(b.urgency)!);
-			return byTag(ranked, (row) => row.item.tags)
-				.map((group) => new Group(group.tag === UNTAGGED ? 'Untagged' : `#${group.tag}`, group.rows));
+			return byTag(ranked, (row) => row.item.tags).map(
+				(group) => new Group(group.tag === UNTAGGED ? 'Untagged' : `#${group.tag}`, group.rows),
+			);
 		}
 
 		const byUrgency = new Map<Urgency, Row[]>(GROUPS.map((group) => [group.urgency, []]));
 		for (const row of rows) byUrgency.get(row.urgency)!.push(row);
 
 		// Empty groups are noise. A group with nothing in it says nothing.
-		return GROUPS
-			.filter((group) => byUrgency.get(group.urgency)!.length > 0)
-			.map((group) => new Group(group.label, byUrgency.get(group.urgency)!));
+		return GROUPS.filter((group) => byUrgency.get(group.urgency)!.length > 0).map(
+			(group) => new Group(group.label, byUrgency.get(group.urgency)!),
+		);
 	}
 }
 
@@ -234,19 +245,22 @@ function registerStatusBar(context: vscode.ExtensionContext, index: WorkspaceInd
 		}
 
 		status.text = `$(warning) ${overdue} overdue`;
-		status.tooltip = critical > 0
-			? `${overdue} outstanding items are past their due date, ${critical} of them by more than the critical threshold.`
-			: `${overdue} outstanding items are past their due date.`;
-		status.backgroundColor = critical > 0
-			? new vscode.ThemeColor('statusBarItem.warningBackground')
-			: undefined;
+		status.tooltip =
+			critical > 0
+				? `${overdue} outstanding items are past their due date, ${critical} of them by more than the critical threshold.`
+				: `${overdue} outstanding items are past their due date.`;
+		status.backgroundColor = critical > 0 ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined;
 		status.show();
 	};
 
 	index.onDidChange(update);
-	vscode.workspace.onDidChangeConfiguration((event) => {
-		if (event.affectsConfiguration('xit')) update();
-	}, undefined, context.subscriptions);
+	vscode.workspace.onDidChangeConfiguration(
+		(event) => {
+			if (event.affectsConfiguration('xit')) update();
+		},
+		undefined,
+		context.subscriptions,
+	);
 
 	context.subscriptions.push(status);
 	update();
@@ -310,11 +324,16 @@ export function registerWorkspaceView(context: vscode.ExtensionContext): Workspa
 		// narrowed reads as a complete one with work missing from it.
 		const filtered = describeSelection(provider.selection);
 
-		view.message = files.length === 0
-			? 'No .xit files in this workspace.'
-			: total === 0 ? 'No items in any .xit file yet.'
-				: filtered === null ? undefined
-					: provider.matched() === 0 ? `${filtered} Nothing matches.` : filtered;
+		view.message =
+			files.length === 0
+				? 'No .xit files in this workspace.'
+				: total === 0
+					? 'No items in any .xit file yet.'
+					: filtered === null
+						? undefined
+						: provider.matched() === 0
+							? `${filtered} Nothing matches.`
+							: filtered;
 	};
 
 	index.onDidChange(announce);
@@ -343,8 +362,14 @@ export function registerWorkspaceView(context: vscode.ExtensionContext): Workspa
 			await pickTags(provider);
 			announce();
 		}),
-		vscode.commands.registerCommand('xit.clearItemFilter', refreshed(() => provider.setFilter(null))),
-		vscode.commands.registerCommand('xit.toggleItemGrouping', refreshed(() => provider.toggleGrouping())),
+		vscode.commands.registerCommand(
+			'xit.clearItemFilter',
+			refreshed(() => provider.setFilter(null)),
+		),
+		vscode.commands.registerCommand(
+			'xit.toggleItemGrouping',
+			refreshed(() => provider.toggleGrouping()),
+		),
 		vscode.workspace.onDidChangeConfiguration((event) => {
 			if (event.affectsConfiguration('xit.itemGrouping')) provider.setGrouping(configured());
 		}),

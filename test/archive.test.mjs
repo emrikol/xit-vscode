@@ -16,14 +16,12 @@ const run = (lines) => archive(lines, TITLE);
 
 describe('what gets archived', () => {
 	it('moves a checked item to a group at the end', () => {
-		assert.deepEqual(run(['[ ] Open', '[x] Done']).lines,
-			['[ ] Open', '', '# Archive', '[x] Done']);
+		assert.deepEqual(run(['[ ] Open', '[x] Done']).lines, ['[ ] Open', '', '# Archive', '[x] Done']);
 	});
 
 	it('moves an obsolete item too, for the opposite reason', () => {
 		// Finished either way: one was done, the other never will be.
-		assert.deepEqual(run(['[ ] Open', '[~] Abandoned']).lines,
-			['[ ] Open', '', '# Archive', '[~] Abandoned']);
+		assert.deepEqual(run(['[ ] Open', '[~] Abandoned']).lines, ['[ ] Open', '', '# Archive', '[~] Abandoned']);
 	});
 
 	it('leaves everything still outstanding', () => {
@@ -41,10 +39,14 @@ describe('what gets archived', () => {
 
 describe('what moves with an item', () => {
 	it('takes its subtasks and continuations', () => {
-		assert.deepEqual(
-			run(['[x] Done ...', '    ... continued', '\t[x] Child', '[ ] Open']).lines,
-			['[ ] Open', '', '# Archive', '[x] Done ...', '    ... continued', '\t[x] Child'],
-		);
+		assert.deepEqual(run(['[x] Done ...', '    ... continued', '\t[x] Child', '[ ] Open']).lines, [
+			'[ ] Open',
+			'',
+			'# Archive',
+			'[x] Done ...',
+			'    ... continued',
+			'\t[x] Child',
+		]);
 	});
 
 	it('refuses a checked parent that still has an open subtask', () => {
@@ -91,10 +93,13 @@ describe('what it will not touch', () => {
 	});
 
 	it('leaves titles and prose where they are', () => {
-		assert.deepEqual(
-			run(['# Todos', '[ ] Open', '[x] Done']).lines,
-			['# Todos', '[ ] Open', '', '# Archive', '[x] Done'],
-		);
+		assert.deepEqual(run(['# Todos', '[ ] Open', '[x] Done']).lines, [
+			'# Todos',
+			'[ ] Open',
+			'',
+			'# Archive',
+			'[x] Done',
+		]);
 	});
 });
 

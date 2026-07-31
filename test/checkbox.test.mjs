@@ -12,7 +12,9 @@ import { readFileSync } from 'node:fs';
 import { tokenizeLine, scoped } from './tokenizer.mjs';
 import { corpusAspects } from './corpus.test.mjs';
 
-const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS, priorityOf } = createRequire(import.meta.url)('../out/checkbox.js');
+const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS, priorityOf } = createRequire(
+	import.meta.url,
+)('../out/checkbox.js');
 
 const GRAMMAR = JSON.parse(readFileSync(new URL('../syntaxes/xit.tmLanguage.json', import.meta.url), 'utf8'));
 
@@ -181,8 +183,7 @@ describe('the grammar and STATUSES agree', () => {
 			// Unescaped for comparison: the grammar may escape a character
 			// this does not, and vice versa. The set is what must match.
 			const found = [...body.replace(/\\(.)/g, '$1')].sort().join('');
-			assert.equal(found, expected,
-				`${name} has a checkbox class of [${body}]; STATUSES is [${STATUS_CLASS}]`);
+			assert.equal(found, expected, `${name} has a checkbox class of [${body}]; STATUSES is [${STATUS_CLASS}]`);
 		}
 	});
 
@@ -252,15 +253,14 @@ describe('priority, and the grammar', () => {
 				if (marks !== fromCode) {
 					disagreements.push(
 						`  ${aspect.id}: ${JSON.stringify(line.text)}\n` +
-						`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
-						`    TypeScript: ${fromCode}`,
+							`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
+							`    TypeScript: ${fromCode}`,
 					);
 				}
 			}
 		}
 
 		assert.ok(compared > 150, `only ${compared} lines compared`);
-		assert.deepEqual(disagreements, [],
-			`priorityOf has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(disagreements, [], `priorityOf has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
 	});
 });

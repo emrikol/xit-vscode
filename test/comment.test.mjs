@@ -47,10 +47,10 @@ describe('finding a comment', () => {
 
 describe('comment blocks', () => {
 	it('reports the span of each', () => {
-		assert.deepEqual(
-			commentBlocks(['[ ] A', '<!--', 'x', '-->', '[ ] B', '<!-- one line -->']),
-			[{ start: 1, end: 3 }, { start: 5, end: 5 }],
-		);
+		assert.deepEqual(commentBlocks(['[ ] A', '<!--', 'x', '-->', '[ ] B', '<!-- one line -->']), [
+			{ start: 1, end: 3 },
+			{ start: 5, end: 5 },
+		]);
 	});
 
 	it('agrees with commentLines about which lines are parked', () => {
@@ -60,6 +60,9 @@ describe('comment blocks', () => {
 		for (const { start, end } of commentBlocks(document)) {
 			for (let at = start; at <= end; at++) fromBlocks.add(at);
 		}
-		assert.deepEqual([...fromBlocks].sort((a, b) => a - b), lines(...document));
+		assert.deepEqual(
+			[...fromBlocks].sort((a, b) => a - b),
+			lines(...document),
+		);
 	});
 });

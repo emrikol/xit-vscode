@@ -25,6 +25,7 @@ node_modules/**
 .vscode-test.mjs
 vsc-extension-quickstart.md
 tsconfig.json
+biome.jsonc
 package-lock.json
 # source maps would point at src/, which is not shipped
 **/*.map

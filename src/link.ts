@@ -58,7 +58,7 @@
  */
 
 import { commentLines } from './comment';
-import { Tag, tagsOn } from './tag';
+import { type Tag, tagsOn } from './tag';
 import { items } from './tree';
 
 /** The tag naming an item, and the tag naming what it waits on. */
@@ -121,7 +121,7 @@ export function identities(lines: readonly string[]): Identified[] {
 
 	for (const item of items(lines).values()) {
 		if (parked.has(item.line)) continue;
-		const tag = tagsOn(lines[item.line]).find((each) => each.key === ID_TAG);
+		const tag = tagsOn(item.text).find((each) => each.key === ID_TAG);
 		if (tag?.value) found.push({ line: item.line, id: tag.value, tag });
 	}
 
@@ -135,7 +135,7 @@ export function dependencies(lines: readonly string[]): Dependency[] {
 
 	for (const item of items(lines).values()) {
 		if (parked.has(item.line)) continue;
-		for (const tag of tagsOn(lines[item.line])) {
+		for (const tag of tagsOn(item.text)) {
 			if (tag.key === AFTER_TAG && tag.value) found.push({ line: item.line, on: parseReference(tag.value), tag });
 		}
 	}
@@ -205,7 +205,9 @@ export function linkProblems(lines: readonly string[]): LinkProblem[] {
 		}
 	}
 
-	const lineOf = new Map([...byId].filter(([, sharing]) => sharing.length === 1).map(([id, [each]]) => [id, each.line]));
+	const lineOf = new Map(
+		[...byId].filter(([, sharing]) => sharing.length === 1).map(([id, [each]]) => [id, each.line]),
+	);
 	const status = new Map([...items(lines).values()].map((item) => [item.line, item.status]));
 	const waiting = dependencies(lines);
 

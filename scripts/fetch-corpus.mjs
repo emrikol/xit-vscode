@@ -43,19 +43,33 @@ const OUT = resolve(REPO_ROOT, 'test/fixtures/syntax-guide.json');
  * Deliberately not a general HTML entity table. An unknown name throws rather
  * than passing through, because a silently mangled example is worse than a
  * failed build: it becomes a test asserting the wrong text.
+ *
+ * Three kinds, which used to be shown by grouping them onto three lines and is
+ * now said here instead: the ones with syntactic meaning in HTML, then the
+ * curly quotes, then the dashes and arrows. A grouping that exists only as
+ * line breaks is one reformat away from being lost.
  */
 const ENTITIES = {
-	nbsp: ' ', amp: '&', lt: '<', gt: '>', quot: '"', apos: "'",
-	rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”',
-	hellip: '…', mdash: '—', ndash: '–', rarr: '→',
+	nbsp: ' ',
+	amp: '&',
+	lt: '<',
+	gt: '>',
+	quot: '"',
+	apos: "'",
+	rsquo: '’',
+	lsquo: '‘',
+	ldquo: '“',
+	rdquo: '”',
+	hellip: '…',
+	mdash: '—',
+	ndash: '–',
+	rarr: '→',
 };
 
 function decodeEntities(text) {
-	return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (whole, body) => {
+	return text.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_whole, body) => {
 		if (body[0] === '#') {
-			const code = body[1] === 'x' || body[1] === 'X'
-				? parseInt(body.slice(2), 16)
-				: parseInt(body.slice(1), 10);
+			const code = body[1] === 'x' || body[1] === 'X' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
 			return String.fromCodePoint(code);
 		}
 		if (body in ENTITIES) return ENTITIES[body];
@@ -65,7 +79,9 @@ function decodeEntities(text) {
 
 /** Visible text of a fragment that contains only inline markup, whitespace collapsed. */
 function plainText(html) {
-	return decodeEntities(html.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
+	return decodeEntities(html.replace(/<[^>]+>/g, ''))
+		.replace(/\s+/g, ' ')
+		.trim();
 }
 
 /**
@@ -90,9 +106,8 @@ function parseListing(html) {
 	};
 
 	const token = /<span class="([^"]+)">|<\/span>|<br\s*\/?>|([^<]+)/g;
-	let match;
 
-	while ((match = token.exec(html)) !== null) {
+	for (let match = token.exec(html); match; match = token.exec(html)) {
 		const [whole, openClass, chunk] = match;
 
 		if (openClass !== undefined) {
@@ -135,7 +150,10 @@ function parseListing(html) {
 }
 
 function slug(heading) {
-	return heading.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+	return heading
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '');
 }
 
 function build(html) {
@@ -144,9 +162,8 @@ function build(html) {
 
 	// Walk headings and the aspects that follow each one, in document order.
 	const marker = /<h2>([^<]*)<\/h2>|<div class="aspect">([\s\S]*?)<\/div>\s*<\/div>/g;
-	let match;
 
-	while ((match = marker.exec(body)) !== null) {
+	for (let match = marker.exec(body); match; match = marker.exec(body)) {
 		const [, heading, aspect] = match;
 
 		if (heading !== undefined) {
@@ -190,7 +207,9 @@ const listingCount = (html.match(/<div class="listing">/g) ?? []).length;
 const aspectCount = sections.reduce((n, s) => n + s.aspects.length, 0);
 
 if (aspectCount !== listingCount) {
-	throw new Error(`the page has ${listingCount} listings but only ${aspectCount} were parsed; the structure has changed`);
+	throw new Error(
+		`the page has ${listingCount} listings but only ${aspectCount} were parsed; the structure has changed`,
+	);
 }
 // The vocabulary, pinned. If the guide grows a class we have never seen, the
 // honest outcome is a failed build and someone reading the page, not a corpus
@@ -210,7 +229,9 @@ for (const line of lines) {
 }
 
 if (!lines.some((line) => line.text.includes(' '))) {
-	throw new Error('no non-breaking space survived extraction; the invalid-whitespace examples have been normalised away');
+	throw new Error(
+		'no non-breaking space survived extraction; the invalid-whitespace examples have been normalised away',
+	);
 }
 if (!lines.some((line) => line.text.includes('\t'))) {
 	throw new Error('no tab survived extraction; the invalid-indentation example has been normalised away');
@@ -242,7 +263,9 @@ if (process.argv.includes('--check')) {
 	const statuses = new Set(lines.map((l) => l.status).filter(Boolean));
 	const kinds = new Set(tokens.map((t) => t.token));
 	console.log(`fetch-corpus: wrote ${OUT}`);
-	console.log(`  ${sections.length} sections, ${sections.reduce((n, s) => n + s.aspects.length, 0)} aspects, ${lines.length} lines, ${tokens.length} tokens`);
+	console.log(
+		`  ${sections.length} sections, ${sections.reduce((n, s) => n + s.aspects.length, 0)} aspects, ${lines.length} lines, ${tokens.length} tokens`,
+	);
 	console.log(`  line statuses: ${[...statuses].sort().join(', ')}`);
 	console.log(`  token kinds:   ${[...kinds].sort().join(', ')}`);
 }

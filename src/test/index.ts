@@ -44,7 +44,10 @@ export function run(): Promise<void> {
 					// Without this the failure surfaces as a browser timeout
 					// with no output at all.
 					console.error(error);
-					reject(error);
+					// A catch binding is `unknown`, and rejecting with a
+					// non-Error loses the stack - which is the whole reason
+					// this branch exists.
+					reject(error instanceof Error ? error : new Error(String(error)));
 				}
 			}),
 	);

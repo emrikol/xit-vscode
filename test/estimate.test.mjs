@@ -79,15 +79,13 @@ describe('totalling a group', () => {
 	const items = (...lines) => collect(lines);
 
 	it('adds up what is estimated', () => {
-		assert.deepEqual(totalEstimate(items('[ ] A #est=2h', '[ ] B #est=30m')),
-			{ minutes: 150, unestimated: 0 });
+		assert.deepEqual(totalEstimate(items('[ ] A #est=2h', '[ ] B #est=30m')), { minutes: 150, unestimated: 0 });
 	});
 
 	it('counts what is not, rather than dropping it', () => {
 		// "6h" for a group that is six hours plus four unknown things is a
 		// number that lies. "6h + 4" does not.
-		assert.deepEqual(totalEstimate(items('[ ] A #est=2h', '[ ] B', '[ ] C')),
-			{ minutes: 120, unestimated: 2 });
+		assert.deepEqual(totalEstimate(items('[ ] A #est=2h', '[ ] B', '[ ] C')), { minutes: 120, unestimated: 2 });
 	});
 
 	it('is zero for a group with nothing estimated', () => {

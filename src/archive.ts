@@ -18,7 +18,7 @@
 import { commentLines } from './comment';
 import { directives } from './directive';
 import { isTitle, markTitle, titleText } from './title';
-import { Item, items } from './tree';
+import { type Item, items } from './tree';
 
 export interface Archived {
 	lines: string[];
@@ -63,8 +63,9 @@ export function archive(lines: readonly string[], title: string): Archived {
 	// Where the archive already starts, if it does. Everything from there on
 	// is left untouched, which is what makes this idempotent.
 	const heading = markTitle(title);
-	const existing = lines.findIndex((text, line) =>
-		!parked.has(line) && isTitle(text) && titleText(text) === titleText(heading));
+	const existing = lines.findIndex(
+		(text, line) => !parked.has(line) && isTitle(text) && titleText(text) === titleText(heading),
+	);
 	const boundary = existing === -1 ? lines.length : existing;
 
 	const moving = new Set<number>();
@@ -92,9 +93,7 @@ export function archive(lines: readonly string[], title: string): Archived {
 	// the archive would join whatever group happens to end the file.
 	while (kept.length > 0 && kept[kept.length - 1].trim() === '') kept.pop();
 
-	const out = existing === -1
-		? [...kept, '', heading, ...taken]
-		: insertAfterTitle(kept, heading, taken);
+	const out = existing === -1 ? [...kept, '', heading, ...taken] : insertAfterTitle(kept, heading, taken);
 
 	const moved = [...all.values()].filter((item) => moving.has(item.line) && item.parent === null).length;
 	return { lines: out, moved };

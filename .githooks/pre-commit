@@ -1,6 +1,9 @@
 #!/bin/sh
 #
-# Build and run the test suite before every commit.
+# Lint, then build and run the test suite, before every commit.
+#
+# Lint first, because it is instant and the test run is not: a formatting slip
+# should not cost a full build to hear about.
 #
 # Installed by the `prepare` script in package.json, which points
 # core.hooksPath at this directory on `npm install`. No dependency needed.
@@ -21,6 +24,19 @@ log="$tmpdir/test.log"
 cleanup() { rm -rf "$tmpdir"; }
 trap cleanup EXIT
 
+# Biome checks formatting and lint rules over src, test and scripts. Reported
+# rather than fixed in place: a hook that rewrites files while you are
+# committing them changes what you are committing, and `npm run lint:fix` is
+# one command away.
+if ! npm run lint >"$log" 2>&1; then
+	cat "$log" >&2
+	echo >&2
+	echo "pre-commit: lint or formatting failed, commit aborted." >&2
+	echo "            most of it fixes itself: npm run lint:fix" >&2
+	echo "            or bypass with: git commit --no-verify" >&2
+	exit 1
+fi
+
 if ! npm test >"$log" 2>&1; then
 	cat "$log" >&2
 	echo >&2
@@ -29,4 +45,4 @@ if ! npm test >"$log" 2>&1; then
 	exit 1
 fi
 
-echo "pre-commit: tests passed."
+echo "pre-commit: lint clean, tests passed."

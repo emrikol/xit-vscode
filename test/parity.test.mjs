@@ -81,7 +81,8 @@ const READERS = {
 	outstanding: (lines) => collect(lines).map(isOpen),
 	align: (lines) => alignments(lines),
 	blocked: (lines) => [...blocked(lines)],
-	repeat: (lines) => lines.map((text) => nextOccurrence(text, 'repeat', dueDatesOn(text)[0] ?? null, THRESHOLDS.today) ?? ''),
+	repeat: (lines) =>
+		lines.map((text) => nextOccurrence(text, 'repeat', dueDatesOn(text)[0] ?? null, THRESHOLDS.today) ?? ''),
 	postpone: (lines) => lines.map((text) => postpone(text, parseInterval('1w'), THRESHOLDS.today) ?? ''),
 };
 
@@ -99,7 +100,11 @@ const SIBLINGS = [
 	{
 		name: 'due/start',
 		swap: (lines) => lines.map((text) => text.replaceAll('-> ', '<- ')),
-		norm: (text) => text.replaceAll('-> ', 'A ').replaceAll('<- ', 'A ').replace(/due-date|start-date/g, 'X'),
+		norm: (text) =>
+			text
+				.replaceAll('-> ', 'A ')
+				.replaceAll('<- ', 'A ')
+				.replace(/due-date|start-date/g, 'X'),
 		documents: [
 			['[ ] Alpha -> 2026-09-30'],
 			['[ ] Alpha -> 2026-02-31'],
@@ -125,8 +130,11 @@ const SIBLINGS = [
 		swap: (lines) => lines.map((text) => text.replace(new RegExp(`^(\\s*)\\[\\${a}\\]`), `$1[${b}]`)),
 		// Every open status is outstanding, so the urgency labels that only
 		// differ by which flavour of outstanding it is are folded together.
-		norm: (text) => text.replaceAll(`[${a}]`, '[O]').replaceAll(`[${b}]`, '[O]')
-			.replace(/"waiting"|"none"|"later"|"critical"|"soon"|"notYet"|"blocked"/g, '"OUTSTANDING"'),
+		norm: (text) =>
+			text
+				.replaceAll(`[${a}]`, '[O]')
+				.replaceAll(`[${b}]`, '[O]')
+				.replace(/"waiting"|"none"|"later"|"critical"|"soon"|"notYet"|"blocked"/g, '"OUTSTANDING"'),
 		documents: [
 			[`[${a}] Alpha`],
 			[`[${a}] Alpha -> 2020-01-01`],
@@ -152,8 +160,10 @@ describe('sibling elements are handled alike', () => {
 				const before = shape(project, document, norm);
 				const after = shape(project, swap(document), norm);
 				if (before !== after && !asymmetries.has(`${reader} | ${name}`)) {
-					asymmetries.set(`${reader} | ${name}`,
-						`  ${JSON.stringify(document)}\n    one: ${before}\n    other: ${after}`);
+					asymmetries.set(
+						`${reader} | ${name}`,
+						`  ${JSON.stringify(document)}\n    one: ${before}\n    other: ${after}`,
+					);
 				}
 			}
 		}
@@ -165,9 +175,13 @@ describe('sibling elements are handled alike', () => {
 
 	it('has no asymmetry that is not written down', () => {
 		const surprises = [...asymmetries].filter(([key]) => !(key in KNOWN));
-		assert.deepEqual(surprises.map(([key]) => key), [],
-			`a reader treats sibling elements differently, and nobody said why:\n\n${
-				surprises.map(([key, detail]) => `${key}\n${detail}`).join('\n\n')}`);
+		assert.deepEqual(
+			surprises.map(([key]) => key),
+			[],
+			`a reader treats sibling elements differently, and nobody said why:\n\n${surprises
+				.map(([key, detail]) => `${key}\n${detail}`)
+				.join('\n\n')}`,
+		);
 	});
 
 	it('has no stale entry, so a fixed gap cannot stay on the list', () => {

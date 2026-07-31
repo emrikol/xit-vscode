@@ -96,20 +96,14 @@ describe('xit.toggle', () => {
 		const editor = await openXit('[ ] One\n[ ] Two\n[ ] Three');
 		editor.selection = new vscode.Selection(0, 0, 2, 0);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['[x] One', '[x] Two', '[x] Three'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['[x] One', '[x] Two', '[x] Three']);
 	});
 
 	it('skips lines that are not items', async () => {
 		const editor = await openXit('A title\n[ ] An item\n\nNot an item');
 		editor.selection = new vscode.Selection(0, 0, 3, 0);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['A title', '[x] An item', '', 'Not an item'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['A title', '[x] An item', '', 'Not an item']);
 	});
 });
 
@@ -158,30 +152,21 @@ describe('subtasks', () => {
 		const editor = await openXit('[ ] Parent\n\t[x] One\n\t[ ] Two');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['[x] Parent', '\t[x] One', '\t[x] Two'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['[x] Parent', '\t[x] One', '\t[x] Two']);
 	});
 
 	it('reopens the parent when a child is unchecked', async () => {
 		const editor = await openXit('[x] Parent\n\t[x] One\n\t[x] Two');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['[ ] Parent', '\t[x] One', '\t[ ] Two'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['[ ] Parent', '\t[x] One', '\t[ ] Two']);
 	});
 
 	it('cascades more than one level in a single edit', async () => {
 		const editor = await openXit('[ ] A\n\t[ ] B\n\t\t[ ] C');
 		editor.selection = at(2);
 		await vscode.commands.executeCommand('xit.toggle');
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['[x] A', '\t[x] B', '\t\t[x] C'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['[x] A', '\t[x] B', '\t\t[x] C']);
 	});
 });
 
@@ -190,21 +175,29 @@ describe('outline', () => {
 	async function symbolsFor(content: string) {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
 		await vscode.window.showTextDocument(document);
-		return vscode.commands.executeCommand<vscode.DocumentSymbol[]>(
-			'vscode.executeDocumentSymbolProvider', document.uri) ?? [];
+		return (
+			vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', document.uri) ??
+			[]
+		);
 	}
 
 	it('is registered, and groups items under their title', async () => {
 		const symbols = await symbolsFor('# Reading list\n[ ] A book\n[x] Another');
 		assert.equal(symbols.length, 1);
 		assert.equal(symbols[0].name, 'Reading list');
-		assert.deepEqual(symbols[0].children.map(s => s.name), ['[ ] A book', '[x] Another']);
+		assert.deepEqual(
+			symbols[0].children.map((s) => s.name),
+			['[ ] A book', '[x] Another'],
+		);
 	});
 
 	it('nests subtasks', async () => {
 		const [parent] = await symbolsFor('[ ] Parent\n\t[x] Child');
 		assert.equal(parent.name, '[ ] Parent');
-		assert.deepEqual(parent.children.map(s => s.name), ['[x] Child']);
+		assert.deepEqual(
+			parent.children.map((s) => s.name),
+			['[x] Child'],
+		);
 	});
 
 	it('selects the checkbox when a symbol is picked', async () => {
@@ -219,8 +212,10 @@ describe('folding', () => {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
 		await vscode.window.showTextDocument(document);
 		const ranges = await vscode.commands.executeCommand<vscode.FoldingRange[]>(
-			'vscode.executeFoldingRangeProvider', document.uri);
-		return (ranges ?? []).map(r => `${r.start}-${r.end}`).sort();
+			'vscode.executeFoldingRangeProvider',
+			document.uri,
+		);
+		return (ranges ?? []).map((r) => `${r.start}-${r.end}`).sort();
 	}
 
 	it('is registered, and folds an item with its subtasks', async () => {
@@ -316,7 +311,7 @@ describe('diagnostics', () => {
 		for (let attempt = 0; attempt < 40; attempt++) {
 			const found = vscode.languages.getDiagnostics(document.uri);
 			if (found.length) return found;
-			await new Promise(resolve => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 50));
 		}
 		return vscode.languages.getDiagnostics(document.uri);
 	}
@@ -332,7 +327,7 @@ describe('diagnostics', () => {
 	it('says nothing about a clean document', async () => {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Fine -> 2026-02-28' });
 		await vscode.window.showTextDocument(document);
-		await new Promise(resolve => setTimeout(resolve, 200));
+		await new Promise((resolve) => setTimeout(resolve, 200));
 		assert.deepEqual(vscode.languages.getDiagnostics(document.uri), []);
 	});
 });
@@ -395,10 +390,7 @@ describe('xit.migrate', () => {
 		const editor = await openXit('Groceries\n[ ] ..! Milk\n  [x] Bread');
 		await vscode.commands.executeCommand('xit.migrate');
 
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['# Groceries', '[ ] ! Milk', '\t[x] Bread'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['# Groceries', '[ ] ! Milk', '\t[x] Bread']);
 	});
 
 	it('is one edit, so undo puts the file back exactly', async () => {
@@ -436,11 +428,16 @@ describe('tag completion', () => {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content });
 		await vscode.window.showTextDocument(document);
 		const list = await vscode.commands.executeCommand<vscode.CompletionList>(
-			'vscode.executeCompletionItemProvider', document.uri, new vscode.Position(line, character));
+			'vscode.executeCompletionItemProvider',
+			document.uri,
+			new vscode.Position(line, character),
+		);
 
 		return (list?.items ?? [])
-			.filter(item => item.kind === vscode.CompletionItemKind.Keyword || item.kind === vscode.CompletionItemKind.Value)
-			.map(item => typeof item.label === 'string' ? item.label : item.label.label);
+			.filter(
+				(item) => item.kind === vscode.CompletionItemKind.Keyword || item.kind === vscode.CompletionItemKind.Value,
+			)
+			.map((item) => (typeof item.label === 'string' ? item.label : item.label.label));
 	}
 
 	it('offers tag names from the workspace after a hash', async () => {
@@ -475,14 +472,14 @@ describe('creation dates', () => {
 	async function settled(document: vscode.TextDocument, expected: RegExp) {
 		for (let tries = 0; tries < 40; tries++) {
 			if (expected.test(document.getText())) return;
-			await new Promise(resolve => setTimeout(resolve, 25));
+			await new Promise((resolve) => setTimeout(resolve, 25));
 		}
 	}
 
 	it('stamps a checkbox as it is finished', async () => {
 		await withCreationStamp(async () => {
 			const editor = await openXit('');
-			await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ]'));
+			await editor.edit((builder) => builder.insert(new vscode.Position(0, 0), '[ ]'));
 			await settled(editor.document, /#created=\d{4}-\d{2}-\d{2}/);
 			assert.match(editor.document.lineAt(0).text, /^\[ \] #created=\d{4}-\d{2}-\d{2}$/);
 		});
@@ -494,16 +491,16 @@ describe('creation dates', () => {
 		// whole trigger is narrowed to avoid.
 		await withCreationStamp(async () => {
 			const editor = await openXit('');
-			await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ] One\n[ ] Two'));
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await editor.edit((builder) => builder.insert(new vscode.Position(0, 0), '[ ] One\n[ ] Two'));
+			await new Promise((resolve) => setTimeout(resolve, 300));
 			assert.ok(!editor.document.getText().includes('#created='), editor.document.getText());
 		});
 	});
 
 	it('does nothing at all when the setting is off', async () => {
 		const editor = await openXit('');
-		await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ]'));
-		await new Promise(resolve => setTimeout(resolve, 300));
+		await editor.edit((builder) => builder.insert(new vscode.Position(0, 0), '[ ]'));
+		await new Promise((resolve) => setTimeout(resolve, 300));
 		assert.equal(editor.document.lineAt(0).text, '[ ]');
 	});
 });
@@ -514,10 +511,12 @@ describe('xit.sortGroup', () => {
 		editor.selection = at(1);
 		await vscode.commands.executeCommand('xit.sortGroup');
 
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['# Todos', '[ ] !!! High', '[ ] Low ...', '    ... continued'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), [
+			'# Todos',
+			'[ ] !!! High',
+			'[ ] Low ...',
+			'    ... continued',
+		]);
 	});
 
 	it('leaves other groups alone', async () => {
@@ -525,10 +524,13 @@ describe('xit.sortGroup', () => {
 		editor.selection = at(0);
 		await vscode.commands.executeCommand('xit.sortGroup');
 
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['[ ] !!! High', '[ ] Low', '', '[ ] Also low', '[ ] !!! Also high'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), [
+			'[ ] !!! High',
+			'[ ] Low',
+			'',
+			'[ ] Also low',
+			'[ ] !!! Also high',
+		]);
 	});
 
 	it('is one edit, so undo takes the whole group back', async () => {
@@ -548,10 +550,14 @@ describe('xit.archive', () => {
 		const editor = await openXit('# Todos\n[ ] Open\n[x] Done ...\n    ... continued');
 		await vscode.commands.executeCommand('xit.archive');
 
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['# Todos', '[ ] Open', '', '# Archive', '[x] Done ...', '    ... continued'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), [
+			'# Todos',
+			'[ ] Open',
+			'',
+			'# Archive',
+			'[x] Done ...',
+			'    ... continued',
+		]);
 	});
 
 	it('is one edit, so undo puts the file back', async () => {
@@ -605,12 +611,13 @@ describe('xit.giveId', () => {
 describe('links between items', () => {
 	it('makes #after= clickable, pointing at the item it waits on', async () => {
 		const document = await vscode.workspace.openTextDocument({
-			language: 'xit', content: '[ ] Draft #id=k3f9\n[ ] Send #after=k3f9',
+			language: 'xit',
+			content: '[ ] Draft #id=k3f9\n[ ] Send #after=k3f9',
 		});
 		await vscode.window.showTextDocument(document);
 
-		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
-			'vscode.executeLinkProvider', document.uri) ?? [];
+		const links =
+			(await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', document.uri)) ?? [];
 
 		assert.equal(links.length, 1);
 		assert.equal(links[0].range.start.line, 1);
@@ -619,12 +626,13 @@ describe('links between items', () => {
 
 	it('offers no link for an id nothing has', async () => {
 		const document = await vscode.workspace.openTextDocument({
-			language: 'xit', content: '[ ] Send #after=zzzz',
+			language: 'xit',
+			content: '[ ] Send #after=zzzz',
 		});
 		await vscode.window.showTextDocument(document);
 
-		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
-			'vscode.executeLinkProvider', document.uri) ?? [];
+		const links =
+			(await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', document.uri)) ?? [];
 		assert.deepEqual(links, []);
 	});
 });
@@ -637,30 +645,37 @@ describe('references across files', () => {
 		await vscode.commands.executeCommand('xit.refreshItems');
 
 		const all = await vscode.workspace.findFiles('**/*.xit');
-		const showcase = all.find(uri => uri.path.endsWith('/showcase.xit'));
-		assert.ok(showcase, `showcase.xit not in the workspace: ${JSON.stringify(all.map(uri => uri.path))}`);
+		const showcase = all.find((uri) => uri.path.endsWith('/showcase.xit'));
+		assert.ok(showcase, `showcase.xit not in the workspace: ${JSON.stringify(all.map((uri) => uri.path))}`);
 
 		const document = await vscode.workspace.openTextDocument(showcase);
 		await vscode.window.showTextDocument(document);
 
-		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
-			'vscode.executeLinkProvider', document.uri) ?? [];
+		const links =
+			(await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', document.uri)) ?? [];
 
-		const across = links.filter(link => link.target?.path.endsWith('linked.xit'));
-		assert.equal(across.length, 1,
-			`no cross-file link among ${links.length}: ${JSON.stringify(links.map(one => one.target?.toString()))}`);
+		const across = links.filter((link) => link.target?.path.endsWith('linked.xit'));
+		assert.equal(
+			across.length,
+			1,
+			`no cross-file link among ${links.length}: ${JSON.stringify(links.map((one) => one.target?.toString()))}`,
+		);
 		assert.equal(across[0].target!.fragment, 'L3', 'points at the line the id is on');
 	});
 
 	it('reports a reference to a file that has no such id', async () => {
 		const document = await vscode.workspace.openTextDocument({
-			language: 'xit', content: '[ ] Send #after="nowhere.xit#zzzz"',
+			language: 'xit',
+			content: '[ ] Send #after="nowhere.xit#zzzz"',
 		});
 		await vscode.window.showTextDocument(document);
-		await new Promise(resolve => setTimeout(resolve, 400));
+		await new Promise((resolve) => setTimeout(resolve, 400));
 
 		const found = vscode.languages.getDiagnostics(document.uri);
-		assert.ok(found.some(one => one.code === 'unknown-id'), JSON.stringify(found.map(one => one.code)));
+		assert.ok(
+			found.some((one) => one.code === 'unknown-id'),
+			JSON.stringify(found.map((one) => one.code)),
+		);
 	});
 });
 
@@ -673,7 +688,7 @@ describe('the three surfaces agree about what is late', () => {
 		const editor = await openXit(content);
 		// Decorations are not readable through the API, so this asserts the
 		// input to them instead: the same collect/urgencyOf pair all three use.
-		await new Promise(resolve => setTimeout(resolve, 150));
+		await new Promise((resolve) => setTimeout(resolve, 150));
 		return editor.document.getText();
 	}
 
@@ -706,10 +721,7 @@ describe('editing an item inside a comment', () => {
 		editor.selection = at(1);
 		await vscode.commands.executeCommand('xit.toggle');
 
-		assert.deepEqual(
-			editor.document.getText().split('\n'),
-			['<!--', '[x] Water -> 2026-01-01 #repeat=weekly', '-->'],
-		);
+		assert.deepEqual(editor.document.getText().split('\n'), ['<!--', '[x] Water -> 2026-01-01 #repeat=weekly', '-->']);
 	});
 
 	it('does not cascade to a parent outside the comment', async () => {

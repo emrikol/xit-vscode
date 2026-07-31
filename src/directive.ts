@@ -91,7 +91,10 @@ export function directiveProblems(lines: readonly string[]): DirectiveProblem[] 
 /** What a key can actually make of a value. Empty means it can make nothing. */
 function usable(key: string, value: string): string[] {
 	if (key.toLowerCase() === 'tags') {
-		return value.split(',').map((part) => part.trim()).filter((name) => name !== '' && isTagName(name));
+		return value
+			.split(',')
+			.map((part) => part.trim())
+			.filter((name) => name !== '' && isTagName(name));
 	}
 	return value === '' ? [] : [value];
 }
@@ -110,7 +113,10 @@ export function directives(lines: readonly string[]): Directives {
 		const [, key, value] = match;
 
 		if (key.toLowerCase() === 'tags') {
-			for (const name of value.split(',').map((part) => part.trim()).filter(Boolean)) {
+			for (const name of value
+				.split(',')
+				.map((part) => part.trim())
+				.filter(Boolean)) {
 				// Only names the format could actually express as a tag. A
 				// directive must not be able to declare something you could
 				// not have written by hand.

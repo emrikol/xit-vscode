@@ -15,35 +15,32 @@ const { problems } = createRequire(import.meta.url)('../out/diagnostics.js');
 
 describe('indentation', () => {
 	it('turns two-space nesting into tabs', () => {
-		assert.deepEqual(
-			tabIndent(['[ ] Parent', '  [x] One', '  [ ] Two']),
-			['[ ] Parent', '\t[x] One', '\t[ ] Two'],
-		);
+		assert.deepEqual(tabIndent(['[ ] Parent', '  [x] One', '  [ ] Two']), ['[ ] Parent', '\t[x] One', '\t[ ] Two']);
 	});
 
 	it('counts depth from the nesting, not from the width', () => {
 		// The old rule was "deeper than the line above", not a fixed width, so
 		// an inconsistent file still nested and has to keep its shape.
-		assert.deepEqual(
-			tabIndent(['[ ] A', '  [ ] B', '     [ ] C', '  [ ] D']),
-			['[ ] A', '\t[ ] B', '\t\t[ ] C', '\t[ ] D'],
-		);
+		assert.deepEqual(tabIndent(['[ ] A', '  [ ] B', '     [ ] C', '  [ ] D']), [
+			'[ ] A',
+			'\t[ ] B',
+			'\t\t[ ] C',
+			'\t[ ] D',
+		]);
 	});
 
 	it('moves a continuation with its item', () => {
 		// Four spaces after the item's own indent, which has to stay four so
 		// the text still lands under the description.
-		assert.deepEqual(
-			tabIndent(['[ ] Parent', '  [ ] Child ...', '      ... continued']),
-			['[ ] Parent', '\t[ ] Child ...', '\t    ... continued'],
-		);
+		assert.deepEqual(tabIndent(['[ ] Parent', '  [ ] Child ...', '      ... continued']), [
+			'[ ] Parent',
+			'\t[ ] Child ...',
+			'\t    ... continued',
+		]);
 	});
 
 	it('resets at a blank line, as the nesting always did', () => {
-		assert.deepEqual(
-			tabIndent(['[ ] A', '  [ ] B', '', '  [ ] C']),
-			['[ ] A', '\t[ ] B', '', '[ ] C'],
-		);
+		assert.deepEqual(tabIndent(['[ ] A', '  [ ] B', '', '  [ ] C']), ['[ ] A', '\t[ ] B', '', '[ ] C']);
 	});
 
 	it('leaves a comment alone', () => {
@@ -126,7 +123,10 @@ describe('the whole migration', () => {
 
 	it('reports every line it touched, and no others', () => {
 		const { changes } = migrate(OLD);
-		assert.deepEqual(changes.map((change) => change.line), [0, 1, 2, 3, 5, 6]);
+		assert.deepEqual(
+			changes.map((change) => change.line),
+			[0, 1, 2, 3, 5, 6],
+		);
 		assert.equal(changes[0].before, 'Groceries');
 		assert.equal(changes[0].after, '# Groceries');
 	});

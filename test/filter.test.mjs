@@ -46,7 +46,10 @@ describe('the tags on offer', () => {
 		// Ordering by count would rearrange the panel as items are ticked off,
 		// so the group being read moves while it is read.
 		const rows = [{ tags: ['zebra'] }, { tags: ['zebra'] }, { tags: ['apple'] }];
-		assert.deepEqual(tagChoices(rows, tagsOf).map((choice) => choice.tag), ['apple', 'zebra']);
+		assert.deepEqual(
+			tagChoices(rows, tagsOf).map((choice) => choice.tag),
+			['apple', 'zebra'],
+		);
 	});
 
 	it('counts an item once per tag, however often the tag is written on it', () => {
@@ -102,12 +105,21 @@ describe('grouping by tag', () => {
 
 	it('collects untagged items into a group of their own, last', () => {
 		const groups = byTag([{ tags: [] }, { tags: ['work'] }], tagsOf);
-		assert.deepEqual(groups.map((group) => group.tag), ['work', UNTAGGED]);
+		assert.deepEqual(
+			groups.map((group) => group.tag),
+			['work', UNTAGGED],
+		);
 	});
 
 	it('keeps the row order it was given, so the caller decides it', () => {
-		const rows = [{ id: 1, tags: ['work'] }, { id: 2, tags: ['work'] }];
-		assert.deepEqual(byTag(rows, tagsOf)[0].rows.map((row) => row.id), [1, 2]);
+		const rows = [
+			{ id: 1, tags: ['work'] },
+			{ id: 2, tags: ['work'] },
+		];
+		assert.deepEqual(
+			byTag(rows, tagsOf)[0].rows.map((row) => row.id),
+			[1, 2],
+		);
 	});
 
 	it('loses no row', () => {
@@ -149,30 +161,45 @@ describe('over items from a real document', () => {
 		// what turns that into something the sidebar can be narrowed to.
 		const items = collect(['<!-- xit: tags=client-acme -->', '[ ] Draft the contract', '[ ] Send it']);
 		assert.deepEqual(tagChoices(items, tagsOf), [{ tag: 'client-acme', count: 2 }]);
-		assert.equal(items.every((item) => matchesTags(item.tags, new Set(['client-acme']))), true);
+		assert.equal(
+			items.every((item) => matchesTags(item.tags, new Set(['client-acme']))),
+			true,
+		);
 	});
 
 	it('folds spelling, so #Work and #work are one group', () => {
 		const items = collect(['[ ] One #Work', '[ ] Two #work']);
-		assert.deepEqual(byTag(items, tagsOf).map((group) => group.tag), ['work']);
+		assert.deepEqual(
+			byTag(items, tagsOf).map((group) => group.tag),
+			['work'],
+		);
 	});
 
 	it('does not offer a tag that only appears inside a comment', () => {
 		// Parked work is not work, and a filter offering a tag with nothing
 		// behind it is a dead end.
 		const items = collect(['[ ] Real #work', '<!--', '[ ] Parked #parked', '-->']);
-		assert.deepEqual(tagChoices(items, tagsOf).map((choice) => choice.tag), ['work']);
+		assert.deepEqual(
+			tagChoices(items, tagsOf).map((choice) => choice.tag),
+			['work'],
+		);
 	});
 
 	it('narrows to a tag written on one item among several', () => {
 		const items = collect(['[ ] Groceries #home', '[ ] Report #work', '[ ] Unfiled']);
 		const kept = items.filter((item) => matchesTags(item.tags, new Set(['work'])));
-		assert.deepEqual(kept.map((item) => item.description), ['Report #work']);
+		assert.deepEqual(
+			kept.map((item) => item.description),
+			['Report #work'],
+		);
 	});
 
 	it('finds the unfiled work, which is the thing about to be lost', () => {
 		const items = collect(['[ ] Groceries #home', '[ ] Unfiled']);
 		const kept = items.filter((item) => matchesTags(item.tags, new Set([UNTAGGED])));
-		assert.deepEqual(kept.map((item) => item.description), ['Unfiled']);
+		assert.deepEqual(
+			kept.map((item) => item.description),
+			['Unfiled'],
+		);
 	});
 });

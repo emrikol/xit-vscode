@@ -18,10 +18,7 @@ const { outline } = createRequire(import.meta.url)('../out/outline.js');
  * of an outline reads the same as the document that produced it.
  */
 function shape(nodes, depth = 0) {
-	return nodes.flatMap((node) => [
-		'\t'.repeat(depth) + node.name,
-		...shape(node.children, depth + 1),
-	]);
+	return nodes.flatMap((node) => ['\t'.repeat(depth) + node.name, ...shape(node.children, depth + 1)]);
 }
 
 describe('outline', () => {
@@ -50,11 +47,7 @@ describe('outline', () => {
 	});
 
 	it('keeps items before any title at the top level', () => {
-		assert.deepEqual(shape(outline(['[ ] Loose', '# A title', '[ ] Owned'])), [
-			'[ ] Loose',
-			'A title',
-			'\t[ ] Owned',
-		]);
+		assert.deepEqual(shape(outline(['[ ] Loose', '# A title', '[ ] Owned'])), ['[ ] Loose', 'A title', '\t[ ] Owned']);
 	});
 
 	it('shows the status in the name, so it reads without an icon', () => {

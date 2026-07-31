@@ -23,7 +23,7 @@
  * Syntax is permanent cost in places that must not drift. A tag is free.
  */
 
-import { Day } from './dueDate';
+import type { Day } from './dueDate';
 import { foldName, tagsOn } from './tag';
 
 /** Spec §Tag: a name is letters, digits, `_` or `-`. */

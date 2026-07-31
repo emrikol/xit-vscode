@@ -12,13 +12,13 @@
  * towards answering "what is due".
  */
 
-import { Status } from './checkbox';
+import type { Status } from './checkbox';
 import { commentLines } from './comment';
 import { directives } from './directive';
-import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
+import { type Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { cycleTime } from './cycle';
 import { estimateOn } from './estimate';
-import { Reference, blocked as blockedLines, dependencies } from './link';
+import { type Reference, blocked as blockedLines, dependencies } from './link';
 import { tags } from './tag';
 import { items } from './tree';
 
@@ -59,7 +59,11 @@ export interface Collected {
  * Items inside a comment are left out. Parked work is not outstanding work,
  * and a list of what is outstanding should not carry it.
  */
-export function collect(lines: readonly string[], estimateTag = 'est', dateTags = { creation: 'created', completion: 'done' }): Collected[] {
+export function collect(
+	lines: readonly string[],
+	estimateTag = 'est',
+	dateTags = { creation: 'created', completion: 'done' },
+): Collected[] {
 	const parked = commentLines(lines);
 	// Tags the file declares about itself, which every item inherits. See
 	// src/directive.ts: a work.xit should not need `#work` on every line.
@@ -82,7 +86,7 @@ export function collect(lines: readonly string[], estimateTag = 'est', dateTags 
 	return [...all.values()]
 		.filter((item) => !parked.has(item.line))
 		.map((item) => {
-			const text = lines[item.line];
+			const text = item.text;
 			const [due] = dueDatesOn(text);
 			const [start] = startDatesOn(text);
 

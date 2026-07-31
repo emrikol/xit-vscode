@@ -6,7 +6,7 @@
  * shape here is VS Code's.
  */
 
-import { readCheckbox, Status } from './checkbox';
+import { readCheckbox, type Status } from './checkbox';
 import { items } from './tree';
 import { dueDatesOn, startDatesOn } from './dueDate';
 import { commentLines } from './comment';
@@ -27,7 +27,6 @@ export interface Node {
 	selectionEnd: number;
 	children: Node[];
 }
-
 
 /**
  * The document as a tree of titles and items.

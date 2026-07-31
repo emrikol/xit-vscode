@@ -92,6 +92,7 @@ export function folds(lines: readonly string[]): Fold[] {
 		}
 	}
 
-	return [...comments(lines), ...itemFolds, ...groups(lines, inComment)]
-		.sort((a, b) => a.start - b.start || a.end - b.end);
+	return [...comments(lines), ...itemFolds, ...groups(lines, inComment)].sort(
+		(a, b) => a.start - b.start || a.end - b.end,
+	);
 }

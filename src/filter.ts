@@ -128,9 +128,7 @@ export function describeSelection(selection: ReadonlySet<string> | null): string
 	if (!selection || selection.size === 0) return null;
 
 	const names = inDisplayOrder([...selection]).map((tag) => (tag === UNTAGGED ? 'untagged' : `#${tag}`));
-	const listed = names.length <= 3
-		? names.join(', ')
-		: `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
+	const listed = names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
 
 	return `Filtered to ${listed}.`;
 }

@@ -52,20 +52,28 @@ function* documents() {
 
 /** What the editor decoration would mark, using the same filter extension.ts applies. */
 function editorMarks(lines) {
-	const late = new Set(collect(lines)
-		.filter(isOpen)
-		.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, THRESHOLDS)))
-		.map((item) => item.line));
+	const late = new Set(
+		collect(lines)
+			.filter(isOpen)
+			.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, THRESHOLDS)))
+			.map((item) => item.line),
+	);
 
-	return new Set(overdue(lines, TODAY).filter((date) => late.has(date.line)).map((date) => date.line));
+	return new Set(
+		overdue(lines, TODAY)
+			.filter((date) => late.has(date.line))
+			.map((date) => date.line),
+	);
 }
 
 /** What the workspace view would list as overdue or critical. */
 function sidebarMarks(lines) {
-	return new Set(collect(lines)
-		.filter(isOpen)
-		.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, THRESHOLDS)))
-		.map((item) => item.line));
+	return new Set(
+		collect(lines)
+			.filter(isOpen)
+			.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, THRESHOLDS)))
+			.map((item) => item.line),
+	);
 }
 
 describe('the editor, the sidebar and the status bar agree', () => {
@@ -92,8 +100,7 @@ describe('the editor, the sidebar and the status bar agree', () => {
 		}
 
 		assert.ok(compared >= 60, `only ${compared} shapes compared`);
-		assert.deepEqual(disagreements, [],
-			`the surfaces disagree about what is late:\n\n${disagreements.join('\n')}`);
+		assert.deepEqual(disagreements, [], `the surfaces disagree about what is late:\n\n${disagreements.join('\n')}`);
 	});
 
 	it('never calls a finished item late, on any surface', () => {
@@ -115,9 +122,16 @@ describe('the editor, the sidebar and the status bar agree', () => {
 			['[ ] Later <- 2030-01-01 -> 2020-01-01'],
 			['[ ] Blocker #id=aaaa', '[ ] Held -> 2020-01-01 #after=aaaa'],
 		]) {
-			assert.deepEqual([...editorMarks(lines)].filter((line) => line !== 0), [], lines.join(' / '));
-			assert.equal(overdueCount([{ items: collect(lines) }], THRESHOLDS).overdue,
-				sidebarMarks(lines).size, lines.join(' / '));
+			assert.deepEqual(
+				[...editorMarks(lines)].filter((line) => line !== 0),
+				[],
+				lines.join(' / '),
+			);
+			assert.equal(
+				overdueCount([{ items: collect(lines) }], THRESHOLDS).overdue,
+				sidebarMarks(lines).size,
+				lines.join(' / '),
+			);
 		}
 	});
 });

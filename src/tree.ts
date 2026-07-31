@@ -11,11 +11,21 @@
  * matters, and here it is easy: this is ordinary code and can count.
  */
 
-import { readCheckbox, Status } from './checkbox';
+import { readCheckbox, type Status } from './checkbox';
 import { commentLines } from './comment';
 
 export interface Item {
 	readonly line: number;
+	/**
+	 * The line as written, checkbox and all.
+	 *
+	 * Carried because every consumer wanted it and none had it: each one took
+	 * `item.line` and went back to index the original array, which is a number
+	 * from one place used to subscript another and works only while the two
+	 * stay in step. This was read once, here, where the line was already in
+	 * hand to find the checkbox on it.
+	 */
+	readonly text: string;
 	/**
 	 * The whitespace before the checkbox, as written.
 	 *
@@ -124,7 +134,7 @@ export function items(lines: readonly string[]): Map<number, Item> {
 	const parked = commentLines(lines);
 
 	// Items still open above the current line, shallowest first.
-	let ancestors: Item[] = [];
+	const ancestors: Item[] = [];
 
 	/** Close every ancestor not still open at `line`, ending it on the line before. */
 	const closeThrough = (keep: (item: Item) => boolean, line: number) => {
@@ -177,6 +187,7 @@ export function items(lines: readonly string[]): Map<number, Item> {
 		const parent = ancestors[ancestors.length - 1] ?? null;
 		const item: Item = {
 			line,
+			text,
 			indent,
 			status: checkbox.status,
 			parent: parent ? parent.line : null,

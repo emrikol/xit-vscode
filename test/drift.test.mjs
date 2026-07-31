@@ -64,17 +64,22 @@ function agree(disagreements, what, document, fromGrammar, fromCode) {
 
 	disagreements.push(
 		`  ${what}\n${document.map((text, at) => `    ${at} ${JSON.stringify(text)}`).join('\n')}\n` +
-		`    grammar:    ${JSON.stringify(a)}\n    TypeScript: ${JSON.stringify(b)}`);
+			`    grammar:    ${JSON.stringify(a)}\n    TypeScript: ${JSON.stringify(b)}`,
+	);
 }
 
-describe('the grammar and the TypeScript agree about the fork\'s own syntax', () => {
+describe("the grammar and the TypeScript agree about the fork's own syntax", () => {
 	it('finds the same titles', async () => {
 		const disagreements = [];
 		for (const document of DOCUMENTS) {
 			const tokenized = await tokenize(document.join('\n'));
-			agree(disagreements, 'title', document,
+			agree(
+				disagreements,
+				'title',
+				document,
 				linesWith(tokenized, 'markup.other.task.title'),
-				document.flatMap((text, at) => (isTitle(text) && !commentLines(document).has(at) ? [at] : [])));
+				document.flatMap((text, at) => (isTitle(text) && !commentLines(document).has(at) ? [at] : [])),
+			);
 		}
 		assert.deepEqual(disagreements, [], `src/title.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
 	});
@@ -83,11 +88,13 @@ describe('the grammar and the TypeScript agree about the fork\'s own syntax', ()
 		const disagreements = [];
 		for (const document of DOCUMENTS) {
 			const tokenized = await tokenize(document.join('\n'));
-			agree(disagreements, 'comment', document,
-				linesWith(tokenized, 'markup.other.comment'),
-				commentLines(document));
+			agree(disagreements, 'comment', document, linesWith(tokenized, 'markup.other.comment'), commentLines(document));
 		}
-		assert.deepEqual(disagreements, [], `src/comment.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(
+			disagreements,
+			[],
+			`src/comment.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`,
+		);
 	});
 
 	it('calls the same lines wrong, though not always by the same name', async () => {
@@ -102,12 +109,23 @@ describe('the grammar and the TypeScript agree about the fork\'s own syntax', ()
 
 		for (const document of DOCUMENTS) {
 			const tokenized = await tokenize(document.join('\n'));
-			agree(disagreements, 'invalid', document,
+			agree(
+				disagreements,
+				'invalid',
+				document,
 				linesWith(tokenized, 'markup.other.task.invalid'),
-				new Set(problems(document).filter((one) => WRONG.includes(one.code)).map((one) => one.line)));
+				new Set(
+					problems(document)
+						.filter((one) => WRONG.includes(one.code))
+						.map((one) => one.line),
+				),
+			);
 		}
-		assert.deepEqual(disagreements, [],
-			`the grammar's invalid rule has drifted from the diagnostics:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(
+			disagreements,
+			[],
+			`the grammar's invalid rule has drifted from the diagnostics:\n\n${disagreements.join('\n\n')}`,
+		);
 	});
 
 	it('reads every line the grammar calls an item, and says why it reads more', async () => {
@@ -125,12 +143,17 @@ describe('the grammar and the TypeScript agree about the fork\'s own syntax', ()
 			const tokenized = await tokenize(document.join('\n'));
 			const fromGrammar = linesWith(tokenized, 'markup.other.task.checkbox');
 			const fromCode = new Set([...items(document).keys()].filter((at) => !commentLines(document).has(at)));
-			const explained = new Set(problems(document)
-				.filter((one) => one.code === 'cannot-nest' || one.code === 'starts-after-due')
-				.map((one) => one.line));
+			const explained = new Set(
+				problems(document)
+					.filter((one) => one.code === 'cannot-nest' || one.code === 'starts-after-due')
+					.map((one) => one.line),
+			);
 
 			for (const at of fromGrammar) {
-				if (!fromCode.has(at)) disagreements.push(`  the grammar reads line ${at} of ${JSON.stringify(document)} as an item and src/tree.ts does not`);
+				if (!fromCode.has(at))
+					disagreements.push(
+						`  the grammar reads line ${at} of ${JSON.stringify(document)} as an item and src/tree.ts does not`,
+					);
 			}
 			for (const at of fromCode) {
 				// An extra is allowed where the Problems panel already objects
@@ -141,7 +164,9 @@ describe('the grammar and the TypeScript agree about the fork\'s own syntax', ()
 				// user has been told the indentation is wrong either way.
 				const flagged = [...explained].some((one) => one <= at);
 				if (!fromGrammar.has(at) && !explained.has(at) && !flagged) {
-					disagreements.push(`  src/tree.ts reads line ${at} of ${JSON.stringify(document)} as an item, the grammar does not, and nothing reports it`);
+					disagreements.push(
+						`  src/tree.ts reads line ${at} of ${JSON.stringify(document)} as an item, the grammar does not, and nothing reports it`,
+					);
 				}
 			}
 		}

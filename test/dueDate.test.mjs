@@ -37,17 +37,32 @@ describe('finding due dates', () => {
 
 	it('rejects the forms the guide calls unrecognised', () => {
 		for (const line of [
-			'[ ] ->2026-01-31', '[ ] ->   2026-01-31', '[ ] >2026-01-31',
-			'[ ] → 2026-01-31', '[ ] ---> 2026-01-31', '[ ] Due-> 2026-01-31',
-			'[ ] -> 2026-01-31T10:00', '[ ] -> 2026-01-31-0', '[ ] -> 2026/01/31/0',
-			'[ ] -> 2026-01/31', '[ ] -> 2026-01-31very urgent',
+			'[ ] ->2026-01-31',
+			'[ ] ->   2026-01-31',
+			'[ ] >2026-01-31',
+			'[ ] → 2026-01-31',
+			'[ ] ---> 2026-01-31',
+			'[ ] Due-> 2026-01-31',
+			'[ ] -> 2026-01-31T10:00',
+			'[ ] -> 2026-01-31-0',
+			'[ ] -> 2026/01/31/0',
+			'[ ] -> 2026-01/31',
+			'[ ] -> 2026-01-31very urgent',
 		]) {
 			assert.equal(on(line), null, `${line} should not hold a due date`);
 		}
 	});
 
 	it('accepts every pattern the spec defines', () => {
-		for (const text of ['-> 2026', '-> 2026-01', '-> 2026-01-31', '-> 2026-W01', '-> 2026-Q1', '-> 2026/01/31', '-> 2026/W01']) {
+		for (const text of [
+			'-> 2026',
+			'-> 2026-01',
+			'-> 2026-01-31',
+			'-> 2026-W01',
+			'-> 2026-Q1',
+			'-> 2026/01/31',
+			'-> 2026/W01',
+		]) {
 			assert.equal(on(`[ ] Task ${text}`)?.text, text);
 		}
 	});
@@ -121,22 +136,34 @@ describe('one due date per item', () => {
 
 	it('takes the first and disregards the rest', () => {
 		const found = dueDates(['[ ] Task -> 2026-01-31 -> 2026-02-28']);
-		assert.deepEqual(found.map((date) => date.text), ['-> 2026-01-31']);
+		assert.deepEqual(
+			found.map((date) => date.text),
+			['-> 2026-01-31'],
+		);
 	});
 
 	it('disregards one on a continuation line', () => {
 		const found = dueDates(['[ ] Task -> 2026-01-31', '    more -> 2026-02-28']);
-		assert.deepEqual(found.map((date) => date.text), ['-> 2026-01-31']);
+		assert.deepEqual(
+			found.map((date) => date.text),
+			['-> 2026-01-31'],
+		);
 	});
 
 	it('finds one that is only on a continuation line', () => {
 		const found = dueDates(['[ ] Do something until ...', '    -> 2026-01-31']);
-		assert.deepEqual(found.map((date) => ({ line: date.line, text: date.text })), [{ line: 1, text: '-> 2026-01-31' }]);
+		assert.deepEqual(
+			found.map((date) => ({ line: date.line, text: date.text })),
+			[{ line: 1, text: '-> 2026-01-31' }],
+		);
 	});
 
 	it('starts again at the next item', () => {
 		const found = dueDates(['[ ] One -> 2026-01-31', '[ ] Two -> 2026-02-28']);
-		assert.deepEqual(found.map((date) => date.text), ['-> 2026-01-31', '-> 2026-02-28']);
+		assert.deepEqual(
+			found.map((date) => date.text),
+			['-> 2026-01-31', '-> 2026-02-28'],
+		);
 	});
 
 	it('ignores a date outside any item', () => {
@@ -190,13 +217,19 @@ describe('start dates', () => {
 
 	it('does not confuse the two arrows', () => {
 		assert.deepEqual(start('[ ] x -> 2026-08-14'), []);
-		assert.deepEqual(dueDatesOn('[ ] x <- 2026-08-14').map((date) => date.text), []);
+		assert.deepEqual(
+			dueDatesOn('[ ] x <- 2026-08-14').map((date) => date.text),
+			[],
+		);
 	});
 
 	it('reads both arrows on one line', () => {
 		const line = '[ ] Do it <- 2026-08-14 -> 2026-08-20';
 		assert.deepEqual(start(line), ['<- 2026-08-14']);
-		assert.deepEqual(dueDatesOn(line).map((date) => date.text), ['-> 2026-08-20']);
+		assert.deepEqual(
+			dueDatesOn(line).map((date) => date.text),
+			['-> 2026-08-20'],
+		);
 	});
 
 	it('gives the first day of whatever period was named', () => {
@@ -235,7 +268,8 @@ describe('the TypeScript matcher and the grammar agree', () => {
 
 			const tokenized = await tokenize(lines.join('\n'));
 			const fromGrammar = tokenized.flatMap((line, index) =>
-				scoped(line, 'markup.other.task.date').map((text) => ({ line: index, text })));
+				scoped(line, 'markup.other.task.date').map((text) => ({ line: index, text })),
+			);
 
 			const fromCode = dueDates(lines).map((date) => ({ line: date.line, text: date.text }));
 
@@ -243,16 +277,20 @@ describe('the TypeScript matcher and the grammar agree', () => {
 			if (JSON.stringify(fromGrammar) !== JSON.stringify(fromCode)) {
 				disagreements.push(
 					`  ${aspect.id}: ${aspect.rule}\n` +
-					lines.map((text) => `    ${JSON.stringify(text)}`).join('\n') + '\n' +
-					`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
-					`    TypeScript: ${JSON.stringify(fromCode)}`,
+						lines.map((text) => `    ${JSON.stringify(text)}`).join('\n') +
+						'\n' +
+						`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
+						`    TypeScript: ${JSON.stringify(fromCode)}`,
 				);
 			}
 		}
 
 		assert.ok(compared > 150, `only ${compared} lines compared`);
-		assert.deepEqual(disagreements, [],
-			`src/dueDate.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(
+			disagreements,
+			[],
+			`src/dueDate.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`,
+		);
 	});
 
 	it('finds the same start dates, on the same corpus with the arrow swapped', async () => {
@@ -273,24 +311,30 @@ describe('the TypeScript matcher and the grammar agree', () => {
 
 			const tokenized = await tokenize(lines.join('\n'));
 			const fromGrammar = tokenized.flatMap((line, index) =>
-				scoped(line, 'markup.other.task.start').map((text) => ({ line: index, text })));
+				scoped(line, 'markup.other.task.start').map((text) => ({ line: index, text })),
+			);
 
 			const fromCode = lines.flatMap((text, index) =>
-				startDatesOn(text).map((date) => ({ line: index, text: date.text })));
+				startDatesOn(text).map((date) => ({ line: index, text: date.text })),
+			);
 
 			compared += lines.length;
 			if (JSON.stringify(fromGrammar) !== JSON.stringify(fromCode)) {
 				disagreements.push(
 					`  ${aspect.id}: ${aspect.rule}\n` +
-					lines.map((text) => `    ${JSON.stringify(text)}`).join('\n') + '\n' +
-					`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
-					`    TypeScript: ${JSON.stringify(fromCode)}`,
+						lines.map((text) => `    ${JSON.stringify(text)}`).join('\n') +
+						'\n' +
+						`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
+						`    TypeScript: ${JSON.stringify(fromCode)}`,
 				);
 			}
 		}
 
 		assert.ok(compared > 20, `only ${compared} lines compared`);
-		assert.deepEqual(disagreements, [],
-			`the start date has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(
+			disagreements,
+			[],
+			`the start date has drifted from the grammar:\n\n${disagreements.join('\n\n')}`,
+		);
 	});
 });

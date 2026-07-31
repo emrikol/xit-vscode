@@ -11,9 +11,9 @@
 
 import { priorityOf } from './checkbox';
 import { commentLines } from './comment';
-import { Collected, Thresholds, collect, urgencyOf, Urgency } from './collect';
-import { Day } from './dueDate';
-import { Item, items } from './tree';
+import { type Collected, type Thresholds, collect, urgencyOf, type Urgency } from './collect';
+import type { Day } from './dueDate';
+import { type Item, items } from './tree';
 
 /** The bounds of the group `line` sits in: consecutive non-blank lines. */
 /**
@@ -55,14 +55,14 @@ const ORDER: Urgency[] = ['critical', 'overdue', 'soon', 'later', 'none', 'waiti
  * with no date is not the most urgent thing in the group, it is the least
  * scheduled.
  */
-function rank(lines: readonly string[], collected: Map<number, Collected>, item: Item, thresholds: Thresholds): [number, number, Day] {
+function rank(collected: Map<number, Collected>, item: Item, thresholds: Thresholds): [number, number, Day] {
 	const found = collected.get(item.line);
 	const urgency = found ? ORDER.indexOf(urgencyOf(found, thresholds)) : ORDER.length;
 	const due = found?.due;
 
 	// From the raw line, not from `description`, which has the checkbox cut
 	// off - and priorityOf reads the marks that follow one.
-	return [urgency, -priorityOf(lines[item.line]), due ? due.endOfPeriod : Number.MAX_SAFE_INTEGER];
+	return [urgency, -priorityOf(item.text), due ? due.endOfPeriod : Number.MAX_SAFE_INTEGER];
 }
 
 /**
@@ -90,7 +90,7 @@ export function sortGroup(lines: readonly string[], line: number, thresholds: Th
 	/** The block of text an item owns: its own line, and everything under it. */
 	const blockOf = (item: Item): string[] => {
 		const ordered = sortChildren(item.children);
-		const out = [lines[item.line]];
+		const out = [item.text];
 
 		// Continuations sit between this item's line and its first child, and
 		// after the last child's block. Taken from the gaps rather than
@@ -111,8 +111,8 @@ export function sortGroup(lines: readonly string[], line: number, thresholds: Th
 
 	const sortChildren = (children: readonly number[]): number[] =>
 		[...children].sort((a, b) => {
-			const first = rank(lines, collected, all.get(a)!, thresholds);
-			const second = rank(lines, collected, all.get(b)!, thresholds);
+			const first = rank(collected, all.get(a)!, thresholds);
+			const second = rank(collected, all.get(b)!, thresholds);
 			for (const [at, value] of first.entries()) {
 				if (value !== second[at]) return value - second[at];
 			}

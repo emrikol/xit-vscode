@@ -57,12 +57,18 @@ describe('stamping', () => {
 		// A due date ends at whitespace or punctuation, so appending after a
 		// space must not swallow it.
 		const stamped = stamp('[x] Ship it -> 2026-08-14', 'done', 20260731);
-		assert.deepEqual(dueDatesOn(stamped).map((d) => d.text), ['-> 2026-08-14']);
+		assert.deepEqual(
+			dueDatesOn(stamped).map((d) => d.text),
+			['-> 2026-08-14'],
+		);
 	});
 
 	it('goes after any existing tags', () => {
 		const stamped = stamp('[x] Ship it #release #urgent', 'done', 20260731);
-		assert.deepEqual(tagsOn(stamped).map((t) => t.name), ['release', 'urgent', 'done']);
+		assert.deepEqual(
+			tagsOn(stamped).map((t) => t.name),
+			['release', 'urgent', 'done'],
+		);
 	});
 
 	it('is idempotent', () => {
@@ -99,7 +105,10 @@ describe('unstamping', () => {
 
 	it('leaves other tags alone', () => {
 		const opened = stamp('[ ] Do this #a #done=2026-07-31 #b', 'done', null);
-		assert.deepEqual(tagsOn(opened).map((t) => t.name), ['a', 'b']);
+		assert.deepEqual(
+			tagsOn(opened).map((t) => t.name),
+			['a', 'b'],
+		);
 	});
 
 	it('does nothing when there is no tag to remove', () => {

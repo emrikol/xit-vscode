@@ -13,7 +13,7 @@ Files written for it still open anywhere. Files written for the official format 
 [Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
 
 **Reference**  
-[Development](#development) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
+[Development](#development) · [Lint and formatting](#lint-and-formatting) · [The two integration runs](#the-two-integration-runs) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
 
 ## Titles
 
@@ -612,13 +612,25 @@ One thing it deliberately does *not* do: a line like `- [ ] Buy milk` was read a
 ```sh
 npm install            # also installs the git hooks
 npm test               # build, then run the unit tests
+npm run lint           # Biome: lint and formatting, over src, test and scripts
+npm run lint:fix       # fix what can be fixed automatically
 npm run test:web       # run the integration tests in a headless browser
 npm run test:integration   # run the same tests in desktop VS Code
 npm run open-web:demo  # serve a real VS Code in the browser, on demo/
 npm run icons          # re-render the icons from their SVG sources
 ```
 
-`npm install` points `core.hooksPath` at `.githooks`, so the hooks install themselves with no extra dependency. `pre-commit` runs the unit tests. `pre-push` runs those, then `test:web`, then confirms the extension still packages, which catches manifest mistakes the tests cannot see. Both take `--no-verify` if you need to get past them.
+`npm install` points `core.hooksPath` at `.githooks`, so the hooks install themselves with no extra dependency. `pre-commit` runs the lint first, because it is instant and the test run is not, then the unit tests. `pre-push` runs those, then `test:web`, then confirms the extension still packages, which catches manifest mistakes the tests cannot see. Both take `--no-verify` if you need to get past them.
+
+### Lint and formatting
+
+[Biome](https://biomejs.dev/) does both, over `src/`, `test/` and `scripts/`. `biome.jsonc` carries the reasoning for every rule that is turned off; the short version is that the recommended set is used rather than every group, because turning all of them on produced 1,528 diagnostics that were overwhelmingly this codebase's deliberate idioms being told they were wrong.
+
+Two rules are switched **on** for `src/` only, and both are satisfied today rather than aspirational. `noNodejsModules` holds the line that makes the web build possible: `src/` runs in a web worker on vscode.dev, where there is no Node and no file system, and one `node:fs` import would break both the web and the virtual-workspace claims in the manifest with no test failing. `noConsole` keeps extension output out of a log nobody opens. `src/test/` is exempt from the first, because it runs in the extension host rather than the worker.
+
+Biome rather than ESLint is not a preference. `typescript-eslint` declares `typescript: >=4.8.4 <6.1.0` on both its latest and its canary; this repo builds on TypeScript 7, so `npm install` refuses the tree outright and forcing past it throws at module load on an explicit version guard. Running it against the TypeScript 6 API does work — that was tried, with a second toolbox pinning `typescript@6.0.3` — at the cost of a second compiler to be removed again when [typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940) lands. What Biome gives up is type-aware rules. That loss was measured rather than assumed: the TypeScript 6 rig found eight things across the whole of `src/`, all cosmetic, and all eight are fixed.
+
+`noUncheckedIndexedAccess` is off in `tsconfig.json` for the same kind of reason, and it is worth writing down because it looks like an obvious thing to turn on. It reports 92 sites here. Eleven were real and are fixed — they are what produced `src/calendar.ts`, the date-precision type in `src/repeat.ts`, and `Item` carrying its own text. The remaining 81 are patterns TypeScript cannot narrow: an array indexed by a number it just validated, `arr[arr.length - 1]` after testing `arr.length`, a capture group in a pattern with no optional groups. Each would take a non-null assertion, so enabling the flag would add roughly 81 of them and prove nothing the tests do not.
 
 The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`, the same libraries VS Code uses, so they exercise the real Oniguruma engine rather than JavaScript's regular expressions. The conformance fixture is the reference `test.xit` from [jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
 

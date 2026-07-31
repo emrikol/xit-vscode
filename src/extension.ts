@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { readCheckbox, readStatus, writeStatus, toggle, shuffle, Status } from './checkbox';
+import { readCheckbox, readStatus, writeStatus, toggle, shuffle, type Status } from './checkbox';
 import { selectedLines } from './selection';
 import { cascade } from './tree';
-import { outline, Node } from './outline';
+import { outline, type Node } from './outline';
 import { folds } from './folding';
 import { stamp, isTagName } from './stamp';
 import { nextOccurrence, parseInterval, postpone } from './repeat';
 import { dueDatesOn } from './dueDate';
-import { problems, Severity } from './diagnostics';
+import { problems, type Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
 import { alignments } from './align';
@@ -15,7 +15,7 @@ import { collect, isOpen, urgencyOf } from './collect';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
 import { registerWorkspaceView } from './workspaceView';
-import { WorkspaceIndex } from './workspaceIndex';
+import type { WorkspaceIndex } from './workspaceIndex';
 import { commonSpelling, foldName, tagsOn } from './tag';
 import { commentLines } from './comment';
 import { overdue, todayFrom } from './dueDate';
@@ -30,7 +30,9 @@ function editSettings() {
 	return {
 		autoCheckParents: configuration.get<boolean>('autoCheckParents', true),
 		repeatItems: configuration.get<boolean>('repeatItems', true),
-		repeatTag: isTagName(configuration.get<string>('repeatTag', 'repeat')) ? configuration.get<string>('repeatTag', 'repeat') : 'repeat',
+		repeatTag: isTagName(configuration.get<string>('repeatTag', 'repeat'))
+			? configuration.get<string>('repeatTag', 'repeat')
+			: 'repeat',
 		stampCompletionDate: configuration.get<boolean>('stampCompletionDate', false),
 		// Fall back rather than write a tag the format cannot express. A
 		// hand-edited setting should not be able to corrupt the file.
@@ -117,7 +119,7 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 	// Returned, not fired and forgotten. `editor.edit` is asynchronous, so a
 	// caller that awaits the command would otherwise see the document before
 	// the edit landed.
-	return editor.edit(builder => {
+	return editor.edit((builder) => {
 		for (const line of new Set(written)) {
 			if (after[line] === before[line]) continue;
 			builder.replace(document.lineAt(line).range, after[line]);
@@ -151,11 +153,13 @@ function registerEditorCommand(
 	command: string,
 	run: (editor: vscode.TextEditor) => unknown,
 ) {
-	context.subscriptions.push(vscode.commands.registerCommand(command, () => {
-		const editor = vscode.window.activeTextEditor;
-		if (!editor) return;
-		return run(editor);
-	}));
+	context.subscriptions.push(
+		vscode.commands.registerCommand(command, () => {
+			const editor = vscode.window.activeTextEditor;
+			if (!editor) return;
+			return run(editor);
+		}),
+	);
 }
 
 /**
@@ -182,50 +186,52 @@ function registerEditorCommand(
  * Off by default, like the completion date.
  */
 function registerCreationDate(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(async (event) => {
-		const document = event.document;
-		if (document.languageId !== LANGUAGE) return;
+	context.subscriptions.push(
+		vscode.workspace.onDidChangeTextDocument(async (event) => {
+			const document = event.document;
+			if (document.languageId !== LANGUAGE) return;
 
-		const configuration = vscode.workspace.getConfiguration(LANGUAGE);
-		if (!configuration.get<boolean>('stampCreationDate', false)) return;
+			const configuration = vscode.workspace.getConfiguration(LANGUAGE);
+			if (!configuration.get<boolean>('stampCreationDate', false)) return;
 
-		// Undo and redo are the user putting the file back, not writing an
-		// item. Stamping there would fight them.
-		if (event.reason !== undefined) return;
-		if (event.contentChanges.length !== 1) return;
+			// Undo and redo are the user putting the file back, not writing an
+			// item. Stamping there would fight them.
+			if (event.reason !== undefined) return;
+			if (event.contentChanges.length !== 1) return;
 
-		const [change] = event.contentChanges;
-		if (change.text.includes('\n')) return;
+			const [change] = event.contentChanges;
+			if (change.text.includes('\n')) return;
 
-		const line = change.range.start.line;
-		if (line >= document.lineCount) return;
+			const line = change.range.start.line;
+			if (line >= document.lineCount) return;
 
-		const text = document.lineAt(line).text;
-		const checkbox = readCheckbox(text);
-		if (!checkbox) return;
+			const text = document.lineAt(line).text;
+			const checkbox = readCheckbox(text);
+			if (!checkbox) return;
 
-		// The change has to have touched the checkbox. Typing in a description
-		// is not creating an item.
-		if (change.range.start.character > checkbox.column + 3) return;
+			// The change has to have touched the checkbox. Typing in a description
+			// is not creating an item.
+			if (change.range.start.character > checkbox.column + 3) return;
 
-		const tag = configuration.get<string>('creationDateTag', 'created');
-		const name = isTagName(tag) ? tag : 'created';
-		if (tagsOn(text).some((found) => found.key === foldName(name))) return;
-		if (commentLines(documentLines(document)).has(line)) return;
+			const tag = configuration.get<string>('creationDateTag', 'created');
+			const name = isTagName(tag) ? tag : 'created';
+			if (tagsOn(text).some((found) => found.key === foldName(name))) return;
+			if (commentLines(documentLines(document)).has(line)) return;
 
-		const stamped = stamp(text, name, todayFrom(new Date()));
-		if (stamped === text) return;
+			const stamped = stamp(text, name, todayFrom(new Date()));
+			if (stamped === text) return;
 
-		const editor = vscode.window.activeTextEditor;
-		if (!editor || editor.document !== document) return;
+			const editor = vscode.window.activeTextEditor;
+			if (!editor || editor.document !== document) return;
 
-		await editor.edit(builder => builder.replace(document.lineAt(line).range, stamped), {
-			// Its own undo step, so one Ctrl+Z takes the stamp off and leaves
-			// the item you just typed alone.
-			undoStopBefore: true,
-			undoStopAfter: false,
-		});
-	}));
+			await editor.edit((builder) => builder.replace(document.lineAt(line).range, stamped), {
+				// Its own undo step, so one Ctrl+Z takes the stamp off and leaves
+				// the item you just typed alone.
+				undoStopBefore: true,
+				undoStopAfter: false,
+			});
+		}),
+	);
 }
 
 /** Every line of a document, which several things here need. */
@@ -252,42 +258,52 @@ function documentLines(document: vscode.TextDocument): string[] {
  * `#size=S` and `#size=s` are two different values and both are offered.
  */
 function registerCompletion(context: vscode.ExtensionContext, index: WorkspaceIndex) {
-	context.subscriptions.push(vscode.languages.registerCompletionItemProvider(LANGUAGE, {
-		provideCompletionItems(document, position) {
-			const upToCursor = document.lineAt(position.line).text.slice(0, position.character);
-			const usage = index.tags();
+	context.subscriptions.push(
+		vscode.languages.registerCompletionItemProvider(
+			LANGUAGE,
+			{
+				provideCompletionItems(document, position) {
+					const upToCursor = document.lineAt(position.line).text.slice(0, position.character);
+					const usage = index.tags();
 
-			// After `#name=`, the values that name has been given.
-			const value = /#([\p{L}\d_-]+)=([\p{L}\d_-]*)$/u.exec(upToCursor);
-			if (value) {
-				const found = usage.get(foldName(value[1]));
-				if (!found) return [];
+					// After `#name=`, the values that name has been given.
+					const value = /#([\p{L}\d_-]+)=([\p{L}\d_-]*)$/u.exec(upToCursor);
+					if (value) {
+						const found = usage.get(foldName(value[1]));
+						if (!found) return [];
 
-				return [...found.values].sort().map((text) => {
-					const item = new vscode.CompletionItem(text, vscode.CompletionItemKind.Value);
-					item.detail = `#${value[1]}`;
-					return item;
-				});
-			}
+						return [...found.values].sort().map((text) => {
+							const item = new vscode.CompletionItem(text, vscode.CompletionItemKind.Value);
+							item.detail = `#${value[1]}`;
+							return item;
+						});
+					}
 
-			// After `#`, the names in use. The `#` is already typed, so the
-			// insert text is the name alone or it would be doubled.
-			if (!/#[\p{L}\d_-]*$/u.test(upToCursor)) return [];
+					// After `#`, the names in use. The `#` is already typed, so the
+					// insert text is the name alone or it would be doubled.
+					if (!/#[\p{L}\d_-]*$/u.test(upToCursor)) return [];
 
-			return [...usage.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, found]) => {
-				const spelling = commonSpelling(found);
-				const item = new vscode.CompletionItem(spelling, vscode.CompletionItemKind.Keyword);
-				// Sorted and filtered by the folded name, so typing `#WOR`
-				// still finds a tag written `#work`.
-				item.filterText = key;
-				item.sortText = key;
-				item.detail = found.values.size > 0
-					? `${found.values.size} value${found.values.size === 1 ? '' : 's'} in use`
-					: undefined;
-				return item;
-			});
-		},
-	}, '#', '='));
+					return [...usage.entries()]
+						.sort(([a], [b]) => a.localeCompare(b))
+						.map(([key, found]) => {
+							const spelling = commonSpelling(found);
+							const item = new vscode.CompletionItem(spelling, vscode.CompletionItemKind.Keyword);
+							// Sorted and filtered by the folded name, so typing `#WOR`
+							// still finds a tag written `#work`.
+							item.filterText = key;
+							item.sortText = key;
+							item.detail =
+								found.values.size > 0
+									? `${found.values.size} value${found.values.size === 1 ? '' : 's'} in use`
+									: undefined;
+							return item;
+						});
+				},
+			},
+			'#',
+			'=',
+		),
+	);
 }
 
 /**
@@ -311,12 +327,14 @@ async function giveIdToItem(editor: vscode.TextEditor) {
 	const existing = tagsOn(text).find((tag) => tag.key === ID_TAG);
 	if (existing?.value) {
 		await vscode.env.clipboard.writeText(`#${AFTER_TAG}=${existing.value}`);
-		void vscode.window.showInformationMessage(`This item is already \`${existing.value}\`. Copied #${AFTER_TAG}=${existing.value}.`);
+		void vscode.window.showInformationMessage(
+			`This item is already \`${existing.value}\`. Copied #${AFTER_TAG}=${existing.value}.`,
+		);
 		return;
 	}
 
 	const id = freshId(documentLines(editor.document));
-	await editor.edit(builder => builder.insert(editor.document.lineAt(line).range.end, ` #${ID_TAG}=${id}`));
+	await editor.edit((builder) => builder.insert(editor.document.lineAt(line).range.end, ` #${ID_TAG}=${id}`));
 	await vscode.env.clipboard.writeText(`#${AFTER_TAG}=${id}`);
 
 	void vscode.window.showInformationMessage(`Gave this item the id \`${id}\`. Copied #${AFTER_TAG}=${id}.`);
@@ -335,30 +353,32 @@ async function giveIdToItem(editor: vscode.TextEditor) {
  * cannot be.
  */
 function registerLinks(context: vscode.ExtensionContext, index: WorkspaceIndex) {
-	context.subscriptions.push(vscode.languages.registerDocumentLinkProvider(LANGUAGE, {
-		provideDocumentLinks(document) {
-			const lines = documentLines(document);
-			// A reference to this file is answered from this file. Going
-			// through the index for it would fail on anything the index has
-			// not read - an untitled buffer, a file outside the workspace -
-			// which is exactly where you are most likely to be writing one.
-			const here = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
+	context.subscriptions.push(
+		vscode.languages.registerDocumentLinkProvider(LANGUAGE, {
+			provideDocumentLinks(document) {
+				const lines = documentLines(document);
+				// A reference to this file is answered from this file. Going
+				// through the index for it would fail on anything the index has
+				// not read - an untitled buffer, a file outside the workspace -
+				// which is exactly where you are most likely to be writing one.
+				const here = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
 
-			return dependencies(lines).flatMap((each) => {
-				const target = each.on.file === null
-					? nullable(here.get(foldId(each.on.id)), (line) => ({ uri: document.uri, line }))
-					: index.resolve(document.uri, each.on);
-				if (!target) return [];
+				return dependencies(lines).flatMap((each) => {
+					const target =
+						each.on.file === null
+							? nullable(here.get(foldId(each.on.id)), (line) => ({ uri: document.uri, line }))
+							: index.resolve(document.uri, each.on);
+					if (!target) return [];
 
-				const link = new vscode.DocumentLink(new vscode.Range(each.line, each.tag.start, each.line, each.tag.end));
-				link.target = target.uri.with({ fragment: `L${target.line + 1}` });
-				link.tooltip = each.on.file === null
-					? 'Go to the item this waits on'
-					: `Go to ${each.on.file}, line ${target.line + 1}`;
-				return [link];
-			});
-		},
-	}));
+					const link = new vscode.DocumentLink(new vscode.Range(each.line, each.tag.start, each.line, each.tag.end));
+					link.target = target.uri.with({ fragment: `L${target.line + 1}` });
+					link.tooltip =
+						each.on.file === null ? 'Go to the item this waits on' : `Go to ${each.on.file}, line ${target.line + 1}`;
+					return [link];
+				});
+			},
+		}),
+	);
 }
 
 /** Apply `then` to a value that may be undefined, which reads better than a ternary here. */
@@ -410,10 +430,11 @@ async function archiveFinished(editor: vscode.TextEditor) {
 
 	const last = editor.document.lineCount - 1;
 	const whole = new vscode.Range(0, 0, last, editor.document.lineAt(last).text.length);
-	await editor.edit(builder => builder.replace(whole, after.join('\n')));
+	await editor.edit((builder) => builder.replace(whole, after.join('\n')));
 
 	void vscode.window.showInformationMessage(
-		`Archived ${moved === 1 ? '1 item' : `${moved} items`}. Undo puts it back.`);
+		`Archived ${moved === 1 ? '1 item' : `${moved} items`}. Undo puts it back.`,
+	);
 }
 
 /**
@@ -446,7 +467,7 @@ async function sortGroupAtCursor(editor: vscode.TextEditor) {
 
 	const last = editor.document.lineCount - 1;
 	const whole = new vscode.Range(0, 0, last, editor.document.lineAt(last).text.length);
-	await editor.edit(builder => builder.replace(whole, after.join('\n')));
+	await editor.edit((builder) => builder.replace(whole, after.join('\n')));
 }
 
 /** What the postpone picker offers, in the order it offers them. */
@@ -473,8 +494,7 @@ const POSTPONE_TO: { label: string; detail: string; interval: string }[] = [
 async function postponeSelected(editor: vscode.TextEditor) {
 	if (editor.document.languageId !== 'xit') return;
 
-	const lines = selectedLines(editor.selections)
-		.filter((line) => readCheckbox(editor.document.lineAt(line).text));
+	const lines = selectedLines(editor.selections).filter((line) => readCheckbox(editor.document.lineAt(line).text));
 	if (lines.length === 0) return;
 
 	const picked = await vscode.window.showQuickPick(POSTPONE_TO, {
@@ -497,7 +517,7 @@ async function postponeSelected(editor: vscode.TextEditor) {
 		return;
 	}
 
-	await editor.edit(builder => {
+	await editor.edit((builder) => {
 		for (const [line, text] of edits) {
 			builder.replace(editor.document.lineAt(line).range, text);
 		}
@@ -531,8 +551,13 @@ async function migrateDocument(editor: vscode.TextEditor) {
 		return;
 	}
 
-	const whole = new vscode.Range(0, 0, editor.document.lineCount - 1, editor.document.lineAt(editor.document.lineCount - 1).text.length);
-	const written = await editor.edit(builder => builder.replace(whole, lines.join('\n')));
+	const whole = new vscode.Range(
+		0,
+		0,
+		editor.document.lineCount - 1,
+		editor.document.lineAt(editor.document.lineCount - 1).text.length,
+	);
+	const written = await editor.edit((builder) => builder.replace(whole, lines.join('\n')));
 
 	if (!written) {
 		void vscode.window.showWarningMessage('Nothing was changed: the document could not be edited.');
@@ -663,12 +688,15 @@ function registerPriorityAlignment(context: vscode.ExtensionContext) {
 			return;
 		}
 
-		editor.setDecorations(padding, alignments(documentLines(editor.document)).map((each) => ({
-			range: new vscode.Range(each.line, each.column, each.line, each.column),
-			// A non-breaking space, because a run of ordinary spaces in inline
-			// decoration content gets collapsed the way HTML collapses it.
-			renderOptions: { before: { contentText: '\u00a0'.repeat(each.pad) } },
-		})));
+		editor.setDecorations(
+			padding,
+			alignments(documentLines(editor.document)).map((each) => ({
+				range: new vscode.Range(each.line, each.column, each.line, each.column),
+				// A non-breaking space, because a run of ordinary spaces in inline
+				// decoration content gets collapsed the way HTML collapses it.
+				renderOptions: { before: { contentText: '\u00a0'.repeat(each.pad) } },
+			})),
+		);
 	}
 
 	context.subscriptions.push(
@@ -748,10 +776,12 @@ function registerOverdueDecoration(context: vscode.ExtensionContext) {
 			criticalAfterDays,
 			soonWithinDays: vscode.workspace.getConfiguration(LANGUAGE).get<number>('dueSoonWithinDays', 7),
 		};
-		const late = new Set(collect(lines)
-			.filter((item) => isOpen(item))
-			.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, thresholds)))
-			.map((item) => item.line));
+		const late = new Set(
+			collect(lines)
+				.filter((item) => isOpen(item))
+				.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, thresholds)))
+				.map((item) => item.line),
+		);
 
 		for (const date of overdue(lines, today)) {
 			if (!late.has(date.line)) continue;
@@ -774,7 +804,11 @@ function registerOverdueDecoration(context: vscode.ExtensionContext) {
 	const refreshAll = () => vscode.window.visibleTextEditors.forEach(refresh);
 
 	context.subscriptions.push(
-		{ dispose: () => decorations && Object.values(decorations).forEach((type) => type.dispose()) },
+		{
+			dispose: () => {
+				for (const type of Object.values(decorations ?? {})) type.dispose();
+			},
+		},
 		vscode.window.onDidChangeActiveTextEditor(refresh),
 		vscode.window.onDidChangeVisibleTextEditors(refreshAll),
 		vscode.workspace.onDidChangeTextDocument((event) => {
@@ -825,16 +859,18 @@ function registerOutline(context: vscode.ExtensionContext) {
 		return symbol;
 	};
 
-	context.subscriptions.push(vscode.languages.registerDocumentSymbolProvider(
-		{ language: LANGUAGE },
-		{
-			provideDocumentSymbols(document) {
-				const lines: string[] = [];
-				for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
-				return outline(lines).map(toSymbol);
+	context.subscriptions.push(
+		vscode.languages.registerDocumentSymbolProvider(
+			{ language: LANGUAGE },
+			{
+				provideDocumentSymbols(document) {
+					const lines: string[] = [];
+					for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+					return outline(lines).map(toSymbol);
+				},
 			},
-		},
-	));
+		),
+	);
 }
 
 /**
@@ -845,25 +881,30 @@ function registerOutline(context: vscode.ExtensionContext) {
  * know that a blank line ends an item, and it has never heard of `<!--`.
  */
 function registerFolding(context: vscode.ExtensionContext) {
-	context.subscriptions.push(vscode.languages.registerFoldingRangeProvider(
-		{ language: LANGUAGE },
-		{
-			provideFoldingRanges(document) {
-				const lines: string[] = [];
-				for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+	context.subscriptions.push(
+		vscode.languages.registerFoldingRangeProvider(
+			{ language: LANGUAGE },
+			{
+				provideFoldingRanges(document) {
+					const lines: string[] = [];
+					for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
 
-				return folds(lines).map((fold) => new vscode.FoldingRange(
-					fold.start,
-					fold.end,
-					// Comment is the only kind VS Code has that fits. An item
-					// and a group are neither imports nor a region, and
-					// claiming otherwise would put them under "Fold All
-					// Regions", which is not what anyone means by it.
-					fold.kind === 'comment' ? vscode.FoldingRangeKind.Comment : undefined,
-				));
+					return folds(lines).map(
+						(fold) =>
+							new vscode.FoldingRange(
+								fold.start,
+								fold.end,
+								// Comment is the only kind VS Code has that fits. An item
+								// and a group are neither imports nor a region, and
+								// claiming otherwise would put them under "Fold All
+								// Regions", which is not what anyone means by it.
+								fold.kind === 'comment' ? vscode.FoldingRangeKind.Comment : undefined,
+							),
+					);
+				},
 			},
-		},
-	));
+		),
+	);
 }
 
 /**
@@ -935,7 +976,6 @@ function registerDiagnostics(context: vscode.ExtensionContext, index: WorkspaceI
 }
 
 export function activate(context: vscode.ExtensionContext) {
-
 	const index = registerWorkspaceView(context);
 	registerCompletion(context, index);
 	registerLinks(context, index);
@@ -947,26 +987,24 @@ export function activate(context: vscode.ExtensionContext) {
 	registerOutline(context);
 	registerFolding(context);
 
-	registerEditorCommand(context, 'xit.migrate', editor => migrateDocument(editor));
+	registerEditorCommand(context, 'xit.migrate', (editor) => migrateDocument(editor));
 
-	registerEditorCommand(context, 'xit.postpone', editor => postponeSelected(editor));
+	registerEditorCommand(context, 'xit.postpone', (editor) => postponeSelected(editor));
 
-	registerEditorCommand(context, 'xit.sortGroup', editor => sortGroupAtCursor(editor));
+	registerEditorCommand(context, 'xit.sortGroup', (editor) => sortGroupAtCursor(editor));
 
-	registerEditorCommand(context, 'xit.archive', editor => archiveFinished(editor));
+	registerEditorCommand(context, 'xit.archive', (editor) => archiveFinished(editor));
 
-	registerEditorCommand(context, 'xit.giveId', editor => giveIdToItem(editor));
+	registerEditorCommand(context, 'xit.giveId', (editor) => giveIdToItem(editor));
 
-	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
+	registerEditorCommand(context, 'xit.toggle', (editor) => editSelectedCheckboxes(editor, toggle));
 
-	registerEditorCommand(context, 'xit.shuffle', editor => editSelectedCheckboxes(editor, shuffle));
+	registerEditorCommand(context, 'xit.shuffle', (editor) => editSelectedCheckboxes(editor, shuffle));
 
-	registerEditorCommand(context, 'xit.suggest', editor => {
-		if (selectionHasCheckboxes(editor))
-			return vscode.commands.executeCommand('xit.toggle');
-		else
-			return vscode.commands.executeCommand('editor.action.triggerSuggest');
+	registerEditorCommand(context, 'xit.suggest', (editor) => {
+		if (selectionHasCheckboxes(editor)) return vscode.commands.executeCommand('xit.toggle');
+		else return vscode.commands.executeCommand('editor.action.triggerSuggest');
 	});
 }
 
-export function deactivate() { }
+export function deactivate() {}

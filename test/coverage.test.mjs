@@ -74,120 +74,246 @@ const source = (file) => readFileSync(new URL(file.startsWith('../') ? file : `.
 
 const LEDGER = {
 	outline: {
-		must: { status: 'outline.test.mjs', due: 'outline.test.mjs', start: 'outline.test.mjs', tags: 'outline.test.mjs',
-			title: 'outline.test.mjs', comment: 'outline.test.mjs', nesting: 'outline.test.mjs' },
+		must: {
+			status: 'outline.test.mjs',
+			due: 'outline.test.mjs',
+			start: 'outline.test.mjs',
+			tags: 'outline.test.mjs',
+			title: 'outline.test.mjs',
+			comment: 'outline.test.mjs',
+			nesting: 'outline.test.mjs',
+		},
 		gap: {},
-		na: { priority: 'stays in the description text, which the name shows verbatim',
-			ids: 'a tag like any other in the name', estimate: 'a tag like any other in the name',
-			directive: 'lives in a comment, which the outline already skips' },
+		na: {
+			priority: 'stays in the description text, which the name shows verbatim',
+			ids: 'a tag like any other in the name',
+			estimate: 'a tag like any other in the name',
+			directive: 'lives in a comment, which the outline already skips',
+		},
 	},
 	folding: {
 		must: { title: 'folding.test.mjs', comment: 'folding.test.mjs', nesting: 'folding.test.mjs' },
 		gap: {},
-		na: { status: 'a fold covers an item whatever its checkbox says',
-			priority: 'not structural', due: 'not structural', start: 'not structural',
-			tags: 'not structural', ids: 'not structural', estimate: 'not structural',
-			directive: 'lives in a comment, which folds as a comment' },
+		na: {
+			status: 'a fold covers an item whatever its checkbox says',
+			priority: 'not structural',
+			due: 'not structural',
+			start: 'not structural',
+			tags: 'not structural',
+			ids: 'not structural',
+			estimate: 'not structural',
+			directive: 'lives in a comment, which folds as a comment',
+		},
 	},
 	sort: {
-		must: { priority: 'sort.test.mjs', due: 'sort.test.mjs', title: 'sort.test.mjs', nesting: 'sort.test.mjs',
-			comment: 'sort.test.mjs', start: 'sort.test.mjs', status: 'sort.test.mjs',
-			ids: 'invariants.test.mjs' },
+		must: {
+			priority: 'sort.test.mjs',
+			due: 'sort.test.mjs',
+			title: 'sort.test.mjs',
+			nesting: 'sort.test.mjs',
+			comment: 'sort.test.mjs',
+			start: 'sort.test.mjs',
+			status: 'sort.test.mjs',
+			ids: 'invariants.test.mjs',
+		},
 		gap: {},
-		na: { tags: 'carried with the line', estimate: 'ranking by estimate is not what this sorts by',
-			directive: 'lives in a comment' },
+		na: {
+			tags: 'carried with the line',
+			estimate: 'ranking by estimate is not what this sorts by',
+			directive: 'lives in a comment',
+		},
 	},
 	archive: {
-		must: { status: 'archive.test.mjs', title: 'archive.test.mjs', comment: 'archive.test.mjs',
-			nesting: 'archive.test.mjs', directive: 'directive.test.mjs', ids: 'invariants.test.mjs' },
+		must: {
+			status: 'archive.test.mjs',
+			title: 'archive.test.mjs',
+			comment: 'archive.test.mjs',
+			nesting: 'archive.test.mjs',
+			directive: 'directive.test.mjs',
+			ids: 'invariants.test.mjs',
+		},
 		gap: {},
-		na: { priority: 'carried with the line', due: 'carried with the line',
-			start: 'carried with the line', tags: 'carried with the line', estimate: 'carried with the line' },
+		na: {
+			priority: 'carried with the line',
+			due: 'carried with the line',
+			start: 'carried with the line',
+			tags: 'carried with the line',
+			estimate: 'carried with the line',
+		},
 	},
 	migrate: {
-		must: { priority: 'migrate.test.mjs', title: 'migrate.test.mjs', comment: 'migrate.test.mjs',
-			nesting: 'migrate.test.mjs' },
+		must: {
+			priority: 'migrate.test.mjs',
+			title: 'migrate.test.mjs',
+			comment: 'migrate.test.mjs',
+			nesting: 'migrate.test.mjs',
+		},
 		gap: {},
-		na: { status: 'untouched by every transform', due: 'untouched', start: 'untouched',
-			tags: 'untouched', ids: 'untouched', estimate: 'untouched',
-			directive: 'lives in a comment, which migration leaves alone' },
+		na: {
+			status: 'untouched by every transform',
+			due: 'untouched',
+			start: 'untouched',
+			tags: 'untouched',
+			ids: 'untouched',
+			estimate: 'untouched',
+			directive: 'lives in a comment, which migration leaves alone',
+		},
 	},
 	diagnostics: {
-		must: { priority: 'diagnostics.test.mjs', due: 'diagnostics.test.mjs', start: 'diagnostics.test.mjs',
-			tags: 'diagnostics.test.mjs', title: 'diagnostics.test.mjs', comment: 'diagnostics.test.mjs',
-			nesting: 'diagnostics.test.mjs', estimate: 'diagnostics.test.mjs', ids: 'link.test.mjs',
-			directive: 'directive.test.mjs' },
+		must: {
+			priority: 'diagnostics.test.mjs',
+			due: 'diagnostics.test.mjs',
+			start: 'diagnostics.test.mjs',
+			tags: 'diagnostics.test.mjs',
+			title: 'diagnostics.test.mjs',
+			comment: 'diagnostics.test.mjs',
+			nesting: 'diagnostics.test.mjs',
+			estimate: 'diagnostics.test.mjs',
+			ids: 'link.test.mjs',
+			directive: 'directive.test.mjs',
+		},
 		gap: {},
 		na: { status: 'a malformed checkbox is reported; a valid status has nothing to report' },
 	},
 	collect: {
-		must: { status: 'collect.test.mjs', due: 'collect.test.mjs', start: 'collect.test.mjs',
-			tags: 'collect.test.mjs', comment: 'collect.test.mjs', nesting: 'collect.test.mjs',
-			estimate: 'estimate.test.mjs', ids: 'link.test.mjs', directive: 'directive.test.mjs' },
+		must: {
+			status: 'collect.test.mjs',
+			due: 'collect.test.mjs',
+			start: 'collect.test.mjs',
+			tags: 'collect.test.mjs',
+			comment: 'collect.test.mjs',
+			nesting: 'collect.test.mjs',
+			estimate: 'estimate.test.mjs',
+			ids: 'link.test.mjs',
+			directive: 'directive.test.mjs',
+		},
 		gap: {},
-		na: { priority: 'the sidebar shows it as part of the description',
-			title: 'collect gathers items; titles are the outline\'s business' },
+		na: {
+			priority: 'the sidebar shows it as part of the description',
+			title: "collect gathers items; titles are the outline's business",
+		},
 	},
 	align: {
 		must: { priority: 'align.test.mjs', comment: 'align.test.mjs', nesting: 'align.test.mjs' },
 		gap: {},
-		na: { status: 'every status can carry a priority, and does', due: 'not on the line\'s left edge',
-			start: 'not on the line\'s left edge', tags: 'not on the line\'s left edge',
-			title: 'has no priority', ids: 'a tag', estimate: 'a tag', directive: 'lives in a comment' },
+		na: {
+			status: 'every status can carry a priority, and does',
+			due: "not on the line's left edge",
+			start: "not on the line's left edge",
+			tags: "not on the line's left edge",
+			title: 'has no priority',
+			ids: 'a tag',
+			estimate: 'a tag',
+			directive: 'lives in a comment',
+		},
 	},
 	link: {
 		must: { ids: 'link.test.mjs', status: 'link.test.mjs', comment: 'link.test.mjs', tags: 'link.test.mjs' },
 		gap: {},
-		na: { priority: 'irrelevant to a reference', due: 'irrelevant', start: 'irrelevant',
-			title: 'cannot carry an id, since it is not an item', nesting: 'an id is per item, not per level',
-			estimate: 'irrelevant', directive: 'lives in a comment' },
+		na: {
+			priority: 'irrelevant to a reference',
+			due: 'irrelevant',
+			start: 'irrelevant',
+			title: 'cannot carry an id, since it is not an item',
+			nesting: 'an id is per item, not per level',
+			estimate: 'irrelevant',
+			directive: 'lives in a comment',
+		},
 	},
 	repeat: {
-		must: { status: 'repeat.test.mjs', priority: 'repeat.test.mjs', due: 'repeat.test.mjs',
-			start: 'repeat.test.mjs', tags: 'repeat.test.mjs', nesting: 'repeat.test.mjs',
-			comment: '../src/test/extension.test.ts' },
+		must: {
+			status: 'repeat.test.mjs',
+			priority: 'repeat.test.mjs',
+			due: 'repeat.test.mjs',
+			start: 'repeat.test.mjs',
+			tags: 'repeat.test.mjs',
+			nesting: 'repeat.test.mjs',
+			comment: '../src/test/extension.test.ts',
+		},
 		gap: {},
-		na: { title: 'not an item', ids: 'carried to the next occurrence unchanged, like any tag',
-			estimate: 'carried unchanged', directive: 'lives in a comment' },
+		na: {
+			title: 'not an item',
+			ids: 'carried to the next occurrence unchanged, like any tag',
+			estimate: 'carried unchanged',
+			directive: 'lives in a comment',
+		},
 	},
 	tag: {
-		must: { tags: 'tag.test.mjs', ids: 'tag.test.mjs', estimate: 'tag.test.mjs',
-			nesting: 'tag.test.mjs', comment: 'tag.test.mjs', directive: 'directive.test.mjs' },
+		must: {
+			tags: 'tag.test.mjs',
+			ids: 'tag.test.mjs',
+			estimate: 'tag.test.mjs',
+			nesting: 'tag.test.mjs',
+			comment: 'tag.test.mjs',
+			directive: 'directive.test.mjs',
+		},
 		gap: {},
-		na: { status: 'a tag is read from a description, whatever the checkbox',
-			priority: 'read separately', due: 'read separately', start: 'read separately',
-			title: 'has no description' },
+		na: {
+			status: 'a tag is read from a description, whatever the checkbox',
+			priority: 'read separately',
+			due: 'read separately',
+			start: 'read separately',
+			title: 'has no description',
+		},
 	},
 	cycle: {
 		must: { tags: 'cycle.test.mjs' },
 		gap: {},
-		na: { status: 'reads two date tags and nothing else', priority: 'irrelevant', due: 'irrelevant',
-			start: 'irrelevant', title: 'not an item', comment: 'collect filters parked items first',
-			nesting: 'per item', ids: 'irrelevant', estimate: 'irrelevant', directive: 'irrelevant' },
+		na: {
+			status: 'reads two date tags and nothing else',
+			priority: 'irrelevant',
+			due: 'irrelevant',
+			start: 'irrelevant',
+			title: 'not an item',
+			comment: 'collect filters parked items first',
+			nesting: 'per item',
+			ids: 'irrelevant',
+			estimate: 'irrelevant',
+			directive: 'irrelevant',
+		},
 	},
 	estimate: {
 		must: { tags: 'estimate.test.mjs', estimate: 'estimate.test.mjs' },
 		gap: {},
-		na: { status: 'reads one tag and nothing else', priority: 'irrelevant', due: 'irrelevant',
-			start: 'irrelevant', title: 'not an item', comment: 'collect filters parked items first',
-			nesting: 'per item', ids: 'irrelevant', directive: 'irrelevant' },
+		na: {
+			status: 'reads one tag and nothing else',
+			priority: 'irrelevant',
+			due: 'irrelevant',
+			start: 'irrelevant',
+			title: 'not an item',
+			comment: 'collect filters parked items first',
+			nesting: 'per item',
+			ids: 'irrelevant',
+			directive: 'irrelevant',
+		},
 	},
 	directive: {
 		must: { directive: 'directive.test.mjs', tags: 'directive.test.mjs', comment: 'directive.test.mjs' },
 		gap: {},
-		na: { status: 'a directive is not an item', priority: 'not an item', due: 'not an item',
-			start: 'not an item', title: 'a directive lives in a comment, not a title',
-			nesting: 'file-level, not per item', ids: 'not a directive key', estimate: 'not a directive key' },
+		na: {
+			status: 'a directive is not an item',
+			priority: 'not an item',
+			due: 'not an item',
+			start: 'not an item',
+			title: 'a directive lives in a comment, not a title',
+			nesting: 'file-level, not per item',
+			ids: 'not a directive key',
+			estimate: 'not a directive key',
+		},
 	},
 	filter: {
 		must: { tags: 'filter.test.mjs', comment: 'filter.test.mjs', directive: 'filter.test.mjs' },
 		gap: {},
-		na: { status: 'the view decides what statuses reach the filter, by showDone',
-			priority: 'not an axis you file work under', due: 'urgency is the other grouping, not this one',
-			start: 'urgency is the other grouping', title: 'a group heading is not a tag',
+		na: {
+			status: 'the view decides what statuses reach the filter, by showDone',
+			priority: 'not an axis you file work under',
+			due: 'urgency is the other grouping, not this one',
+			start: 'urgency is the other grouping',
+			title: 'a group heading is not a tag',
 			nesting: 'an item is filed under its own tags, whatever its depth',
 			ids: 'offered like any other tag, and counted as one',
-			estimate: 'offered like any other tag, and counted as one' },
+			estimate: 'offered like any other tag, and counted as one',
+		},
 	},
 };
 
@@ -204,10 +330,12 @@ const BEHAVIOUR = {
 	archive: (lines) => archive(lines, 'Archive').moved,
 	migrate: (lines) => migrate(lines).changes.length,
 	diagnostics: (lines) => problems(lines).map((problem) => problem.code),
-	collect: (lines) => collect(lines).map((item) => [urgencyOf(item, THRESHOLDS), isOpen(item), item.estimate, item.took, item.tags]),
+	collect: (lines) =>
+		collect(lines).map((item) => [urgencyOf(item, THRESHOLDS), isOpen(item), item.estimate, item.took, item.tags]),
 	align: (lines) => alignments(lines),
 	link: (lines) => [[...blocked(lines)], linkProblems(lines).map((one) => one.kind)],
-	repeat: (lines) => lines.map((text) => nextOccurrence(text, 'repeat', dueDatesOn(text)[0] ?? null, THRESHOLDS.today) ?? ''),
+	repeat: (lines) =>
+		lines.map((text) => nextOccurrence(text, 'repeat', dueDatesOn(text)[0] ?? null, THRESHOLDS.today) ?? ''),
 	tag: (lines) => [...tagUsage(lines).keys()].sort(),
 	cycle: (lines) => collect(lines).map((item) => item.took),
 	estimate: (lines) => collect(lines).map((item) => item.estimate),
@@ -218,16 +346,34 @@ const BEHAVIOUR = {
 /** Two documents differing only in what the named element means. */
 const PROBES = {
 	status: [['[ ] Alpha'], ['[x] Alpha']],
-	priority: [['[ ] ! Alpha', '[ ] !! Beta'], ['[ ] !!! Alpha', '[ ] ! Beta']],
+	priority: [
+		['[ ] ! Alpha', '[ ] !! Beta'],
+		['[ ] !!! Alpha', '[ ] ! Beta'],
+	],
 	due: [['[ ] Alpha -> 2020-01-01'], ['[ ] Alpha -> 2030-01-01']],
 	start: [['[ ] Alpha <- 2020-01-01 -> 2026-01-01'], ['[ ] Alpha <- 2030-01-01 -> 2026-01-01']],
 	tags: [['[ ] Alpha #aaa'], ['[ ] Alpha #bbb']],
-	title: [['# Aaa', '[ ] Alpha'], ['# Bbb', '[ ] Alpha']],
-	comment: [['<!--', '[ ] Parked', '-->', '[ ] Alpha'], ['<!--', '[ ] Other', '-->', '[ ] Alpha']],
-	nesting: [['[ ] Alpha', '\t[ ] Beta'], ['[ ] Alpha', '[ ] Beta']],
-	ids: [['[ ] Alpha #id=aaaa', '[ ] Beta #after=aaaa'], ['[ ] Alpha #id=aaaa', '[ ] Beta #after=zzzz']],
+	title: [
+		['# Aaa', '[ ] Alpha'],
+		['# Bbb', '[ ] Alpha'],
+	],
+	comment: [
+		['<!--', '[ ] Parked', '-->', '[ ] Alpha'],
+		['<!--', '[ ] Other', '-->', '[ ] Alpha'],
+	],
+	nesting: [
+		['[ ] Alpha', '\t[ ] Beta'],
+		['[ ] Alpha', '[ ] Beta'],
+	],
+	ids: [
+		['[ ] Alpha #id=aaaa', '[ ] Beta #after=aaaa'],
+		['[ ] Alpha #id=aaaa', '[ ] Beta #after=zzzz'],
+	],
 	estimate: [['[ ] Alpha #est=1h'], ['[ ] Alpha #est=8h']],
-	directive: [['<!-- xit: tags=aaa -->', '[ ] Alpha'], ['<!-- xit: tags=bbb -->', '[ ] Alpha']],
+	directive: [
+		['<!-- xit: tags=aaa -->', '[ ] Alpha'],
+		['<!-- xit: tags=bbb -->', '[ ] Alpha'],
+	],
 };
 
 const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
@@ -243,19 +389,22 @@ describe('every reader is classified against every element', () => {
 				if (where.length !== 1) undeclared.push(`${reader} x ${element}: declared ${where.length} times`);
 			}
 		}
-		assert.deepEqual(undeclared, [],
-			`every cell must be exactly one of must, gap or n/a:\n  ${undeclared.join('\n  ')}`);
+		assert.deepEqual(
+			undeclared,
+			[],
+			`every cell must be exactly one of must, gap or n/a:\n  ${undeclared.join('\n  ')}`,
+		);
 	});
 
 	it('exercises everything it claims to', () => {
 		const unproven = [];
 		for (const [reader, { must }] of Object.entries(LEDGER)) {
 			for (const [element, file] of Object.entries(must)) {
-				if (!ELEMENTS[element].test(source(file))) unproven.push(`${reader} x ${element}: ${file} does not exercise it`);
+				if (!ELEMENTS[element].test(source(file)))
+					unproven.push(`${reader} x ${element}: ${file} does not exercise it`);
 			}
 		}
-		assert.deepEqual(unproven, [],
-			`a cell claims to be covered and is not:\n  ${unproven.join('\n  ')}`);
+		assert.deepEqual(unproven, [], `a cell claims to be covered and is not:\n  ${unproven.join('\n  ')}`);
 	});
 
 	it('has no gap left', () => {
@@ -264,7 +413,8 @@ describe('every reader is classified against every element', () => {
 		// what stops a future gap being parked here indefinitely instead of
 		// being fixed, and it fails the moment one is added.
 		const open = Object.entries(LEDGER).flatMap(([reader, { gap }]) =>
-			Object.entries(gap).map(([element, task]) => `${reader} x ${element}: ${task}`));
+			Object.entries(gap).map(([element, task]) => `${reader} x ${element}: ${task}`),
+		);
 		assert.deepEqual(open, [], `cells still recorded as gaps:\n  ${open.join('\n  ')}`);
 	});
 
@@ -299,7 +449,11 @@ describe('every reader is classified against every element', () => {
 				if (!pair) continue;
 
 				const shape = (lines) => {
-					try { return JSON.stringify(project(lines)); } catch { return 'threw'; }
+					try {
+						return JSON.stringify(project(lines));
+					} catch {
+						return 'threw';
+					}
 				};
 				if (shape(pair[0]) !== shape(pair[1])) {
 					talkative.push(`  ${reader} x ${element}: declared n/a, but it responds`);
@@ -314,8 +468,21 @@ describe('every reader is classified against every element', () => {
 		// A new reader with no ledger entry is the failure this exists to
 		// prevent, so the list is asserted rather than derived from the ledger.
 		assert.deepEqual(Object.keys(LEDGER).sort(), [
-			'align', 'archive', 'collect', 'cycle', 'diagnostics', 'directive', 'estimate',
-			'filter', 'folding', 'link', 'migrate', 'outline', 'repeat', 'sort', 'tag',
+			'align',
+			'archive',
+			'collect',
+			'cycle',
+			'diagnostics',
+			'directive',
+			'estimate',
+			'filter',
+			'folding',
+			'link',
+			'migrate',
+			'outline',
+			'repeat',
+			'sort',
+			'tag',
 		]);
 	});
 
@@ -326,6 +493,10 @@ describe('every reader is classified against every element', () => {
 		// this file exists to stop. Adding `filter` to the ledger without a
 		// projection would have done exactly that.
 		const unprojected = Object.keys(LEDGER).filter((reader) => !BEHAVIOUR[reader]);
-		assert.deepEqual(unprojected, [], `a reader with n/a cells and no way to check them:\n  ${unprojected.join('\n  ')}`);
+		assert.deepEqual(
+			unprojected,
+			[],
+			`a reader with n/a cells and no way to check them:\n  ${unprojected.join('\n  ')}`,
+		);
 	});
 });

@@ -96,22 +96,31 @@ export function toggle(status: Status): Status {
 }
 
 /**
- * Step through every status in a fixed cycle:
+ * The order Shuffle steps through, wrapping from the last back to the first:
  * open → ongoing → waiting → obsolete → in question → checked.
  *
  * Waiting sits after ongoing so the three you can still act on, or are
  * waiting to act on, stay together at the front of the cycle.
+ *
+ * The same six statuses as STATUSES, in a different order, which is a
+ * different fact and so is written separately. That it is the same *set* is
+ * not left to trust: test/checkbox.test.mjs walks this from every status and
+ * fails unless the walk reaches all of STATUSES.
+ *
+ * This was a switch of six `case` lines until a formatter wanted to print it
+ * over fourteen. The layout was doing the work the construct should have
+ * done - a cycle is data, and a switch is control flow pretending to be data.
+ * As a list it needs no alignment to read, and adding a status is one entry
+ * rather than two lines and a fall-through to get right.
  */
+const CYCLE: readonly Status[] = [' ', '@', '>', '~', '?', 'x'];
+
 export function shuffle(status: Status): Status {
-	switch (status) {
-		case ' ': return '@';
-		case '@': return '>';
-		case '>': return '~';
-		case '~': return '?';
-		case '?': return 'x';
-		case 'x': return ' ';
-		default: return ' ';
-	}
+	// A status outside the cycle cannot happen - Status is a union of exactly
+	// these six - but indexOf answers -1 for one, which lands on the first
+	// entry and matches what the switch's `default` did.
+	const at = CYCLE.indexOf(status);
+	return CYCLE[(at + 1) % CYCLE.length] ?? CYCLE[0];
 }
 
 /**

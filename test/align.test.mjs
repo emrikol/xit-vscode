@@ -22,32 +22,34 @@ function drawn(lines) {
 
 describe('aligning a group', () => {
 	it('right-aligns the marks to the widest in the group', () => {
-		assert.deepEqual(
-			drawn(['[ ] ! Low', '[ ] !!! Urgent', '[ ] !! Middle']),
-			['[ ] ··! Low', '[ ] !!! Urgent', '[ ] ·!! Middle'],
-		);
+		assert.deepEqual(drawn(['[ ] ! Low', '[ ] !!! Urgent', '[ ] !! Middle']), [
+			'[ ] ··! Low',
+			'[ ] !!! Urgent',
+			'[ ] ·!! Middle',
+		]);
 	});
 
 	it('leaves the widest item alone', () => {
-		assert.deepEqual(alignments(['[ ] !!! A', '[ ] ! B']).map((each) => each.line), [1]);
+		assert.deepEqual(
+			alignments(['[ ] !!! A', '[ ] ! B']).map((each) => each.line),
+			[1],
+		);
 	});
 
 	it('leaves an item with no priority alone', () => {
 		// Padding a line with nothing to align would indent the description of
 		// every ordinary item, which is a lot of movement for a few marks.
-		assert.deepEqual(
-			drawn(['[ ] !!! Urgent', '[ ] Ordinary', '[ ] ! Low']),
-			['[ ] !!! Urgent', '[ ] Ordinary', '[ ] ··! Low'],
-		);
+		assert.deepEqual(drawn(['[ ] !!! Urgent', '[ ] Ordinary', '[ ] ! Low']), [
+			'[ ] !!! Urgent',
+			'[ ] Ordinary',
+			'[ ] ··! Low',
+		]);
 	});
 
 	it('aligns each group on its own', () => {
 		// Aligning across the file would let one urgent item indent everything
 		// below it.
-		assert.deepEqual(
-			drawn(['[ ] !!! A', '[ ] ! B', '', '[ ] ! C']),
-			['[ ] !!! A', '[ ] ··! B', '', '[ ] ! C'],
-		);
+		assert.deepEqual(drawn(['[ ] !!! A', '[ ] ! B', '', '[ ] ! C']), ['[ ] !!! A', '[ ] ··! B', '', '[ ] ! C']);
 	});
 
 	it('counts from where the priority starts, not from the checkbox', () => {
@@ -67,10 +69,12 @@ describe('aligning a group', () => {
 		// nested one have different base indents, so their marks cannot form
 		// a column however much padding is added - and it shifts the
 		// shallower item's description right for no gain.
-		assert.deepEqual(
-			drawn(['[ ] !!! Top', '\t[ ] ! Nested', '\t[ ] !!!!! Deep', '[ ] ! Also top']),
-			['[ ] !!! Top', '\t[ ] ····! Nested', '\t[ ] !!!!! Deep', '[ ] ··! Also top'],
-		);
+		assert.deepEqual(drawn(['[ ] !!! Top', '\t[ ] ! Nested', '\t[ ] !!!!! Deep', '[ ] ! Also top']), [
+			'[ ] !!! Top',
+			'\t[ ] ····! Nested',
+			'\t[ ] !!!!! Deep',
+			'[ ] ··! Also top',
+		]);
 	});
 
 	it('does not let a deep item pad a shallow one', () => {

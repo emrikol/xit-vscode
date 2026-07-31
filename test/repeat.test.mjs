@@ -132,34 +132,22 @@ describe('repeating from completion', () => {
 
 	it('still counts from the due date without the plus', () => {
 		// Rent. Late payment does not move the next rent day.
-		assert.equal(
-			next('[x] Pay rent -> 2026-08-03 #repeat=7d', 20260806),
-			'[ ] Pay rent -> 2026-08-10 #repeat=7d',
-		);
+		assert.equal(next('[x] Pay rent -> 2026-08-03 #repeat=7d', 20260806), '[ ] Pay rent -> 2026-08-10 #repeat=7d');
 	});
 
 	it('keeps the written pattern, so a month stays a month', () => {
-		assert.equal(
-			next('[x] Review -> 2026-01 #repeat=+1m', 20260615),
-			'[ ] Review -> 2026-07 #repeat=+1m',
-		);
+		assert.equal(next('[x] Review -> 2026-01 #repeat=+1m', 20260615), '[ ] Review -> 2026-07 #repeat=+1m');
 	});
 
 	it('keeps a week-precision date a week', () => {
 		// 6 August 2026 is in ISO week 32.
-		assert.equal(
-			next('[x] Standup -> 2026-W05 #repeat=+1w', 20260806),
-			'[ ] Standup -> 2026-W33 #repeat=+1w',
-		);
+		assert.equal(next('[x] Standup -> 2026-W05 #repeat=+1w', 20260806), '[ ] Standup -> 2026-W33 #repeat=+1w');
 	});
 
 	it('falls back to the due date when no today is given', () => {
 		// The unit tests that do not care about completion pass nothing, and
 		// must keep the old behaviour rather than silently doing nothing.
-		assert.equal(
-			next('[x] Water -> 2026-08-03 #repeat=+7d'),
-			'[ ] Water -> 2026-08-10 #repeat=+7d',
-		);
+		assert.equal(next('[x] Water -> 2026-08-03 #repeat=+7d'), '[ ] Water -> 2026-08-10 #repeat=+7d');
 	});
 });
 
@@ -227,10 +215,7 @@ describe('the next occurrence of an item', () => {
 	});
 
 	it('keeps the indentation, so a repeating subtask stays a subtask', () => {
-		assert.equal(
-			next('\t[x] Sub -> 2026-08-03 #repeat=weekly'),
-			'\t[ ] Sub -> 2026-08-10 #repeat=weekly',
-		);
+		assert.equal(next('\t[x] Sub -> 2026-08-03 #repeat=weekly'), '\t[ ] Sub -> 2026-08-10 #repeat=weekly');
 	});
 
 	it('repeats an item with no due date, unchanged but reopened', () => {
@@ -287,17 +272,11 @@ describe('postponing', () => {
 	});
 
 	it('leaves the rest of the line alone', () => {
-		assert.equal(
-			later('\t[@] ! Ship it -> 2026-01-01 #release', '1d'),
-			'\t[@] ! Ship it -> 2026-08-01 #release',
-		);
+		assert.equal(later('\t[@] ! Ship it -> 2026-01-01 #release', '1d'), '\t[@] ! Ship it -> 2026-08-01 #release');
 	});
 
 	it('touches only the first due date, which is the one that counts', () => {
-		assert.equal(
-			later('[ ] Do it -> 2026-01-01 -> 2026-02-02', '1d'),
-			'[ ] Do it -> 2026-08-01 -> 2026-02-02',
-		);
+		assert.equal(later('[ ] Do it -> 2026-01-01 -> 2026-02-02', '1d'), '[ ] Do it -> 2026-08-01 -> 2026-02-02');
 	});
 });
 
@@ -338,10 +317,7 @@ describe('a repeating item inside a comment', () => {
 		// line is parked. The decision lives in extension.ts, where the whole
 		// document is in hand, and src/test/extension.test.ts asserts that a
 		// parked repeating item does not spawn an occurrence into the comment.
-		assert.equal(
-			next('[x] Water -> 2026-01-01 #repeat=weekly'),
-			'[ ] Water -> 2026-01-08 #repeat=weekly',
-		);
+		assert.equal(next('[x] Water -> 2026-01-01 #repeat=weekly'), '[ ] Water -> 2026-01-08 #repeat=weekly');
 	});
 });
 

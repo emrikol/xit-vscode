@@ -1,0 +1,132 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
+
+	// Biome rather than ESLint, and the reason is not preference.
+	//
+	// typescript-eslint declares `typescript: >=4.8.4 <6.1.0` on its latest and
+	// on its canary. This repo builds on TypeScript 7, so `npm i` refuses to
+	// resolve the tree at all, and forcing past it throws at module load:
+	// typescript-eslint has an explicit `if (versionMajor >= 7) throw`. The
+	// documented workaround is to run it against the TS 6 API, which works -
+	// it was tried, with a second toolbox holding typescript@6.0.3 - and costs
+	// a second compiler and a two-directory layout to be torn out again when
+	// typescript-eslint/issues/10940 lands.
+	//
+	// Biome has its own parser and never loads TypeScript, so none of that
+	// applies. It also reads .mjs, which is 7,984 lines here that nothing
+	// checked before: `tsconfig.json` includes only `src`.
+	//
+	// What is given up: type-aware rules. That is a real loss and it was
+	// measured rather than waved away - the TS 6 rig found eight things, all
+	// cosmetic, and all eight are fixed.
+
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+
+	"files": {
+		"includes": [
+			"src/**/*.ts",
+			"test/**/*.mjs",
+			"scripts/**/*.mjs",
+			"!**/node_modules",
+			"!out",
+			"!dist",
+			// Fetched from the syntax guide, not written here. Reformatting it
+			// would make the next `npm run corpus:check` a diff against itself.
+			"!test/corpus"
+		]
+	},
+
+	// Tabs and single quotes, which is what the repo already used by hand. The
+	// width is 120 because the code sits at 105 characters at the 99th
+	// percentile, so a narrower limit would reflow prose-heavy lines that read
+	// fine.
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab",
+		"lineWidth": 120
+	},
+
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"trailingCommas": "all",
+			"semicolons": "always",
+			"arrowParentheses": "always"
+		}
+	},
+
+	"linter": {
+		"enabled": true,
+		"rules": {
+			// `recommended`, not every group. Turning all of them on gave 1,528
+			// diagnostics, and they were overwhelmingly this codebase's
+			// deliberate idioms being told they were wrong: 317 single-line
+			// `if`s, 292 "magic numbers" that are dates and thresholds, 129
+			// ternaries, 76 `continue`s in parser loops. A rule set that has to
+			// be suppressed 800 times is not strict, it is off.
+			"preset": "recommended",
+			"style": {
+				// Every `!` here follows a lookup the code has already proved -
+				// `all.get(item.parent)!` where the parent came from the same
+				// map. There are 45, and the alternatives are worse: a runtime
+				// check for something structurally guaranteed, or a fallback
+				// that answers wrongly instead of throwing. The same reasoning
+				// is why `noUncheckedIndexedAccess` is off in tsconfig.json.
+				"noNonNullAssertion": "off",
+				// Nine hits, nine false positives. The rule assumes a template
+				// literal always reads better than `+`, which is untrue when a
+				// part contains a backtick or a `${`: '```' + language, and
+				// '\t'.repeat(depth) + '[ ] Level', are both clearer as they
+				// are.
+				"useTemplate": "off"
+			},
+			"suspicious": {
+				// src/test/manifest.ts exists to be imported by the integration
+				// tests. Exporting from it is the point.
+				"noExportsInTest": "off"
+			}
+		}
+	},
+
+	// The imports here are grouped by meaning, not alphabetically, and the
+	// grouping is worth more than the sort.
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "off"
+			}
+		}
+	},
+
+	"overrides": [
+		{
+			// Two constraints the extension already satisfies, locked in while
+			// they hold rather than after they are broken.
+			//
+			// `src/` runs in a web worker on vscode.dev, where there is no Node
+			// and no file system: the manifest claims support for virtual and
+			// web workspaces, and a single `node:fs` import would break both
+			// with no test failing. `src/test/` is exempt because it runs in
+			// the extension host, not the worker.
+			//
+			// A console call in an extension goes to a log nobody opens. There
+			// are none today.
+			"includes": ["src/**/*.ts", "!src/test/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"noNodejsModules": "error"
+					},
+					"suspicious": {
+						"noConsole": "error"
+					}
+				}
+			}
+		}
+	]
+}

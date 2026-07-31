@@ -23,15 +23,18 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT } from './tokenizer.mjs';
 
-export const CORPUS = JSON.parse(
-	readFileSync(resolve(REPO_ROOT, 'test/fixtures/syntax-guide.json'), 'utf8'),
-);
+export const CORPUS = JSON.parse(readFileSync(resolve(REPO_ROOT, 'test/fixtures/syntax-guide.json'), 'utf8'));
 
 /** Every example line, with the aspect it came from. */
 export function corpusLines() {
 	return CORPUS.sections.flatMap((section) =>
 		section.aspects.flatMap((aspect) =>
-			aspect.lines.map((line, index) => ({ ...line, section: section.heading, rule: aspect.rule, id: `${aspect.id}:${index}` })),
+			aspect.lines.map((line, index) => ({
+				...line,
+				section: section.heading,
+				rule: aspect.rule,
+				id: `${aspect.id}:${index}`,
+			})),
 		),
 	);
 }
@@ -66,7 +69,7 @@ describe('conformance corpus', () => {
 		assert.ok(corpusLines().length > 150);
 	});
 
-	it('gives every aspect the guide\'s own words', () => {
+	it("gives every aspect the guide's own words", () => {
 		// The rule text is what makes an allowlist entry readable. Without it
 		// a known divergence is a line of xit and no reason.
 		for (const aspect of corpusAspects()) {
@@ -84,23 +87,28 @@ describe('conformance corpus', () => {
 	it('has token offsets that land inside their line', () => {
 		for (const line of corpusLines()) {
 			for (const span of line.spans) {
-				assert.ok(span.start >= 0 && span.end <= line.text.length && span.start < span.end,
-					`${line.id}: ${span.token} [${span.start}:${span.end}] does not fit ${JSON.stringify(line.text)}`);
+				assert.ok(
+					span.start >= 0 && span.end <= line.text.length && span.start < span.end,
+					`${line.id}: ${span.token} [${span.start}:${span.end}] does not fit ${JSON.stringify(line.text)}`,
+				);
 			}
 		}
 	});
 
 	it('keeps the non-breaking spaces the guide uses on purpose', () => {
 		const nbsp = corpusLines().filter((line) => line.text.includes(' '));
-		assert.deepEqual(nbsp.map((line) => line.text), [
-			'[ ] Invalid (non-breaking space)',
-			'    invalid (4 non-breaking spaces)',
-		]);
+		assert.deepEqual(
+			nbsp.map((line) => line.text),
+			['[ ] Invalid (non-breaking space)', '    invalid (4 non-breaking spaces)'],
+		);
 	});
 
 	it('keeps the literal tab the guide uses on purpose', () => {
 		const tabs = corpusLines().filter((line) => line.text.includes('\t'));
-		assert.deepEqual(tabs.map((line) => line.text), ['\tinvalid (tab)']);
+		assert.deepEqual(
+			tabs.map((line) => line.text),
+			['\tinvalid (tab)'],
+		);
 	});
 
 	it('keeps blank lines, which are what separate groups', () => {

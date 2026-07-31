@@ -126,9 +126,7 @@ const NAME_CHAR = String.raw`\p{L}\p{M}\p{N}\p{Extended_Pictographic}\u200D_`;
 const NAME = `[${NAME_CHAR}.-]*[${NAME_CHAR}-]`;
 
 const TAG = new RegExp(
-	'(?<=[\\s\\p{P}])'
-	+ `#(?<name>${NAME})`
-	+ `(?:=(?<value>'[^'\\n]*'|"[^"\\n]*"|${UNQUOTED})?)?`,
+	'(?<=[\\s\\p{P}])' + `#(?<name>${NAME})` + `(?:=(?<value>'[^'\\n]*'|"[^"\\n]*"|${UNQUOTED})?)?`,
 	'gu',
 );
 
@@ -159,8 +157,14 @@ export function tagsOn(line: string): Tag[] {
 
 	TAG.lastIndex = 0;
 	for (let match = TAG.exec(line); match; match = TAG.exec(line)) {
+		// Read out before the closure below, which is what the two `match!`
+		// assertions here were for: narrowing a `let` does not survive into a
+		// callback, so each use inside one had to re-assert what the loop
+		// condition had already proved.
+		const at = match.index;
+
 		// A `#` inside a URL is a fragment, not a tag. See URL above.
-		if (links.some(([start, end]) => match!.index >= start && match!.index < end)) continue;
+		if (links.some(([start, end]) => at >= start && at < end)) continue;
 
 		const name = match.groups!.name;
 		const raw = match.groups!.value;
@@ -261,8 +265,7 @@ export function tagUsage(lines: readonly string[]): Map<string, TagUsage> {
  * Same reasoning as `foldName` using plain `toLowerCase`.
  */
 export function commonSpelling(usage: TagUsage): string {
-	return [...usage.spellings.entries()]
-		.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))[0][0];
+	return [...usage.spellings.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))[0][0];
 }
 
 /** Every tag in a document, by folded name, with the values it was given. */

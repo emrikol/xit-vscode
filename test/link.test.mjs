@@ -20,12 +20,17 @@ const kinds = (lines) => linkProblems(lines).map((problem) => `${problem.kind}@$
 
 describe('reading identity', () => {
 	it('finds an item that names itself', () => {
-		assert.deepEqual(identities(['[ ] Draft #id=k3f9']).map((each) => [each.line, each.id]), [[0, 'k3f9']]);
+		assert.deepEqual(
+			identities(['[ ] Draft #id=k3f9']).map((each) => [each.line, each.id]),
+			[[0, 'k3f9']],
+		);
 	});
 
 	it('finds an item that waits on another', () => {
-		assert.deepEqual(dependencies(['[ ] Send #after=k3f9']).map((each) => [each.line, each.on]),
-			[[0, { file: null, id: 'k3f9' }]]);
+		assert.deepEqual(
+			dependencies(['[ ] Send #after=k3f9']).map((each) => [each.line, each.on]),
+			[[0, { file: null, id: 'k3f9' }]],
+		);
 	});
 
 	it('ignores anything inside a comment', () => {

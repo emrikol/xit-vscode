@@ -70,8 +70,10 @@ describe('what the workspace view is given', () => {
 	});
 
 	it('follows the configured tag names', () => {
-		const [item] = collect(['[x] x #opened=2026-01-01 #closed=2026-01-03'], 'est',
-			{ creation: 'opened', completion: 'closed' });
+		const [item] = collect(['[x] x #opened=2026-01-01 #closed=2026-01-03'], 'est', {
+			creation: 'opened',
+			completion: 'closed',
+		});
 		assert.equal(item.took, 2);
 	});
 });

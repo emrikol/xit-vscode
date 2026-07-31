@@ -19,11 +19,17 @@ const on = (line) => tagsOn(line);
 
 describe('reading tags', () => {
 	it('finds a plain tag', () => {
-		assert.deepEqual(on('[ ] A #tag here').map((t) => t.text), ['#tag']);
+		assert.deepEqual(
+			on('[ ] A #tag here').map((t) => t.text),
+			['#tag'],
+		);
 	});
 
 	it('finds several on one line', () => {
-		assert.deepEqual(on('[ ] #one and #two and #three').map((t) => t.name), ['one', 'two', 'three']);
+		assert.deepEqual(
+			on('[ ] #one and #two and #three').map((t) => t.name),
+			['one', 'two', 'three'],
+		);
 	});
 
 	it('reads an unquoted value', () => {
@@ -57,8 +63,14 @@ describe('a hash inside a URL', () => {
 		// The format has no escaping, and says so on purpose - the guide's
 		// tags/8, "Backslashes don't have special meaning". That is fine until
 		// you paste a link, and then `#top` was a tag.
-		assert.deepEqual(tagsOn('[ ] Read https://example.com/#top').map((tag) => tag.text), []);
-		assert.deepEqual(tagsOn('[ ] Read http://a.example/x/#anchor').map((tag) => tag.text), []);
+		assert.deepEqual(
+			tagsOn('[ ] Read https://example.com/#top').map((tag) => tag.text),
+			[],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] Read http://a.example/x/#anchor').map((tag) => tag.text),
+			[],
+		);
 	});
 
 	it('does not stop a real tag later on the line', () => {
@@ -69,14 +81,20 @@ describe('a hash inside a URL', () => {
 	});
 
 	it('leaves a link with no fragment alone', () => {
-		assert.deepEqual(tagsOn('[ ] Read https://example.com/docs #reading').map((tag) => tag.text), ['#reading']);
+		assert.deepEqual(
+			tagsOn('[ ] Read https://example.com/docs #reading').map((tag) => tag.text),
+			['#reading'],
+		);
 	});
 
 	it('still reads a colour as a tag, which is accepted and documented', () => {
 		// The narrow fix, not the general one. `#FF8800` after a space is a
 		// tag by the format's own rules, it is rare, and fixing it would mean
 		// inventing an escape character everyone has to think about.
-		assert.deepEqual(tagsOn('[ ] Colour is #FF8800').map((tag) => tag.text), ['#FF8800']);
+		assert.deepEqual(
+			tagsOn('[ ] Colour is #FF8800').map((tag) => tag.text),
+			['#FF8800'],
+		);
 	});
 });
 
@@ -139,12 +157,21 @@ describe('tags inside items', () => {
 
 	it('reads a tag on a continuation line, and attributes it to the item', () => {
 		const found = tags(['[ ] Item ...', '    ... and a #tag']);
-		assert.deepEqual(found.map((t) => [t.line, t.item, t.text]), [[1, 0, '#tag']]);
+		assert.deepEqual(
+			found.map((t) => [t.line, t.item, t.text]),
+			[[1, 0, '#tag']],
+		);
 	});
 
 	it('attributes a subtask tag to the subtask, not the parent', () => {
 		const found = tags(['[ ] Parent #a', '\t[ ] Child #b']);
-		assert.deepEqual(found.map((t) => [t.item, t.text]), [[0, '#a'], [1, '#b']]);
+		assert.deepEqual(
+			found.map((t) => [t.item, t.text]),
+			[
+				[0, '#a'],
+				[1, '#b'],
+			],
+		);
 	});
 });
 
@@ -171,16 +198,15 @@ describe('the TypeScript matcher and the grammar agree', () => {
 				if (JSON.stringify(fromGrammar) !== JSON.stringify(fromCode)) {
 					disagreements.push(
 						`  ${aspect.id}: ${JSON.stringify(text)}\n` +
-						`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
-						`    TypeScript: ${JSON.stringify(fromCode)}`,
+							`    grammar:    ${JSON.stringify(fromGrammar)}\n` +
+							`    TypeScript: ${JSON.stringify(fromCode)}`,
 					);
 				}
 			}
 		}
 
 		assert.ok(compared > 150, `only ${compared} lines compared`);
-		assert.deepEqual(disagreements, [],
-			`src/tag.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
+		assert.deepEqual(disagreements, [], `src/tag.ts has drifted from the grammar:\n\n${disagreements.join('\n\n')}`);
 	});
 });
 
@@ -188,7 +214,13 @@ describe('what completion draws on', () => {
 	it('records every spelling of a folded name', () => {
 		const usage = tagUsage(['[ ] a #Work', '[ ] b #work', '[ ] c #work']);
 		assert.deepEqual([...usage.keys()], ['work']);
-		assert.deepEqual([...usage.get('work').spellings.entries()], [['Work', 1], ['work', 2]]);
+		assert.deepEqual(
+			[...usage.get('work').spellings.entries()],
+			[
+				['Work', 1],
+				['work', 2],
+			],
+		);
 	});
 
 	it('offers the commonest spelling', () => {
@@ -253,10 +285,22 @@ describe('an unquoted value takes almost anything, which is a fork', () => {
 	it('leaves the name narrow, which the corpus requires', () => {
 		// tags/2: a name that took any printable character could never end a
 		// sentence.
-		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
-		assert.deepEqual(tagsOn('[ ] x (#tag)').map((tag) => tag.text), ['#tag']);
-		assert.deepEqual(tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text), ['#tag1', '#tag2']);
-		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
+		assert.deepEqual(
+			tagsOn('[ ] This is a #tag.').map((tag) => tag.text),
+			['#tag'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x (#tag)').map((tag) => tag.text),
+			['#tag'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text),
+			['#tag1', '#tag2'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #a+b').map((tag) => tag.text),
+			['#a'],
+		);
 	});
 });
 
@@ -266,20 +310,39 @@ describe('a name takes more than letters, which is a fork', () => {
 		// allows letters, digits, `_` and `-`; Devanagari vowel signs are
 		// marks, so `#हिन्दी` gave `#ह`. Thai and Arabic diacritics broke the
 		// same way.
-		assert.deepEqual(tagsOn('[ ] x #हिन्दी').map((tag) => tag.text), ['#हिन्दी']);
-		assert.deepEqual(tagsOn('[ ] x #ไทย').map((tag) => tag.text), ['#ไทย']);
+		assert.deepEqual(
+			tagsOn('[ ] x #हिन्दी').map((tag) => tag.text),
+			['#हिन्दी'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #ไทย').map((tag) => tag.text),
+			['#ไทย'],
+		);
 	});
 
 	it('takes emoji, including sequences held together by a joiner', () => {
-		assert.deepEqual(tagsOn('[ ] x #tag\u{1F973}').map((tag) => tag.text), ['#tag\u{1F973}']);
-		assert.deepEqual(tagsOn('[ ] x #❤️').map((tag) => tag.text), ['#❤️'], 'a variation selector is a mark');
-		assert.deepEqual(tagsOn('[ ] x #\u{1F468}‍\u{1F469}‍\u{1F467}').map((tag) => tag.text),
-			['#\u{1F468}‍\u{1F469}‍\u{1F467}']);
+		assert.deepEqual(
+			tagsOn('[ ] x #tag\u{1F973}').map((tag) => tag.text),
+			['#tag\u{1F973}'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #❤️').map((tag) => tag.text),
+			['#❤️'],
+			'a variation selector is a mark',
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #\u{1F468}‍\u{1F469}‍\u{1F467}').map((tag) => tag.text),
+			['#\u{1F468}‍\u{1F469}‍\u{1F467}'],
+		);
 	});
 
 	it('keeps the letters that always worked', () => {
 		for (const name of ['σκληρά', '今日は', 'übermorgen', 'Русский']) {
-			assert.deepEqual(tagsOn(`[ ] x #${name}`).map((tag) => tag.text), [`#${name}`], name);
+			assert.deepEqual(
+				tagsOn(`[ ] x #${name}`).map((tag) => tag.text),
+				[`#${name}`],
+				name,
+			);
 		}
 	});
 
@@ -289,13 +352,25 @@ describe('a name takes more than letters, which is a fork', () => {
 		// every `#tag=value` one long name.
 		assert.equal(tagsOn('[ ] x #a=b')[0].name, 'a');
 		assert.equal(tagsOn('[ ] x #a=b')[0].value, 'b');
-		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
+		assert.deepEqual(
+			tagsOn('[ ] x #a+b').map((tag) => tag.text),
+			['#a'],
+		);
 	});
 
 	it('does not take punctuation, so a tag can still end a sentence', () => {
-		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
-		assert.deepEqual(tagsOn('[ ] x (#tag)').map((tag) => tag.text), ['#tag']);
-		assert.deepEqual(tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text), ['#tag1', '#tag2']);
+		assert.deepEqual(
+			tagsOn('[ ] This is a #tag.').map((tag) => tag.text),
+			['#tag'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x (#tag)').map((tag) => tag.text),
+			['#tag'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text),
+			['#tag1', '#tag2'],
+		);
 	});
 });
 
@@ -303,14 +378,26 @@ describe('a dot inside a name but never at its end', () => {
 	it('keeps a version-like name whole', () => {
 		// `#v1.2` gave `#v1` - silently, which is the shape of bug this whole
 		// area kept producing.
-		assert.deepEqual(tagsOn('[ ] x #v1.2').map((tag) => tag.text), ['#v1.2']);
-		assert.deepEqual(tagsOn('[ ] x #a.b.c=d').map((tag) => tag.text), ['#a.b.c=d']);
+		assert.deepEqual(
+			tagsOn('[ ] x #v1.2').map((tag) => tag.text),
+			['#v1.2'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] x #a.b.c=d').map((tag) => tag.text),
+			['#a.b.c=d'],
+		);
 	});
 
 	it('still lets a tag end a sentence', () => {
 		// The trailing dot is trimmed, exactly as it is from a value.
-		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
-		assert.deepEqual(tagsOn('[ ] Done #shopping..').map((tag) => tag.text), ['#shopping']);
+		assert.deepEqual(
+			tagsOn('[ ] This is a #tag.').map((tag) => tag.text),
+			['#tag'],
+		);
+		assert.deepEqual(
+			tagsOn('[ ] Done #shopping..').map((tag) => tag.text),
+			['#shopping'],
+		);
 	});
 });
 
@@ -326,9 +413,6 @@ describe('tags inside a comment', () => {
 	});
 
 	it('leave a real tag after the comment alone', () => {
-		assert.deepEqual(
-			[...tagUsage(['<!--', '[ ] Parked #secret', '-->', '[ ] Real #beta']).keys()],
-			['beta'],
-		);
+		assert.deepEqual([...tagUsage(['<!--', '[ ] Parked #secret', '-->', '[ ] Real #beta']).keys()], ['beta']);
 	});
 });

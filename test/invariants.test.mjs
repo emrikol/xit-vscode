@@ -135,7 +135,9 @@ describe('the commands that move text', () => {
 				const once = run(document);
 				const twice = run(once);
 				if (JSON.stringify(once) !== JSON.stringify(twice)) {
-					unstable.push(`  ${name}: ${JSON.stringify(document)}\n    once:  ${JSON.stringify(once)}\n    twice: ${JSON.stringify(twice)}`);
+					unstable.push(
+						`  ${name}: ${JSON.stringify(document)}\n    once:  ${JSON.stringify(once)}\n    twice: ${JSON.stringify(twice)}`,
+					);
 				}
 			}
 		}
@@ -153,7 +155,9 @@ describe('the commands that move text', () => {
 			for (const [name, run] of Object.entries(COMMANDS)) {
 				const after = run(document);
 				const ids = new Set(identities(after).map((each) => foldId(each.id)));
-				const wanted = dependencies(after).filter((each) => each.on.file === null).map((each) => foldId(each.on.id));
+				const wanted = dependencies(after)
+					.filter((each) => each.on.file === null)
+					.map((each) => foldId(each.on.id));
 
 				for (const id of before) {
 					if (!ids.has(id)) broken.push(`  ${name} lost the id ${id}: ${JSON.stringify(document)}`);
@@ -175,7 +179,8 @@ describe('the commands that move text', () => {
 			for (const [name, run] of Object.entries(COMMANDS)) {
 				const after = run(document);
 				for (const text of parked) {
-					if (!after.includes(text)) touched.push(`  ${name} altered a parked line ${JSON.stringify(text)}: ${JSON.stringify(document)}`);
+					if (!after.includes(text))
+						touched.push(`  ${name} altered a parked line ${JSON.stringify(text)}: ${JSON.stringify(document)}`);
 				}
 			}
 		}
@@ -192,10 +197,11 @@ describe('the commands that move text', () => {
 			for (const [name, run] of Object.entries(COMMANDS)) {
 				if (name === 'migrate') continue; // migration changes indentation on purpose
 				const after = items(run(document));
-				const pairs = (tree) => [...tree.values()]
-					.filter((item) => item.parent !== null)
-					.map((item) => `${tree.get(item.line).indent}|${tree.get(item.parent).indent}`)
-					.sort();
+				const pairs = (tree) =>
+					[...tree.values()]
+						.filter((item) => item.parent !== null)
+						.map((item) => `${tree.get(item.line).indent}|${tree.get(item.parent).indent}`)
+						.sort();
 
 				if (JSON.stringify(pairs(after)) !== JSON.stringify(pairs(before))) {
 					reparented.push(`  ${name}: ${JSON.stringify(document)}\n    -> ${JSON.stringify(run(document))}`);

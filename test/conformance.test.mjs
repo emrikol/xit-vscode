@@ -340,16 +340,19 @@ describe('conformance with the syntax guide', () => {
 		const undocumented = findings.filter((finding) => !(finding.key in KNOWN));
 		if (!undocumented.length) return;
 
-		const report = undocumented.map((finding) =>
-			`  ${finding.key}\n` +
-			`    ${finding.kind}: expected ${JSON.stringify(finding.want)}\n` +
-			`    line: ${JSON.stringify(finding.text)}\n` +
-			`    rule: ${finding.rule}`,
-		).join('\n\n');
+		const report = undocumented
+			.map(
+				(finding) =>
+					`  ${finding.key}\n` +
+					`    ${finding.kind}: expected ${JSON.stringify(finding.want)}\n` +
+					`    line: ${JSON.stringify(finding.text)}\n` +
+					`    rule: ${finding.rule}`,
+			)
+			.join('\n\n');
 
 		assert.fail(
 			`${undocumented.length} divergence(s) from the syntax guide:\n\n${report}\n\n` +
-			'Fix the grammar, or add the key to KNOWN in this file with a reason.',
+				'Fix the grammar, or add the key to KNOWN in this file with a reason.',
 		);
 	});
 
@@ -367,7 +370,8 @@ describe('conformance with the syntax guide', () => {
 		// A mapping typo, or a corpus that failed to load, would leave this
 		// suite passing with nothing compared.
 		const aspects = corpusAspects();
-		const spans = aspects.flatMap((aspect) => aspect.lines.flatMap((line) => line.spans))
+		const spans = aspects
+			.flatMap((aspect) => aspect.lines.flatMap((line) => line.spans))
 			.filter((span) => span.token in TOKEN_SCOPE);
 		assert.ok(aspects.length >= 46);
 		assert.ok(spans.length > 150, `only ${spans.length} comparable tokens`);

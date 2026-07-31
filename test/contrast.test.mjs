@@ -142,8 +142,10 @@ describe('the overdue highlight is legible', () => {
 				const foreground = parse(contributed(`xit.${tier}Foreground`, theme.kind));
 				const ratio = contrast(foreground, composite(background, parse(theme.background)));
 
-				assert.ok(ratio >= 4.5,
-					`${theme.name}, ${tier}: text on the badge is ${ratio.toFixed(2)}:1, below the 4.5:1 WCAG asks for body text`);
+				assert.ok(
+					ratio >= 4.5,
+					`${theme.name}, ${tier}: text on the badge is ${ratio.toFixed(2)}:1, below the 4.5:1 WCAG asks for body text`,
+				);
 			}
 		}
 	});
@@ -157,8 +159,10 @@ describe('the overdue highlight is legible', () => {
 					const mark = parse(contributed(`xit.${tier}${part}`, theme.kind));
 					const ratio = contrast(composite(mark, parse(theme.background)), parse(theme.background));
 
-					assert.ok(ratio >= 3,
-						`${theme.name}, ${tier}${part}: ${ratio.toFixed(2)}:1 against the editor background, below the 3:1 WCAG asks for a non-text indicator`);
+					assert.ok(
+						ratio >= 3,
+						`${theme.name}, ${tier}${part}: ${ratio.toFixed(2)}:1 against the editor background, below the 3:1 WCAG asks for a non-text indicator`,
+					);
 				}
 			}
 		}
@@ -177,24 +181,35 @@ describe('the overdue highlight is legible', () => {
 		// contrast between them is not the fix - it would break the family
 		// resemblance and still leave colour doing all the work.
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		const options = source.slice(source.indexOf('function renderOptions'), source.indexOf('function registerOverdueDecoration'));
+		const options = source.slice(
+			source.indexOf('function renderOptions'),
+			source.indexOf('function registerOverdueDecoration'),
+		);
 
-		assert.match(options, /tier === 'critical'[\s\S]*?fontWeight/,
-			'the critical tier is distinguished only by colour');
-		assert.equal([...options.matchAll(/fontWeight/g)].length, 1,
-			'the ordinary tier is bold too, so weight no longer distinguishes them');
+		assert.match(options, /tier === 'critical'[\s\S]*?fontWeight/, 'the critical tier is distinguished only by colour');
+		assert.equal(
+			[...options.matchAll(/fontWeight/g)].length,
+			1,
+			'the ordinary tier is bold too, so weight no longer distinguishes them',
+		);
 	});
 
 	it('never paints a background without also setting the foreground', () => {
 		// The rule the first attempt broke. A background the extension owns,
 		// under text the theme owns, is a pair of colours that have never met.
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		const options = source.slice(source.indexOf('function renderOptions'), source.indexOf('function registerOverdueDecoration'));
+		const options = source.slice(
+			source.indexOf('function renderOptions'),
+			source.indexOf('function registerOverdueDecoration'),
+		);
 
 		// The two assignments must sit together, with nothing but whitespace
 		// between them, so neither can be moved or removed on its own.
-		assert.match(options, /options\.backgroundColor = new vscode\.ThemeColor\(colours\.background\);\s*\n\s*options\.color = new vscode\.ThemeColor\(colours\.foreground\);/,
-			'a background is painted without the matching foreground beside it');
+		assert.match(
+			options,
+			/options\.backgroundColor = new vscode\.ThemeColor\(colours\.background\);\s*\n\s*options\.color = new vscode\.ThemeColor\(colours\.foreground\);/,
+			'a background is painted without the matching foreground beside it',
+		);
 
 		// And nowhere else may paint one.
 		const backgrounds = [...options.matchAll(/backgroundColor/g)];

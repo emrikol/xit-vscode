@@ -26,6 +26,7 @@ import { dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { MARKER, isTitle } from './title';
 import { linkProblems } from './link';
 import { items } from './tree';
+import { lastDayOfMonth } from './calendar';
 
 export type Severity = 'error' | 'warning' | 'hint';
 
@@ -46,16 +47,6 @@ function isDay(value: string | null): boolean {
 
 	const [, year, month, date] = match.map(Number);
 	return month >= 1 && month <= 12 && date >= 1 && date <= lastDayOfMonth(year, month);
-}
-
-const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-function isLeapYear(year: number): boolean {
-	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-function lastDayOfMonth(year: number, month: number): number {
-	return month === 2 && isLeapYear(year) ? 29 : DAYS_IN_MONTH[month - 1];
 }
 
 /**
@@ -124,7 +115,10 @@ export interface KnownTags {
 }
 
 export const DEFAULT_TAGS: KnownTags = {
-	repeat: 'repeat', estimate: 'est', completion: 'done', creation: 'created',
+	repeat: 'repeat',
+	estimate: 'est',
+	completion: 'done',
+	creation: 'created',
 };
 
 /**
@@ -139,21 +133,28 @@ export const DEFAULT_TAGS: KnownTags = {
  * A warning rather than an error. The file still means something; the tag just
  * does not do what it looks like it does.
  */
-function unrecognisedValue(text: string, name: string, valid: (value: string | null) => boolean, expected: string): Problem[] {
+function unrecognisedValue(
+	text: string,
+	name: string,
+	valid: (value: string | null) => boolean,
+	expected: string,
+): Problem[] {
 	const key = foldName(name);
 
-	return tagsOn(text)
-		// An absent value is an absent tag - spec §Tag - so `#repeat` on its
-		// own is someone writing a plain tag, not a broken interval.
-		.filter((tag) => tag.key === key && tag.value !== null && !valid(tag.value))
-		.map((tag) => ({
-			line: 0,
-			start: tag.start,
-			end: tag.end,
-			severity: 'warning' as const,
-			code: 'unrecognised-value',
-			message: `\`${tag.value}\` is not something \`#${name}\` understands, so it does nothing. ${expected}`,
-		}));
+	return (
+		tagsOn(text)
+			// An absent value is an absent tag - spec §Tag - so `#repeat` on its
+			// own is someone writing a plain tag, not a broken interval.
+			.filter((tag) => tag.key === key && tag.value !== null && !valid(tag.value))
+			.map((tag) => ({
+				line: 0,
+				start: tag.start,
+				end: tag.end,
+				severity: 'warning' as const,
+				code: 'unrecognised-value',
+				message: `\`${tag.value}\` is not something \`#${name}\` understands, so it does nothing. ${expected}`,
+			}))
+	);
 }
 
 /** Everything worth reporting about a document. */
@@ -197,7 +198,8 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 				end: checkbox.column,
 				severity: 'warning',
 				code: 'cannot-nest',
-				message: 'This indentation does not nest. A subtask is indented by one tab per level; spaces do not nest, and a tab mixed with spaces does not either.',
+				message:
+					'This indentation does not nest. A subtask is indented by one tab per level; spaces do not nest, and a tab mixed with spaces does not either.',
 			});
 		}
 
@@ -220,10 +222,16 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 		// A value this fork gives meaning to and cannot read. Built with the
 		// very flaw the reports above exist to remove.
 		for (const [name, valid, expected] of [
-			[known.repeat, (value: string | null) => parseInterval(value) !== null,
-				'Intervals are daily, weekly, monthly, quarterly, yearly, weekdays, a named day such as monday, or a count such as 3d, 2w or 6m, optionally prefixed with + to count from when it was checked.'],
-			[known.estimate, (value: string | null) => parseEstimate(value) !== null,
-				'An estimate is a number and a unit: 30m, 2h, 1.5h, 1d or 1w.'],
+			[
+				known.repeat,
+				(value: string | null) => parseInterval(value) !== null,
+				'Intervals are daily, weekly, monthly, quarterly, yearly, weekdays, a named day such as monday, or a count such as 3d, 2w or 6m, optionally prefixed with + to count from when it was checked.',
+			],
+			[
+				known.estimate,
+				(value: string | null) => parseEstimate(value) !== null,
+				'An estimate is a number and a unit: 30m, 2h, 1.5h, 1d or 1w.',
+			],
 			[known.completion, isDay, 'A date is written YYYY-MM-DD.'],
 			[known.creation, isDay, 'A date is written YYYY-MM-DD.'],
 		] as [string, (value: string | null) => boolean, string][]) {
@@ -241,8 +249,8 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 			if (rest.includes(quote)) continue;
 			found.push({
 				line,
-				start: match.index! + name.length,
-				end: match.index! + whole.length,
+				start: match.index + name.length,
+				end: match.index + whole.length,
 				severity: 'warning',
 				code: 'dropped-tag-value',
 				message: `This value opens with ${quote} and never closes it, so the whole value is disregarded and only the tag name is kept.`,
@@ -374,7 +382,8 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 						end: due.end,
 						severity: 'warning',
 						code: 'extra-due-date',
-						message: 'An item has one due date; spec §Description says any others "MUST be disregarded". This one has no effect.',
+						message:
+							'An item has one due date; spec §Description says any others "MUST be disregarded". This one has no effect.',
 					});
 				}
 				seen = true;
@@ -393,9 +402,10 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 			end: problem.end,
 			severity: problem.kind === 'value' ? 'warning' : 'hint',
 			code: problem.kind === 'value' ? 'unrecognised-value' : 'unknown-directive',
-			message: problem.kind === 'value'
-				? `\`${problem.key}\` cannot use that value, so this directive does nothing.`
-				: `\`${problem.key}\` is not a directive this version understands, so it is ignored. That is deliberate - a directive written for a later version must not break an earlier one - but check the spelling.`,
+			message:
+				problem.kind === 'value'
+					? `\`${problem.key}\` cannot use that value, so this directive does nothing.`
+					: `\`${problem.key}\` is not a directive this version understands, so it is ignored. That is deliberate - a directive written for a later version must not break an earlier one - but check the spelling.`,
 		});
 	}
 

@@ -155,10 +155,25 @@ describe('marketplace metadata', () => {
 
 	it('uses only categories the Marketplace recognises', () => {
 		const allowed = new Set([
-			'Programming Languages', 'Snippets', 'Linters', 'Themes', 'Debuggers',
-			'Formatters', 'Keymaps', 'SCM Providers', 'Other', 'Extension Packs',
-			'Language Packs', 'Data Science', 'Machine Learning', 'Visualization',
-			'Notebooks', 'Education', 'Testing', 'AI', 'Chat',
+			'Programming Languages',
+			'Snippets',
+			'Linters',
+			'Themes',
+			'Debuggers',
+			'Formatters',
+			'Keymaps',
+			'SCM Providers',
+			'Other',
+			'Extension Packs',
+			'Language Packs',
+			'Data Science',
+			'Machine Learning',
+			'Visualization',
+			'Notebooks',
+			'Education',
+			'Testing',
+			'AI',
+			'Chat',
 		]);
 		for (const category of manifest.categories) {
 			assert.ok(allowed.has(category), `${category} is not a Marketplace category`);
@@ -199,8 +214,15 @@ describe('packaging', () => {
 		// .claude/settings.local.json was found inside a built vsix once. The
 		// only thing that caught it was packaging and reading the file list.
 		const required = [
-			'.claude/**', 'src/**', 'test/**', 'node_modules/**', 'scripts/**',
-			'demo/**', 'out/**', '.vscode-test.mjs', '**/*.map',
+			'.claude/**',
+			'src/**',
+			'test/**',
+			'node_modules/**',
+			'scripts/**',
+			'demo/**',
+			'out/**',
+			'.vscode-test.mjs',
+			'**/*.map',
 		];
 		for (const pattern of required) {
 			assert.ok(ignored.includes(pattern), `.vscodeignore does not exclude ${pattern}`);
@@ -270,8 +292,10 @@ describe('contributed files', () => {
 describe('language configuration', () => {
 	// JSON with comments, which is what VS Code reads here.
 	const configuration = JSON.parse(
-		readFileSync(resolve(REPO_ROOT, manifest.contributes.languages[0].configuration), 'utf8')
-			.replace(/^\s*\/\/.*$/gm, ''),
+		readFileSync(resolve(REPO_ROOT, manifest.contributes.languages[0].configuration), 'utf8').replace(
+			/^\s*\/\/.*$/gm,
+			'',
+		),
 	);
 
 	it('declares no brackets', () => {
@@ -384,8 +408,12 @@ describe('icons', () => {
 
 describe('overdue due dates', () => {
 	const COLOURS = [
-		'xit.overdueDueDateBackground', 'xit.overdueDueDateForeground', 'xit.overdueDueDateBorder',
-		'xit.criticallyOverdueDueDateBackground', 'xit.criticallyOverdueDueDateForeground', 'xit.criticallyOverdueDueDateBorder',
+		'xit.overdueDueDateBackground',
+		'xit.overdueDueDateForeground',
+		'xit.overdueDueDateBorder',
+		'xit.criticallyOverdueDueDateBackground',
+		'xit.criticallyOverdueDueDateForeground',
+		'xit.criticallyOverdueDueDateBorder',
 	];
 
 	it('contributes every colour, with a description', () => {
@@ -420,7 +448,9 @@ describe('overdue due dates', () => {
 		const declared = new Set([
 			...manifest.contributes.commands.map((entry) => entry.command),
 			...manifest.contributes.colors.map((entry) => entry.id),
-			...Object.values(manifest.contributes.views).flat().map((entry) => entry.id),
+			...Object.values(manifest.contributes.views)
+				.flat()
+				.map((entry) => entry.id),
 			...Object.keys(manifest.contributes.configuration.properties),
 			// Settings are read without their prefix, so both spellings count.
 			...Object.keys(manifest.contributes.configuration.properties).map((id) => id.replace(/^xit\./, '')),
@@ -435,8 +465,10 @@ describe('overdue due dates', () => {
 		]);
 
 		for (const [, id] of source.matchAll(/'(xit\.[A-Za-z]+)'/g)) {
-			assert.ok(declared.has(id) || fromSource.has(id),
-				`${id} is used in the source but declared nowhere in the manifest`);
+			assert.ok(
+				declared.has(id) || fromSource.has(id),
+				`${id} is used in the source but declared nowhere in the manifest`,
+			);
 		}
 	});
 
@@ -604,8 +636,7 @@ describe('the README keeps up with what is contributed', () => {
 	const readme = readFileSync(resolve(REPO_ROOT, 'README.md'), 'utf8');
 
 	it('mentions every setting it contributes', () => {
-		const missing = Object.keys(manifest.contributes.configuration.properties)
-			.filter((key) => !readme.includes(key));
+		const missing = Object.keys(manifest.contributes.configuration.properties).filter((key) => !readme.includes(key));
 		assert.deepEqual(missing, [], `settings nobody documented: ${missing.join(', ')}`);
 	});
 
@@ -617,7 +648,7 @@ describe('the README keeps up with what is contributed', () => {
 			if (!node || typeof node !== 'object') return;
 			for (const [key, value] of Object.entries(node)) {
 				if (key === 'name' && typeof value === 'string') {
-					value.split(' ').filter((scope) => scope.startsWith('markup.other')).forEach((scope) => emitted.add(scope));
+					for (const scope of value.split(' ').filter((each) => each.startsWith('markup.other'))) emitted.add(scope);
 				} else walk(value);
 			}
 		})(JSON.parse(readFileSync(resolve(REPO_ROOT, 'syntaxes/xit.tmLanguage.json'), 'utf8')));
@@ -627,10 +658,18 @@ describe('the README keeps up with what is contributed', () => {
 	});
 
 	it('links only to headings that exist', () => {
-		const anchors = new Set([...readme.matchAll(/^#{1,3} (.+)$/gm)]
-			.map(([, heading]) => `#${heading.toLowerCase().replace(/[^a-z0-9 -]/g, '').replace(/ /g, '-')}`));
-		const broken = [...new Set([...readme.matchAll(/\]\((#[a-z0-9-]+)\)/g)].map(([, link]) => link))]
-			.filter((link) => !anchors.has(link));
+		const anchors = new Set(
+			[...readme.matchAll(/^#{1,3} (.+)$/gm)].map(
+				([, heading]) =>
+					`#${heading
+						.toLowerCase()
+						.replace(/[^a-z0-9 -]/g, '')
+						.replace(/ /g, '-')}`,
+			),
+		);
+		const broken = [...new Set([...readme.matchAll(/\]\((#[a-z0-9-]+)\)/g)].map(([, link]) => link))].filter(
+			(link) => !anchors.has(link),
+		);
 
 		assert.deepEqual(broken, [], `links to headings that are not there: ${broken.join(', ')}`);
 	});
@@ -648,7 +687,8 @@ describe('the README keeps up with what is contributed', () => {
 		// You meet a code in the Problems panel and want to look it up. Six
 		// were described in prose and never named, which is not lookupable.
 		const sources = ['src/diagnostics.ts', 'src/link.ts']
-			.map((file) => readFileSync(resolve(REPO_ROOT, file), 'utf8')).join('\n');
+			.map((file) => readFileSync(resolve(REPO_ROOT, file), 'utf8'))
+			.join('\n');
 		const codes = new Set([...sources.matchAll(/(?:code|kind): '([a-z-]+)'/g)].map(([, code]) => code));
 
 		const missing = [...codes].filter((code) => !readme.includes(`\`${code}\``));
@@ -665,7 +705,8 @@ describe('the changelog stays readable', () => {
 		const releases = changelog.split(/^## /m).slice(1);
 		const repeated = releases.flatMap((release) => {
 			const headings = [...release.matchAll(/^### (.+)$/gm)].map(([, name]) => name);
-			return headings.filter((name, at) => headings.indexOf(name) !== at)
+			return headings
+				.filter((name, at) => headings.indexOf(name) !== at)
 				.map((name) => `${release.split('\n')[0]}: ${name}`);
 		});
 
@@ -698,8 +739,15 @@ describe('nothing still describes a rule this fork retired', () => {
 		{
 			phrase: 'two or more spaces',
 			retired: 'nesting became one tab per level',
-			history: ['src/tree.ts', 'src/diagnostics.ts', 'test/conformance.test.mjs',
-				'test/diagnostics.test.mjs', 'test/grammar.test.mjs', 'README.md', 'syntaxes/xit.tmLanguage.json'],
+			history: [
+				'src/tree.ts',
+				'src/diagnostics.ts',
+				'test/conformance.test.mjs',
+				'test/diagnostics.test.mjs',
+				'test/grammar.test.mjs',
+				'README.md',
+				'syntaxes/xit.tmLanguage.json',
+			],
 		},
 		{
 			phrase: 'two spaces or a tab',
@@ -709,9 +757,16 @@ describe('nothing still describes a rule this fork retired', () => {
 	];
 
 	const FILES = [
-		...readdirSync(resolve(REPO_ROOT, 'src')).filter((name) => name.endsWith('.ts')).map((name) => `src/${name}`),
-		...readdirSync(resolve(REPO_ROOT, 'test')).filter((name) => name.endsWith('.mjs')).map((name) => `test/${name}`),
-		'README.md', 'CHANGELOG.md', 'package.json', 'syntaxes/xit.tmLanguage.json',
+		...readdirSync(resolve(REPO_ROOT, 'src'))
+			.filter((name) => name.endsWith('.ts'))
+			.map((name) => `src/${name}`),
+		...readdirSync(resolve(REPO_ROOT, 'test'))
+			.filter((name) => name.endsWith('.mjs'))
+			.map((name) => `test/${name}`),
+		'README.md',
+		'CHANGELOG.md',
+		'package.json',
+		'syntaxes/xit.tmLanguage.json',
 		// This file spells the retired phrases out in order to look for them.
 	].filter((file) => file !== 'test/manifest.test.mjs');
 
