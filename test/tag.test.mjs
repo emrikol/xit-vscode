@@ -313,3 +313,22 @@ describe('a dot inside a name but never at its end', () => {
 		assert.deepEqual(tagsOn('[ ] Done #shopping..').map((tag) => tag.text), ['#shopping']);
 	});
 });
+
+describe('tags inside a comment', () => {
+	it('are not offered by completion', () => {
+		// `#secret` in a commented-out item was being offered as a tag to use.
+		// Parked work was set aside deliberately.
+		assert.deepEqual([...tagUsage(['[ ] Real #alpha', '<!--', '[ ] Parked #secret', '-->']).keys()], ['alpha']);
+	});
+
+	it('are not attributed to any item', () => {
+		assert.deepEqual(tags(['<!--', '[ ] Parked #secret', '-->']), []);
+	});
+
+	it('leave a real tag after the comment alone', () => {
+		assert.deepEqual(
+			[...tagUsage(['<!--', '[ ] Parked #secret', '-->', '[ ] Real #beta']).keys()],
+			['beta'],
+		);
+	});
+});

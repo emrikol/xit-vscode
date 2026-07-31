@@ -191,3 +191,26 @@ describe('auto-checking a parent', () => {
 		assert.equal(after[0], '[x] Parent');
 	});
 });
+
+describe('parked work is not work', () => {
+	it('does not record a checkbox inside a comment as an item', () => {
+		// Every caller used to have to remember this, and one forgot: a tag
+		// inside a comment reached completion, because tags() walks these.
+		const tree = items(['[ ] Parent', '\t[x] Real', '<!--', '\t[ ] Parked', '-->']);
+		assert.deepEqual([...tree.keys()], [0, 1]);
+	});
+
+	it('still ends an item at a comment, which does not split a group', () => {
+		// The fork's rule is that a comment cannot appear inside an item.
+		// Skipping parked lines outright made the item before a comment
+		// swallow the comment and everything after it.
+		const tree = items(['[ ] Before', '<!--', 'parked', '-->', '[ ] After']);
+		assert.equal(tree.get(0).endLine, 0);
+		assert.equal(tree.get(4).parent, null);
+	});
+
+	it('does not let a parked child hold its parent open', () => {
+		const tree = items(['[ ] Parent', '\t[ ] Real', '<!--', '\t[x] Parked', '-->']);
+		assert.deepEqual(tree.get(0).children, [1]);
+	});
+});

@@ -18,6 +18,7 @@
  * test/tag.test.mjs runs the conformance corpus through both.
  */
 
+import { commentLines } from './comment';
 import { items } from './tree';
 
 export interface Tag {
@@ -224,8 +225,12 @@ export interface TagUsage {
  */
 export function tagUsage(lines: readonly string[]): Map<string, TagUsage> {
 	const usage = new Map<string, TagUsage>();
+	// Parked work is not work. Completion draws on this, and a `#secret` in a
+	// commented-out item was being offered as a tag to use.
+	const parked = commentLines(lines);
 
-	for (const line of lines) {
+	for (const [at, line] of lines.entries()) {
+		if (parked.has(at)) continue;
 		for (const tag of tagsOn(line)) {
 			const found = usage.get(tag.key) ?? { spellings: new Map<string, number>(), values: new Set<string>() };
 			found.spellings.set(tag.name, (found.spellings.get(tag.name) ?? 0) + 1);

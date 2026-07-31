@@ -122,8 +122,9 @@ const LEDGER = {
 			estimate: 'carried unchanged', directive: 'lives in a comment' },
 	},
 	tag: {
-		must: { tags: 'tag.test.mjs', ids: 'tag.test.mjs', estimate: 'tag.test.mjs', nesting: 'tag.test.mjs' },
-		gap: { comment: '#95' },
+		must: { tags: 'tag.test.mjs', ids: 'tag.test.mjs', estimate: 'tag.test.mjs',
+			nesting: 'tag.test.mjs', comment: 'tag.test.mjs' },
+		gap: {},
 		na: { status: 'a tag is read from a description, whatever the checkbox',
 			priority: 'read separately', due: 'read separately', start: 'read separately',
 			title: 'has no description', directive: 'read by src/directive.ts, not here' },

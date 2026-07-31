@@ -12,6 +12,7 @@
  */
 
 import { readCheckbox, Status } from './checkbox';
+import { commentLines } from './comment';
 
 export interface Item {
 	readonly line: number;
@@ -89,6 +90,17 @@ function isDeeper(inner: string, outer: string): boolean {
  */
 export function items(lines: readonly string[]): Map<number, Item> {
 	const found = new Map<number, Item>();
+	// Parked work is not work. This used to be every caller's job to remember,
+	// and one of them forgot: a tag inside a comment reached completion,
+	// because tags() walks these items. Filtering here removes the footgun
+	// rather than adding a seventh place that has to remember.
+	//
+	// A comment does end an item, though it does not split a group: the fork's
+	// rule is that a comment "cannot appear inside an item". Skipping parked
+	// lines outright was wrong for exactly that reason - an item before a
+	// comment swallowed the comment and everything after it, which the folding
+	// tests caught immediately.
+	const parked = commentLines(lines);
 
 	// Items still open above the current line, shallowest first.
 	let ancestors: Item[] = [];
@@ -101,6 +113,10 @@ export function items(lines: readonly string[]): Map<number, Item> {
 	};
 
 	for (const [line, text] of lines.entries()) {
+		if (parked.has(line)) {
+			closeThrough(() => false, line);
+			continue;
+		}
 		if (text.trim() === '') {
 			closeThrough(() => false, line);
 			continue;
