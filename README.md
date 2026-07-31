@@ -458,14 +458,14 @@ Intervals are `daily`, `weekly`, `monthly`, `quarterly`, `yearly`, `weekdays`, a
 
 ### Repeating from completion
 
-An `-after` suffix counts from the day the item was checked rather than from its due date. This is the difference between rent and watering the plants:
+A leading `+` counts from the day the item was checked rather than from its due date. This is the difference between rent and watering the plants:
 
 | | |
 | --- | --- |
 | `#repeat=7d` | Seven days after it was **due**. Late payment does not move the next rent day. |
-| `#repeat=7d-after` | Seven days after you **checked it**. Water the plants three days late and the next watering is seven days from then, not four days away. |
+| `#repeat=+7d` | Seven days after you **checked it**. Water the plants three days late and the next watering is seven days from then, not four days away. |
 
-A suffix rather than the `+7d` that would read better, and the reason is worth knowing: spec §Tag allows only letters, digits, `_` and `-` in an unquoted tag value, so `#repeat=+7d` parses as `#repeat=` with no value at all — silently, which is the format doing exactly what the Problems panel now reports elsewhere. `#repeat="+7d"` would work, and requiring quotes for a common case is worse than a suffix that needs none.
+**`+` is a legal tag value character in this fork,** and it had to become one for this to work at all. Spec §Tag allows only letters, digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parsed as `#repeat=` with no value — silently, which is the format doing exactly what the Problems panel now reports elsewhere. It costs nothing: no example in the conformance corpus has an unquoted `+`, and `tags/7`'s `#tag='v!a.l?u+e'` is quoted, which always worked. Tag *names* are unchanged.
 
 ## Outline and Folding
 

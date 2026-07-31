@@ -214,3 +214,26 @@ describe('what completion draws on', () => {
 		assert.deepEqual([...usage.get('plain').values], []);
 	});
 });
+
+describe('a plus in a value, which is a fork', () => {
+	it('is read as part of the value', () => {
+		// Spec §Tag allows only letters, digits, `_` and `-` unquoted, so this
+		// parsed as `#repeat=` with no value at all - silently. A whole
+		// feature did nothing and nothing said why.
+		assert.equal(tagsOn('[ ] x #repeat=+7d')[0].value, '+7d');
+		assert.equal(tagsOn('[ ] x #offset=+3')[0].value, '+3');
+	});
+
+	it('costs no conformance divergence, because no example has one unquoted', () => {
+		// tags/7 has `#tag='v!a.l?u+e'`, inside quotes, which always worked.
+		assert.equal(tagsOn("[ ] #tag='v!a.l?u+e'")[0].value, 'v!a.l?u+e');
+	});
+
+	it('leaves names alone, where a leading plus reads as nothing anyone wants', () => {
+		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
+	});
+
+	it('still terminates a value at anything else', () => {
+		assert.equal(tagsOn('[ ] x #tag=a+b!c')[0].value, 'a+b');
+	});
+});

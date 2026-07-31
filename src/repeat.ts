@@ -33,11 +33,14 @@ export interface Interval {
 	 * water them three days late and the next watering should be seven days
 	 * from then, not four days away.
 	 *
-	 * Written as an `-after` suffix: `7d-after`, `weekly-after`. A leading `+`
-	 * would read better and is not available - spec §Tag allows only letters,
-	 * digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parses as
-	 * `#repeat=` with no value at all, silently. Requiring `#repeat="+7d"` for
-	 * a common case is worse than a suffix that needs no quotes.
+	 * Written with a leading `+`: `+7d`, `+weekly`, `+monday`.
+	 *
+	 * That needed a fork of its own. Spec §Tag allows only letters, digits, `_`
+	 * and `-` in an unquoted value, so `#repeat=+7d` parsed as `#repeat=` with
+	 * no value at all - silently, which is the format doing the very thing the
+	 * Problems panel now reports elsewhere. `+` is a legal value character in
+	 * this fork, and it costs nothing: no example in the conformance corpus has
+	 * an unquoted `+`.
 	 */
 	fromCompletion: boolean;
 	/** ISO weekday, 1 Monday to 7 Sunday, when the interval names a day. */
@@ -77,10 +80,10 @@ const ANY_CHECKBOX = new RegExp(`\\[[${STATUS_CLASS}]\\]`);
 export function parseInterval(value: string | null): Interval | null {
 	if (!value) return null;
 
-	// An `-after` suffix means "from when it was checked". Stripped first so
-	// every form below can carry it: `weekly-after`, `7d-after`, `monday-after`.
-	const fromCompletion = /-after$/i.test(value);
-	const rest = fromCompletion ? value.slice(0, -'-after'.length) : value;
+	// A leading `+` means "from when it was checked". Stripped first so every
+	// form below can carry it: `+weekly`, `+7d`, `+monday`.
+	const fromCompletion = value.startsWith('+');
+	const rest = fromCompletion ? value.slice(1) : value;
 	const lower = rest.toLowerCase();
 
 	// Every weekday, skipping Saturday and Sunday. The one interval a plain

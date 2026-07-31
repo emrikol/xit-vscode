@@ -57,19 +57,17 @@ describe('parsing an interval', () => {
 });
 
 describe('the new interval forms', () => {
-	it('takes an -after suffix, meaning from the day it was checked', () => {
-		// A leading `+` would read better and is not available: spec §Tag
-		// allows only letters, digits, `_` and `-` in an unquoted value, so
-		// `#repeat=+7d` parses as `#repeat=` with no value at all, silently.
-		assert.deepEqual(parseInterval('7d-after'), { unit: 'day', count: 7, fromCompletion: true });
-		assert.deepEqual(parseInterval('weekly-after'), { unit: 'week', count: 1, fromCompletion: true });
-		assert.deepEqual(parseInterval('monday-after'), { unit: 'week', count: 1, fromCompletion: true, weekday: 1 });
+	it('takes a leading plus, meaning from the day it was checked', () => {
+		assert.deepEqual(parseInterval('+7d'), { unit: 'day', count: 7, fromCompletion: true });
+		assert.deepEqual(parseInterval('+weekly'), { unit: 'week', count: 1, fromCompletion: true });
+		assert.deepEqual(parseInterval('+monday'), { unit: 'week', count: 1, fromCompletion: true, weekday: 1 });
 	});
 
-	it('is a legal unquoted tag value, which a plus is not', () => {
-		// The reason for the suffix, asserted rather than trusted.
-		assert.equal(tagsOn('[x] W #repeat=7d-after')[0].value, '7d-after');
-		assert.equal(tagsOn('[x] W #repeat=+7d')[0].value, null, 'a plus is silently dropped');
+	it('reads the plus as part of the value, which is a fork', () => {
+		// Spec §Tag allows only letters, digits, `_` and `-` unquoted, so this
+		// used to parse as `#repeat=` with no value at all - silently. The
+		// whole feature did nothing and nothing said why.
+		assert.equal(tagsOn('[x] W #repeat=+7d')[0].value, '+7d');
 	});
 
 	it('takes every weekday', () => {
@@ -82,7 +80,7 @@ describe('the new interval forms', () => {
 	});
 
 	it('still refuses what it does not understand', () => {
-		for (const value of ['-after', 'sometimes-after', 'someday', 'weekday', '0d-after']) {
+		for (const value of ['+', '+sometimes', 'someday', 'weekday', '+0d']) {
 			assert.equal(parseInterval(value), null, JSON.stringify(value));
 		}
 	});
@@ -127,12 +125,12 @@ describe('repeating from completion', () => {
 		// Watering the plants three days late: the next watering is seven days
 		// from now, not four days away.
 		assert.equal(
-			next('[x] Water the plants -> 2026-08-03 #repeat=7d-after', 20260806),
-			'[ ] Water the plants -> 2026-08-13 #repeat=7d-after',
+			next('[x] Water the plants -> 2026-08-03 #repeat=+7d', 20260806),
+			'[ ] Water the plants -> 2026-08-13 #repeat=+7d',
 		);
 	});
 
-	it('still counts from the due date without the suffix', () => {
+	it('still counts from the due date without the plus', () => {
 		// Rent. Late payment does not move the next rent day.
 		assert.equal(
 			next('[x] Pay rent -> 2026-08-03 #repeat=7d', 20260806),
@@ -142,16 +140,16 @@ describe('repeating from completion', () => {
 
 	it('keeps the written pattern, so a month stays a month', () => {
 		assert.equal(
-			next('[x] Review -> 2026-01 #repeat=1m-after', 20260615),
-			'[ ] Review -> 2026-07 #repeat=1m-after',
+			next('[x] Review -> 2026-01 #repeat=+1m', 20260615),
+			'[ ] Review -> 2026-07 #repeat=+1m',
 		);
 	});
 
 	it('keeps a week-precision date a week', () => {
 		// 6 August 2026 is in ISO week 32.
 		assert.equal(
-			next('[x] Standup -> 2026-W05 #repeat=1w-after', 20260806),
-			'[ ] Standup -> 2026-W33 #repeat=1w-after',
+			next('[x] Standup -> 2026-W05 #repeat=+1w', 20260806),
+			'[ ] Standup -> 2026-W33 #repeat=+1w',
 		);
 	});
 
@@ -159,8 +157,8 @@ describe('repeating from completion', () => {
 		// The unit tests that do not care about completion pass nothing, and
 		// must keep the old behaviour rather than silently doing nothing.
 		assert.equal(
-			next('[x] Water -> 2026-08-03 #repeat=7d-after'),
-			'[ ] Water -> 2026-08-10 #repeat=7d-after',
+			next('[x] Water -> 2026-08-03 #repeat=+7d'),
+			'[ ] Water -> 2026-08-10 #repeat=+7d',
 		);
 	});
 });

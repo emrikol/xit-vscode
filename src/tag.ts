@@ -80,7 +80,7 @@ function urlRanges(line: string): [number, number][] {
 const TAG = new RegExp(
 	'(?<=[\\s\\p{P}])'
 	+ '#(?<name>[\\p{L}\\d_-]+)'
-	+ '(?:=(?<value>\'[^\'\\n]*\'|"[^"\\n]*"|[\\p{L}\\d_-]+)?)?',
+	+ '(?:=(?<value>\'[^\'\\n]*\'|"[^"\\n]*"|[\\p{L}\\d_+-]+)?)?',
 	'gu',
 );
 
