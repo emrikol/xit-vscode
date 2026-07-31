@@ -11,6 +11,7 @@ import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
 import { archive } from './archive';
+import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
 import { registerWorkspaceView } from './workspaceView';
 import { WorkspaceIndex } from './workspaceIndex';
 import { commonSpelling, foldName, tagsOn } from './tag';
@@ -270,6 +271,65 @@ function registerCompletion(context: vscode.ExtensionContext, index: WorkspaceIn
 			});
 		},
 	}, '#', '='));
+}
+
+/**
+ * Give the item under the cursor an id, so another can wait on it.
+ *
+ * Generated rather than derived from anything positional. An id has to survive
+ * a re-sort and a move between files, and both sorting a group and archiving
+ * finished items rewrite lines - either would break every reference in the
+ * file if the id were a line number or a hash of its surroundings.
+ *
+ * The id is put on the clipboard as `#after=…`, because the next thing anyone
+ * does after making one is paste a reference to it.
+ */
+async function giveIdToItem(editor: vscode.TextEditor) {
+	if (editor.document.languageId !== LANGUAGE) return;
+
+	const line = editor.selection.active.line;
+	const text = editor.document.lineAt(line).text;
+	if (!readCheckbox(text)) return;
+
+	const existing = tagsOn(text).find((tag) => tag.key === ID_TAG);
+	if (existing?.value) {
+		await vscode.env.clipboard.writeText(`#${AFTER_TAG}=${existing.value}`);
+		void vscode.window.showInformationMessage(`This item is already \`${existing.value}\`. Copied #${AFTER_TAG}=${existing.value}.`);
+		return;
+	}
+
+	const id = freshId(documentLines(editor.document));
+	await editor.edit(builder => builder.insert(editor.document.lineAt(line).range.end, ` #${ID_TAG}=${id}`));
+	await vscode.env.clipboard.writeText(`#${AFTER_TAG}=${id}`);
+
+	void vscode.window.showInformationMessage(`Gave this item the id \`${id}\`. Copied #${AFTER_TAG}=${id}.`);
+}
+
+/**
+ * Make `#after=` clickable, so a reference goes to what it waits on.
+ *
+ * Within one document. Ids resolve inside a file, which is a real limit and a
+ * deliberate one: making them resolve across a workspace needs ids to be
+ * unique across every file, and nothing generates or enforces that. Better a
+ * scope that is honest than one that works until two files collide.
+ */
+function registerLinks(context: vscode.ExtensionContext) {
+	context.subscriptions.push(vscode.languages.registerDocumentLinkProvider(LANGUAGE, {
+		provideDocumentLinks(document) {
+			const lines = documentLines(document);
+			const target = new Map(identities(lines).map((each) => [foldId(each.id), each.line]));
+
+			return dependencies(lines).flatMap((each) => {
+				const at = target.get(foldId(each.on));
+				if (at === undefined) return [];
+
+				const link = new vscode.DocumentLink(new vscode.Range(each.line, each.tag.start, each.line, each.tag.end));
+				link.target = document.uri.with({ fragment: `L${at + 1}` });
+				link.tooltip = lines[at].trim();
+				return [link];
+			});
+		},
+	}));
 }
 
 /**
@@ -732,6 +792,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerDiagnostics(context);
 	registerCompletion(context, registerWorkspaceView(context));
 	registerCreationDate(context);
+	registerLinks(context);
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);
@@ -743,6 +804,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerEditorCommand(context, 'xit.sortGroup', editor => sortGroupAtCursor(editor));
 
 	registerEditorCommand(context, 'xit.archive', editor => archiveFinished(editor));
+
+	registerEditorCommand(context, 'xit.giveId', editor => giveIdToItem(editor));
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 

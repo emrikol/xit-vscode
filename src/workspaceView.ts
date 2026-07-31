@@ -25,6 +25,7 @@ const GROUPS: { urgency: Urgency; label: string }[] = [
 	// hiding would lose work, and ranking them by a due date you cannot work
 	// towards would put them above things you can.
 	{ urgency: 'waiting', label: 'Waiting on someone else' },
+	{ urgency: 'blocked', label: 'Blocked by another item' },
 	{ urgency: 'notYet', label: 'Not started yet' },
 ];
 

@@ -330,6 +330,10 @@
                 {
                     "command": "xit.archive",
                     "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.giveId",
+                    "when": "editorLangId == 'xit'"
                 }
             ],
             "view/title": [
@@ -388,6 +392,11 @@
             {
                 "command": "xit.archive",
                 "title": "Archive Finished Items",
+                "category": "xit!"
+            },
+            {
+                "command": "xit.giveId",
+                "title": "Give This Item an Id",
                 "category": "xit!"
             }
         ],

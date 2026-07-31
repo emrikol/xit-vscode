@@ -17,6 +17,7 @@ import { commentLines } from './comment';
 import { directives } from './directive';
 import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
 import { estimateOn } from './estimate';
+import { blocked as blockedLines } from './link';
 import { tags } from './tag';
 import { items } from './tree';
 
@@ -35,6 +36,8 @@ export interface Collected {
 	tags: string[];
 	/** How long it is expected to take, in minutes, or null. */
 	estimate: number | null;
+	/** Whether it waits on another item that is not finished yet. */
+	blocked: boolean;
 	parent: number | null;
 	children: number[];
 }
@@ -50,6 +53,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 	// Tags the file declares about itself, which every item inherits. See
 	// src/directive.ts: a work.xit should not need `#work` on every line.
 	const inherited = directives(lines).tags;
+	const waiting = blockedLines(lines);
 	const all = items(lines);
 	const allTags = tags(lines);
 
@@ -91,6 +95,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 				start: start ? { text: start.text, startOfPeriod: startOfPeriod(start.parts) } : null,
 				tags: [...new Set([...inherited, ...allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key)])],
 				estimate: estimateOn(text, estimateTag),
+				blocked: waiting.has(item.line),
 				parent: item.parent,
 				children: item.children,
 			};
@@ -99,7 +104,7 @@ export function collect(lines: readonly string[], estimateTag = 'est'): Collecte
 }
 
 /** How urgent an item is, which is what the sidebar groups by. */
-export type Urgency = 'critical' | 'overdue' | 'soon' | 'later' | 'none' | 'waiting' | 'notYet';
+export type Urgency = 'critical' | 'overdue' | 'soon' | 'later' | 'none' | 'waiting' | 'notYet' | 'blocked';
 
 export interface Thresholds {
 	today: Day;
@@ -125,6 +130,7 @@ export function urgencyOf(item: Collected, thresholds: Thresholds): Urgency {
 	// Waiting comes first because someone else is holding it, which is worth
 	// seeing; not-yet-started is your own decision and can wait at the bottom.
 	if (item.status === '>') return 'waiting';
+	if (item.blocked) return 'blocked';
 	if (item.start && item.start.startOfPeriod > thresholds.today) return 'notYet';
 
 	if (!item.due) return 'none';

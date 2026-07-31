@@ -329,6 +329,27 @@ A comment is where this costs least. Comments are already a fork of the specific
 
 **An unknown key is ignored, in silence and on purpose.** A directive written for a later version must not break an earlier one, and reporting it would make every new key a breaking change for anyone who has not updated. A tag name the format could not express is ignored for the opposite reason: a directive must not be able to declare something you could not have written by hand.
 
+## One Item Waiting on Another
+
+The only thing the format genuinely could not express: items could not refer to each other.
+
+```
+[ ] Draft the contract #id=k3f9
+[ ] Send it out #after=k3f9
+```
+
+**xit!: Give This Item an Id** puts an id on the item under the cursor and copies `#after=…` to the clipboard, because pasting a reference is the next thing anyone does. `#after=` is clickable and jumps to what it waits on.
+
+An item waiting on something unfinished is **blocked**, and gets its own group in the workspace view — the same answer as a `[>]` waiting item and one whose start date has not arrived. All three are work you cannot act on: sorted below everything you can, and never hidden.
+
+Four things get reported in the Problems panel: an id nothing has, an id used twice, a cycle, and waiting on something already finished. A cycle is an error because nothing in it can ever start; the rest are warnings, because the file still means something, it just does not mean what it looks like.
+
+**Ids are generated, not derived.** An id has to survive a re-sort and a move between files, and both **Sort Group** and **Archive Finished Items** rewrite lines — either would break every reference in the file if an id were a line number or a hash of its surroundings. They are four characters of base32 with the vowels and the look-alike pairs removed, so an id cannot spell a word and can be read aloud.
+
+**Ids resolve within a file.** That is a real limit and a deliberate one: making them resolve across a workspace needs ids unique across every file, and nothing generates or enforces that. A scope that is honest beats one that works until two files collide.
+
+Nothing cascades. Checking an item does not check what waits on it, and nothing reorders itself — a dependency describes the world, it does not get to edit your file.
+
 ## Time Estimates
 
 `#est=2h` on an item, and the workspace view totals each group beside its count.

@@ -541,3 +541,60 @@ describe('xit.archive', () => {
 		assert.equal(editor.document.getText(), before);
 	});
 });
+
+describe('xit.giveId', () => {
+	it('gives an item an id and copies a reference to it', async () => {
+		const editor = await openXit('[ ] Draft the contract');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.giveId');
+
+		const text = editor.document.lineAt(0).text;
+		assert.match(text, /^\[ \] Draft the contract #id=[a-z0-9]{4}$/);
+
+		const [, id] = /#id=([a-z0-9]{4})/.exec(text)!;
+		assert.equal(await vscode.env.clipboard.readText(), `#after=${id}`);
+	});
+
+	it('does not give a second id to an item that has one', async () => {
+		const editor = await openXit('[ ] Draft #id=k3f9');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.giveId');
+
+		assert.equal(editor.document.lineAt(0).text, '[ ] Draft #id=k3f9');
+		assert.equal(await vscode.env.clipboard.readText(), '#after=k3f9');
+	});
+
+	it('does nothing on a line that is not an item', async () => {
+		const editor = await openXit('# A title');
+		editor.selection = at(0);
+		await vscode.commands.executeCommand('xit.giveId');
+		assert.equal(editor.document.lineAt(0).text, '# A title');
+	});
+});
+
+describe('links between items', () => {
+	it('makes #after= clickable, pointing at the item it waits on', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit', content: '[ ] Draft #id=k3f9\n[ ] Send #after=k3f9',
+		});
+		await vscode.window.showTextDocument(document);
+
+		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+			'vscode.executeLinkProvider', document.uri) ?? [];
+
+		assert.equal(links.length, 1);
+		assert.equal(links[0].range.start.line, 1);
+		assert.equal(document.getText(links[0].range), '#after=k3f9');
+	});
+
+	it('offers no link for an id nothing has', async () => {
+		const document = await vscode.workspace.openTextDocument({
+			language: 'xit', content: '[ ] Send #after=zzzz',
+		});
+		await vscode.window.showTextDocument(document);
+
+		const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>(
+			'vscode.executeLinkProvider', document.uri) ?? [];
+		assert.deepEqual(links, []);
+	});
+});

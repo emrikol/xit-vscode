@@ -20,6 +20,7 @@ import { STATUSES, STATUS_CLASS, readCheckbox } from './checkbox';
 import { commentLines } from './comment';
 import { dueDatesOn } from './dueDate';
 import { MARKER, isTitle } from './title';
+import { linkProblems } from './link';
 import { items } from './tree';
 
 export type Severity = 'error' | 'warning' | 'hint';
@@ -249,6 +250,23 @@ export function problems(lines: readonly string[]): Problem[] {
 				seen = true;
 			}
 		}
+	}
+
+	// Broken links between items. Reported rather than repaired: a broken
+	// reference is a fact about the file, and guessing which item was meant
+	// would be worse than saying so.
+	for (const problem of linkProblems(lines)) {
+		found.push({
+			line: problem.line,
+			start: problem.start,
+			end: problem.end,
+			// A cycle is an error because nothing in it can ever start. The
+			// others are warnings: the file still means something, it just
+			// does not mean what it looks like.
+			severity: problem.kind === 'cycle' ? 'error' : 'warning',
+			code: problem.kind,
+			message: problem.message,
+		});
 	}
 
 	// An unterminated comment swallows the rest of the file, silently.
