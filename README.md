@@ -106,11 +106,15 @@ This is the format author's own suggestion for keeping a list inside a larger do
 
 ## Overdue Dates
 
-A due date whose period has passed is marked with a tinted background and a border. Turn it off with `xit.overdueDueDates`, and recolour it with the `xit.overdueDueDateBackground` and `xit.overdueDueDateBorder` theme colours.
+A due date whose period has passed is marked, and one more than a fortnight past is marked again in a second colour.
 
-The background is translucent and there is no foreground colour, on purpose: a decoration's `color` overrides the theme's own colour for the date, so recolouring the text would make an overdue date stop looking like a date. A background adds a signal instead of replacing one.
+| Setting | Default | |
+| --- | --- | --- |
+| `xit.overdueDueDates` | `true` | Turn the marking off entirely. |
+| `xit.overdueDueDateStyle` | `border-and-background` | `border-and-background`, `background`, `border` or `underline`. |
+| `xit.criticallyOverdueAfterDays` | `14` | Days past the end of the period before the second colour. `0` uses one colour for everything. |
 
-The border is not decoration either. WCAG asks 4.5:1 for body text and 3:1 for a non-text indicator, and across VS Code's default themes those cannot both be met by a background alone — by the time the wash is strong enough for the highlight to reach even 2:1 against the editor background, the date itself is down to 3.5:1. The border carries the indicator contrast beside the text rather than behind it. `test/contrast.test.mjs` computes both ratios for all eight default themes on every commit.
+Six theme colours are contributed, so any of it can be recoloured: `xit.overdueDueDateBackground`, `xit.overdueDueDateForeground`, `xit.overdueDueDateBorder`, and the same three under `xit.criticallyOverdueDueDate…`.
 
 A due date names a period, not always a day, so it counts as passed only once the whole period has ended:
 
@@ -124,7 +128,17 @@ A due date names a period, not always a day, so it counts as passed only once th
 
 Weeks follow ISO 8601, so week 1 is the one containing the first Thursday of the year, and a week can end in the following year: `-> 2022-W52` runs out on 1 January 2023.
 
-Only the first due date of an item counts, as the specification requires, and this only applies to `.xit` files — not to xit inside a Markdown fence.
+Only the first due date of an item counts, as the specification requires, and this applies to `.xit` files only — not to xit inside a Markdown fence.
+
+### Why the filled styles set the text colour too
+
+The two styles that paint a background also set the foreground, and they cannot be separated. A background the extension chooses, under text the theme chooses, is a pair of colours that have never met: the first version of this did exactly that, and in Monokai a purple `#AE81FF` date landed on the amber fill at 2.73:1, down from 5.23:1 with no marking at all. Lowering the opacity did not rescue it, and three bundled themes are already below 4.5:1 before anything is drawn, so no fixed threshold was even reachable.
+
+Owning both sides fixes it by construction — the same pair in every theme, including ones written after this, at 9.36:1 on dark and 5.54:1 on light. The `border` and `underline` styles own neither side, which is equally safe: the text keeps exactly the contrast the theme gave it.
+
+The critical tier is bold as well as red. Amber and red are chosen to weigh the same so they read as one family, which leaves hue as the only thing between them, and amber against red is the pair red-green colour blindness collapses. WCAG SC 1.4.1 asks that colour not be the only cue, so weight is the one that carries.
+
+`test/contrast.test.mjs` computes all of this against the seventeen themes VS Code ships, on every commit.
 
 ## Development
 

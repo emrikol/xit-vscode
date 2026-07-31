@@ -185,9 +185,27 @@ export function dueDates(lines: readonly string[]): DueDateAt[] {
 	return found;
 }
 
-/** Due dates whose period ended before `today`. */
-export function overdue(lines: readonly string[], today: Day): DueDateAt[] {
-	return dueDates(lines).filter((date) => date.endOfPeriod < today);
+/** Whole days from `from` to `to`, both local calendar days. */
+export function daysBetween(from: Day, to: Day): number {
+	const asDate = (value: Day) => Date.UTC(Math.floor(value / 10000), (Math.floor(value / 100) % 100) - 1, value % 100);
+	return Math.round((asDate(to) - asDate(from)) / 86400000);
+}
+
+export interface OverdueDate extends DueDateAt {
+	/** Whole days since the period ended. Always one or more. */
+	daysLate: number;
+}
+
+/**
+ * Due dates whose period ended before `today`, with how late each one is.
+ *
+ * Strictly before: a date is not overdue on the last day of its period. `->
+ * 2026-01-31` is due all of 31 January and late on the first of February.
+ */
+export function overdue(lines: readonly string[], today: Day): OverdueDate[] {
+	return dueDates(lines)
+		.filter((date) => date.endOfPeriod < today)
+		.map((date) => ({ ...date, daysLate: daysBetween(date.endOfPeriod, today) }));
 }
 
 /**

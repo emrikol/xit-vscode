@@ -85,28 +85,91 @@
                     "type": "boolean",
                     "default": true,
                     "description": "Mark due dates whose period has passed. A month, quarter, week or year counts as passed only once it has ended, so \"-> 2026\" is overdue on 1 January 2027."
+                },
+                "xit.overdueDueDateStyle": {
+                    "type": "string",
+                    "enum": [
+                        "border-and-background",
+                        "background",
+                        "border",
+                        "underline"
+                    ],
+                    "enumDescriptions": [
+                        "A filled badge with a border around it.",
+                        "A filled badge.",
+                        "An outline around the date, leaving the theme’s own colour for the text.",
+                        "An underline beneath the date, leaving the theme’s own colour for the text."
+                    ],
+                    "default": "border-and-background",
+                    "description": "How an overdue due date is marked. The filled styles also set the text colour, because a background that leaves the theme choosing the text colour pairs two colours that have never met."
+                },
+                "xit.criticallyOverdueAfterDays": {
+                    "type": "number",
+                    "default": 14,
+                    "minimum": 0,
+                    "description": "Days past the end of its period before a due date is marked critically overdue, in a second colour. Set to 0 to use one colour for everything."
                 }
             }
         },
         "colors": [
             {
                 "id": "xit.overdueDueDateBackground",
-                "description": "Background of a due date whose period has passed. Translucent, so the theme's own colour for the date shows through.",
+                "description": "Background of an overdue due date.",
                 "defaults": {
-                    "dark": "#CCA70055",
-                    "light": "#BF880355",
-                    "highContrast": "#FFCC0055",
-                    "highContrastLight": "#BF880355"
+                    "dark": "#E5A000",
+                    "light": "#8A6100",
+                    "highContrast": "#E5A000",
+                    "highContrastLight": "#8A6100"
+                }
+            },
+            {
+                "id": "xit.overdueDueDateForeground",
+                "description": "Text colour of an overdue due date, used whenever a background is drawn behind it.",
+                "defaults": {
+                    "dark": "#000000",
+                    "light": "#FFFFFF",
+                    "highContrast": "#000000",
+                    "highContrastLight": "#FFFFFF"
                 }
             },
             {
                 "id": "xit.overdueDueDateBorder",
-                "description": "Border around a due date whose period has passed. This is what carries the contrast: a background alone cannot be strong enough to see without making the date itself hard to read.",
+                "description": "Border or underline of an overdue due date.",
                 "defaults": {
-                    "dark": "editorWarning.foreground",
-                    "light": "editorWarning.foreground",
-                    "highContrast": "editorWarning.foreground",
-                    "highContrastLight": "editorWarning.foreground"
+                    "dark": "#E5A000",
+                    "light": "#8A6100",
+                    "highContrast": "#E5A000",
+                    "highContrastLight": "#8A6100"
+                }
+            },
+            {
+                "id": "xit.criticallyOverdueDueDateBackground",
+                "description": "Background of a due date that is critically overdue.",
+                "defaults": {
+                    "dark": "#F14C4C",
+                    "light": "#A31515",
+                    "highContrast": "#F14C4C",
+                    "highContrastLight": "#A31515"
+                }
+            },
+            {
+                "id": "xit.criticallyOverdueDueDateForeground",
+                "description": "Text colour of a critically overdue due date, used whenever a background is drawn behind it.",
+                "defaults": {
+                    "dark": "#000000",
+                    "light": "#FFFFFF",
+                    "highContrast": "#000000",
+                    "highContrastLight": "#FFFFFF"
+                }
+            },
+            {
+                "id": "xit.criticallyOverdueDueDateBorder",
+                "description": "Border or underline of a critically overdue due date.",
+                "defaults": {
+                    "dark": "#F14C4C",
+                    "light": "#A31515",
+                    "highContrast": "#F14C4C",
+                    "highContrastLight": "#A31515"
                 }
             }
         ],

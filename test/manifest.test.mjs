@@ -373,33 +373,42 @@ describe('icons', () => {
 });
 
 describe('overdue due dates', () => {
-	const COLOURS = ['xit.overdueDueDateBackground', 'xit.overdueDueDateBorder'];
+	const COLOURS = [
+		'xit.overdueDueDateBackground', 'xit.overdueDueDateForeground', 'xit.overdueDueDateBorder',
+		'xit.criticallyOverdueDueDateBackground', 'xit.criticallyOverdueDueDateForeground', 'xit.criticallyOverdueDueDateBorder',
+	];
 
-	it('contributes every colour the decoration asks for', () => {
-		// createTextEditorDecorationType takes a ThemeColor by id. An id that
-		// nothing contributes resolves to undefined, and the decoration then
-		// renders with nothing at all - invisible, with no error anywhere.
-		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-
+	it('contributes every colour, with a description', () => {
 		for (const id of COLOURS) {
 			const colour = manifest.contributes.colors?.find((entry) => entry.id === id);
 			assert.ok(colour, `${id} is not contributed`);
-			assert.ok(colour.description?.length > 0);
-			assert.match(source, new RegExp(`ThemeColor\\('${id.replace(/\./g, '\\.')}'\\)`), `${id} is contributed but never used`);
+			assert.ok(colour.description?.length > 0, `${id} has no description`);
 		}
 	});
 
-	it('asks for no colour it does not contribute', () => {
+	it('names every contributed colour in the source', () => {
+		// createTextEditorDecorationType takes a ThemeColor by id. An id that
+		// nothing contributes resolves to undefined, and the decoration then
+		// renders with nothing at all - invisible, with no error anywhere. The
+		// ids are built from a tier name and a part, so this looks for the
+		// pieces rather than for whole literals.
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		const asked = [...source.matchAll(/ThemeColor\('([^']+)'\)/g)].map(([, id]) => id);
+		for (const id of COLOURS) {
+			assert.ok(source.includes(id), `${id} is contributed but never used`);
+		}
+	});
+
+	it('contributes exactly the colours it uses', () => {
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		// Command ids share the `xit.` prefix, so they have to come out first.
+		const commands = new Set(manifest.contributes.commands.map((command) => command.command));
+		const used = new Set([...source.matchAll(/'(xit\.[A-Za-z]+)'/g)]
+			.map(([, id]) => id)
+			.filter((id) => !commands.has(id)));
 		const contributed = new Set(manifest.contributes.colors.map((entry) => entry.id));
 
-		for (const id of asked) {
-			// Only ids this extension owns; a built-in theme colour is fine to
-			// reference without contributing it.
-			if (!id.startsWith('xit.')) continue;
-			assert.ok(contributed.has(id), `${id} is used but never contributed`);
-		}
+		for (const id of used) assert.ok(contributed.has(id), `${id} is used but never contributed`);
+		for (const id of contributed) assert.ok(used.has(id), `${id} is contributed but never used`);
 	});
 
 	it('gives every colour a default for every theme kind', () => {
@@ -414,17 +423,29 @@ describe('overdue due dates', () => {
 		}
 	});
 
-	it('can be turned off', () => {
-		const setting = manifest.contributes.configuration?.properties?.['xit.overdueDueDates'];
-		assert.ok(setting, 'no setting to disable overdue marking');
-		assert.equal(setting.type, 'boolean');
-		assert.equal(setting.default, true);
-		assert.ok(setting.description?.length > 0);
+	it('can be turned off, restyled, and have its second tier retimed', () => {
+		const properties = manifest.contributes.configuration?.properties ?? {};
+
+		assert.equal(properties['xit.overdueDueDates']?.type, 'boolean');
+		assert.equal(properties['xit.overdueDueDates']?.default, true);
+		assert.equal(properties['xit.overdueDueDateStyle']?.default, 'border-and-background');
+		assert.equal(properties['xit.criticallyOverdueAfterDays']?.type, 'number');
+		assert.equal(properties['xit.criticallyOverdueAfterDays']?.default, 14);
+		// Zero turns the second tier off. A negative threshold would make
+		// everything critical, which is the opposite of what anyone means.
+		assert.equal(properties['xit.criticallyOverdueAfterDays']?.minimum, 0);
+
+		for (const [id, setting] of Object.entries(properties)) {
+			assert.ok(setting.description?.length > 0, `${id} has no description`);
+		}
 	});
 
-	it('is read by the code that draws it', () => {
+	it('reads every setting it contributes', () => {
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		assert.match(source, /getConfiguration\(LANGUAGE\)\.get<boolean>\('overdueDueDates'/);
+		for (const id of Object.keys(manifest.contributes.configuration.properties)) {
+			const name = id.replace(/^xit\./, '');
+			assert.ok(source.includes(`'${name}'`), `${id} is contributed but never read`);
+		}
 	});
 });
 

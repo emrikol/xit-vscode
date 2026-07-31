@@ -5,19 +5,27 @@
  * so there is no reason to look at a screenshot to know whether a highlight is
  * readable. This asserts it on every commit instead.
  *
- * Two ratios matter, and they pull in opposite directions:
+ * Two ratios matter:
  *
- *   text   the date must stay readable on top of the highlight.
+ *   text   the date must stay readable on the highlight.
  *          WCAG 2.1 SC 1.4.3 asks 4.5:1 for body text.
- *   patch  the highlight must be distinguishable from the plain editor
+ *   mark   the highlight must be distinguishable from the plain editor
  *          background, or it says nothing at all.
  *          SC 1.4.11 asks 3:1 for a non-text indicator.
  *
- * They cannot both be met by a background wash. Measured across the default
- * themes: by the time the wash is strong enough for the patch ratio to reach
- * even 2:1, the text is down to 3.5:1. That is why the decoration has a
- * border, and why the border is not cosmetic — it carries the indicator
- * contrast beside the text instead of behind it.
+ * The first attempt met neither reliably, and the reason is worth keeping.
+ * It painted a translucent wash and left the theme choosing the text colour,
+ * so one side of the text ratio belonged to us and the other to whoever wrote
+ * the theme. Monokai puts #AE81FF on it: 2.73:1, down from 5.23:1 with no
+ * highlight at all. Lowering the alpha did not rescue it, and three bundled
+ * themes are already below 4.5:1 before anything is drawn, so no absolute bar
+ * was even reachable.
+ *
+ * Owning both sides fixes it by construction. The badge sets its own
+ * background and its own foreground, so the text ratio is the same in every
+ * theme, including ones written after this — 9.36:1 on dark, 5.54:1 on light.
+ * The styles that draw no background set no colours at all, which is equally
+ * safe: the text then keeps exactly the contrast the theme gave it.
  */
 
 import { describe, it } from 'node:test';
@@ -42,29 +50,26 @@ const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'ut
  * decoration measured rgb(5, 80, 174) for a date, which is #0550AE below.
  */
 const THEMES = [
+	{ name: 'Abyss', kind: 'dark', background: '#000C18', date: '#F280D0' },
 	{ name: '2026 Dark', kind: 'dark', background: '#121314', date: '#79C0FF' },
 	{ name: '2026 Light', kind: 'light', background: '#FFFFFF', date: '#0550AE' },
 	{ name: 'Dark Modern', kind: 'dark', background: '#1F1F1F', date: '#CCCCCC' },
 	{ name: 'Dark+', kind: 'dark', background: '#1E1E1E', date: '#D4D4D4' },
+	{ name: 'Kimbie Dark', kind: 'dark', background: '#221A0F', date: '#F79A32' },
 	{ name: 'Light Modern', kind: 'light', background: '#FFFFFF', date: '#3B3B3B' },
 	{ name: 'Light+', kind: 'light', background: '#FFFFFF', date: '#000000' },
+	{ name: 'Monokai', kind: 'dark', background: '#272822', date: '#AE81FF' },
+	{ name: 'Monokai Dimmed', kind: 'dark', background: '#1E1E1E', date: '#8080FF' },
+	{ name: 'Quiet Light', kind: 'light', background: '#F5F5F5', date: '#9C5D27' },
+	{ name: 'Red', kind: 'dark', background: '#390000', date: '#994646' },
+	{ name: 'Solarized Dark', kind: 'dark', background: '#002B36', date: '#CB4B16' },
+	{ name: 'Solarized Light', kind: 'light', background: '#FDF6E3', date: '#CB4B16' },
+	{ name: 'Tomorrow Night Blue', kind: 'dark', background: '#002451', date: '#FFFFFF' },
 	{ name: 'High Contrast Black', kind: 'highContrast', background: '#000000', date: '#FFFFFF' },
 	{ name: 'High Contrast Light', kind: 'highContrastLight', background: '#FFFFFF', date: '#000000' },
 ];
 
-/**
- * editorWarning.foreground, which the border defaults to.
- *
- * From VS Code's built-in colour registry, not from any theme file: the
- * themes do not set it. The light value is confirmed against a running
- * editor, where the decoration measured rgb(191, 136, 3) = #BF8803.
- */
-const EDITOR_WARNING = {
-	dark: '#CCA700',
-	light: '#BF8803',
-	highContrast: '#FFCC00',
-	highContrastLight: '#BF8803',
-};
+const TIERS = ['overdueDueDate', 'criticallyOverdueDueDate'];
 
 function parse(colour) {
 	const digits = colour.replace('#', '');
@@ -118,70 +123,93 @@ describe('contrast maths', () => {
 	});
 
 	it('composites alpha the way a renderer does', () => {
-		// Half of black over white is mid grey.
 		const half = composite(parse('#00000080'), parse('#FFFFFF'));
 		assert.ok(Math.abs(half.r - 127.5) < 1);
-		// A fully opaque colour ignores what is under it.
 		assert.deepEqual(composite(parse('#123456'), parse('#FFFFFF')), { r: 0x12, g: 0x34, b: 0x56, alpha: 1 });
 	});
 });
 
 describe('the overdue highlight is legible', () => {
-	it('keeps the date readable on the highlight, in every default theme', () => {
+	it('keeps the date readable on the badge, in every bundled theme', () => {
+		// Both sides of this ratio are ours, so it does not depend on the
+		// theme at all - the same pair of colours in all seventeen. That is
+		// the point. The first attempt owned only the background and let the
+		// theme keep the text colour, and Monokai put #AE81FF on the amber:
+		// 2.73:1, down from 5.23:1 with no highlight at all.
 		for (const theme of THEMES) {
-			const wash = parse(contributed('xit.overdueDueDateBackground', theme.kind));
-			const behind = composite(wash, parse(theme.background));
-			const ratio = contrast(parse(theme.date), behind);
+			for (const tier of TIERS) {
+				const background = parse(contributed(`xit.${tier}Background`, theme.kind));
+				const foreground = parse(contributed(`xit.${tier}Foreground`, theme.kind));
+				const ratio = contrast(foreground, composite(background, parse(theme.background)));
 
-			assert.ok(ratio >= 4.5,
-				`${theme.name}: a due date on the overdue highlight is ${ratio.toFixed(2)}:1, below the 4.5:1 WCAG asks for body text`);
+				assert.ok(ratio >= 4.5,
+					`${theme.name}, ${tier}: text on the badge is ${ratio.toFixed(2)}:1, below the 4.5:1 WCAG asks for body text`);
+			}
 		}
 	});
 
-	it('keeps the highlight visible against the editor, in every default theme', () => {
-		// The border carries this, not the background. Its default is
-		// editorWarning.foreground, which is chosen to be visible.
+	it('keeps the mark visible against the editor, in every bundled theme', () => {
+		// SC 1.4.11, for the badge itself and for the border and underline
+		// styles, which draw nothing else.
 		for (const theme of THEMES) {
-			const border = contributed('xit.overdueDueDateBorder', theme.kind);
-			assert.equal(border, 'editorWarning.foreground');
+			for (const tier of TIERS) {
+				for (const part of ['Background', 'Border']) {
+					const mark = parse(contributed(`xit.${tier}${part}`, theme.kind));
+					const ratio = contrast(composite(mark, parse(theme.background)), parse(theme.background));
 
-			const ratio = contrast(parse(EDITOR_WARNING[theme.kind]), parse(theme.background));
-			assert.ok(ratio >= 3,
-				`${theme.name}: the overdue border is ${ratio.toFixed(2)}:1 against the editor background, below the 3:1 WCAG asks for a non-text indicator`);
+					assert.ok(ratio >= 3,
+						`${theme.name}, ${tier}${part}: ${ratio.toFixed(2)}:1 against the editor background, below the 3:1 WCAG asks for a non-text indicator`);
+				}
+			}
 		}
 	});
 
-	it('does not rely on the background alone, because it cannot', () => {
-		// The reason the border exists. If a wash ever did reach 3:1 on its
-		// own the border would be redundant, and this would be worth
-		// revisiting - so it is asserted rather than assumed.
-		const reachable = THEMES.some((theme) => {
-			const wash = parse(contributed('xit.overdueDueDateBackground', theme.kind));
-			return contrast(composite(wash, parse(theme.background)), parse(theme.background)) >= 3;
-		});
-		assert.equal(reachable, false, 'a background wash now reaches 3:1 on its own; the border may be unnecessary');
-	});
-
-	it('uses a translucent wash, so the theme colours the date', () => {
-		// An opaque background would hide nothing, but a translucent one keeps
-		// the highlight working with any theme rather than only with the ones
-		// measured here.
-		for (const kind of ['dark', 'light', 'highContrast', 'highContrastLight']) {
-			const wash = parse(contributed('xit.overdueDueDateBackground', kind));
-			assert.ok(wash.alpha < 1, `the ${kind} overdue background is opaque`);
-			assert.ok(wash.alpha > 0.1, `the ${kind} overdue background is too faint to see at all`);
-		}
-	});
-
-	it('does not set a foreground colour', () => {
-		// A decoration's `color` wins over the TextMate token, so setting one
-		// replaces the theme's date colour rather than adding to it, and the
-		// date stops reading as a date.
+	it('tells the two severities apart by more than colour', () => {
+		// The two badges are chosen to weigh the same, which is what makes
+		// them read as one family. It also means hue is all that separates
+		// them - 1.42:1 of luminance on light themes - and amber against red
+		// is exactly the pair red-green colour blindness collapses.
+		//
+		// WCAG SC 1.4.1: "Color is not used as the only visual means of
+		// conveying information." So the critical tier is bold as well as
+		// red, and this is the test that keeps it that way. It asserts the
+		// difference rather than a contrast number, because raising the
+		// contrast between them is not the fix - it would break the family
+		// resemblance and still leave colour doing all the work.
 		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
-		const block = source.slice(source.indexOf('createTextEditorDecorationType'));
-		const options = block.slice(0, block.indexOf('});'));
-		assert.doesNotMatch(options, /(^|\s)color:/, 'the overdue decoration sets a foreground colour');
-		assert.match(options, /backgroundColor:/);
-		assert.match(options, /borderColor:/);
+		const options = source.slice(source.indexOf('function renderOptions'), source.indexOf('function registerOverdueDecoration'));
+
+		assert.match(options, /tier === 'critical'[\s\S]*?fontWeight/,
+			'the critical tier is distinguished only by colour');
+		assert.equal([...options.matchAll(/fontWeight/g)].length, 1,
+			'the ordinary tier is bold too, so weight no longer distinguishes them');
+	});
+
+	it('never paints a background without also setting the foreground', () => {
+		// The rule the first attempt broke. A background the extension owns,
+		// under text the theme owns, is a pair of colours that have never met.
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		const options = source.slice(source.indexOf('function renderOptions'), source.indexOf('function registerOverdueDecoration'));
+
+		// The two assignments must sit together, with nothing but whitespace
+		// between them, so neither can be moved or removed on its own.
+		assert.match(options, /options\.backgroundColor = new vscode\.ThemeColor\(colours\.background\);\s*\n\s*options\.color = new vscode\.ThemeColor\(colours\.foreground\);/,
+			'a background is painted without the matching foreground beside it');
+
+		// And nowhere else may paint one.
+		const backgrounds = [...options.matchAll(/backgroundColor/g)];
+		assert.equal(backgrounds.length, 1, 'more than one place paints a background');
+	});
+
+	it('offers every style the setting advertises', () => {
+		const styles = manifest.contributes.configuration.properties['xit.overdueDueDateStyle'];
+		assert.deepEqual(styles.enum, ['border-and-background', 'background', 'border', 'underline']);
+		assert.equal(styles.default, 'border-and-background');
+		assert.equal(styles.enumDescriptions.length, styles.enum.length);
+
+		const source = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+		for (const style of styles.enum) {
+			assert.ok(source.includes(`'${style}'`), `${style} is offered but never drawn`);
+		}
 	});
 });
