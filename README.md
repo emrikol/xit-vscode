@@ -360,6 +360,33 @@ One consequence worth knowing if you read the source. `collect()` is a pure func
 
 Nothing cascades. Checking an item does not check what waits on it, and nothing reorders itself — a dependency describes the world, it does not get to edit your file.
 
+## Tag Values
+
+An unquoted tag value runs to whitespace, minus trailing punctuation.
+
+```
+[ ] Water the plants #repeat=+7d
+[ ] Write the report #est=1.5h
+[ ] Post it #after=linked.xit#k3f9
+[ ] Ship it #branch=feature/login-v2, then tell the team
+```
+
+The last one gives `feature/login-v2` — the comma is trimmed, because a value should be able to end a clause.
+
+**This is a fork,** and it replaced two bugs rather than one feature. Spec §Tag allows only letters, digits, `_` and `-` unquoted, which meant `#repeat=+7d` parsed as `#repeat=` with **no value at all** and `#est=1.5h` parsed as `#est=1`. Both silently. The decimal estimate this README documented had never once worked. Widening the set a character at a time was the wrong shape of fix, so the rule changed instead.
+
+Trailing `.` `,` `;` `:` `!` `?` `)` `]` `}` and quotes are trimmed. A leading quote is excluded, so `#tag="unterminated` still falls to the specification's rule that an unclosed value is disregarded.
+
+**Tag names are unchanged, and deliberately so.** The syntax guide pins this in `tags/2`, and the examples are the argument:
+
+```
+[ ] This is a #tag.      → #tag
+[ ] (#tag)               → #tag
+[ ] Tags: #tag1/#tag2    → two tags
+```
+
+A name that took any printable character could never end a sentence. A value gets the same courtesy through the trailing trim; a name gets it by staying narrow.
+
 ## Time Estimates
 
 `#est=2h` on an item, and the workspace view totals each group beside its count.
@@ -478,7 +505,7 @@ A leading `+` counts from the day the item was checked rather than from its due 
 | `#repeat=7d` | Seven days after it was **due**. Late payment does not move the next rent day. |
 | `#repeat=+7d` | Seven days after you **checked it**. Water the plants three days late and the next watering is seven days from then, not four days away. |
 
-**`+` and `.` are legal tag value characters in this fork,** and `+` had to become one for this to work at all. Spec §Tag allows only letters, digits, `_` and `-` in an unquoted value, so `#repeat=+7d` parsed as `#repeat=` with no value — silently, which is the format doing exactly what the Problems panel now reports elsewhere. `.` came from the same hole: `#est=1.5h` parsed as `#est=1`, so the decimal estimate this README documents never worked. Both cost nothing — no corpus example has an unquoted `+`, or a `.` in or after an unquoted value, and `tags/7`'s `#tag='v!a.l?u+e'` is quoted, which always worked. Tag *names* are unchanged, so `[ ] This is a #tag.` still ends at the `#tag`.
+**An unquoted tag value takes almost any character in this fork.** See [Tag Values](#tag-values) — this is one of the things that needed fixing for it to work at all.
 
 ## Outline and Folding
 

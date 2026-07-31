@@ -215,38 +215,47 @@ describe('what completion draws on', () => {
 	});
 });
 
-describe('a plus and a dot in a value, which is a fork', () => {
-	it('is read as part of the value', () => {
-		// Spec §Tag allows only letters, digits, `_` and `-` unquoted, so this
-		// parsed as `#repeat=` with no value at all - silently. A whole
-		// feature did nothing and nothing said why.
+describe('an unquoted value takes almost anything, which is a fork', () => {
+	// Spec §Tag allows only letters, digits, `_` and `-`, which cost two bugs
+	// one character at a time - `#repeat=+7d` parsed as `#repeat=` with no
+	// value, and `#est=1.5h` as `#est=1`, both in silence. Widening it a
+	// character at a time was the wrong shape of fix.
+	it('takes the characters that used to be silently dropped', () => {
 		assert.equal(tagsOn('[ ] x #repeat=+7d')[0].value, '+7d');
-		assert.equal(tagsOn('[ ] x #offset=+3')[0].value, '+3');
-	});
-
-	it('costs no conformance divergence, because no example has one unquoted', () => {
-		// tags/7 has `#tag='v!a.l?u+e'`, inside quotes, which always worked.
-		assert.equal(tagsOn("[ ] #tag='v!a.l?u+e'")[0].value, 'v!a.l?u+e');
-	});
-
-	it('leaves names alone, where a leading plus reads as nothing anyone wants', () => {
-		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
-	});
-
-	it('reads a dot as part of the value too', () => {
-		// `#est=1.5h` parsed as `#est=1`, so a decimal estimate was documented
-		// and never worked. The unit test exercised the parser directly and
-		// never went through a real tag, which is how it survived.
 		assert.equal(tagsOn('[ ] x #est=1.5h')[0].value, '1.5h');
+	});
+
+	it('takes anything else printable too', () => {
+		assert.equal(tagsOn('[ ] x #tag=a/b:c@d%e')[0].value, 'a/b:c@d%e');
+		assert.equal(tagsOn('[ ] x #tag=a+b!c')[0].value, 'a+b!c');
 		assert.equal(tagsOn('[ ] x #v=1.2.3')[0].value, '1.2.3');
 	});
 
-	it('leaves a name terminated at a dot, which the corpus requires', () => {
-		// tags/2: "[ ] This is a #tag." expects `#tag`, not `#tag.`.
-		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
+	it('lets a cross-file reference go unquoted', () => {
+		// A `#` inside the value is unambiguous, because a tag needs a space
+		// or punctuation before its hash and a letter sits there.
+		assert.equal(tagsOn('[ ] x #after=linked.xit#k3f9')[0].value, 'linked.xit#k3f9');
 	});
 
-	it('still terminates a value at anything else', () => {
-		assert.equal(tagsOn('[ ] x #tag=a+b!c')[0].value, 'a+b');
+	it('trims trailing punctuation, so a value can end a sentence', () => {
+		// The same courtesy the name already gets from tags/2.
+		assert.equal(tagsOn('[ ] x #tag=value.')[0].value, 'value');
+		assert.equal(tagsOn('[ ] x (#tag=bar)')[0].value, 'bar');
+		assert.equal(tagsOn('[ ] x #tag=urgent!')[0].value, 'urgent');
+	});
+
+	it('still drops an unterminated quoted value rather than reading it raw', () => {
+		// tags/9: "the value is disregarded altogether". A leading quote is
+		// excluded from the unquoted form so this rule survives the widening.
+		assert.equal(tagsOn('[ ] x #tag="unterminated')[0].value, null);
+	});
+
+	it('leaves the name narrow, which the corpus requires', () => {
+		// tags/2: a name that took any printable character could never end a
+		// sentence.
+		assert.deepEqual(tagsOn('[ ] This is a #tag.').map((tag) => tag.text), ['#tag']);
+		assert.deepEqual(tagsOn('[ ] x (#tag)').map((tag) => tag.text), ['#tag']);
+		assert.deepEqual(tagsOn('[ ] x #tag1/#tag2').map((tag) => tag.text), ['#tag1', '#tag2']);
+		assert.deepEqual(tagsOn('[ ] x #a+b').map((tag) => tag.text), ['#a']);
 	});
 });

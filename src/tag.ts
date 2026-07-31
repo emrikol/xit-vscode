@@ -77,10 +77,29 @@ function urlRanges(line: string): [number, number][] {
 	return [...line.matchAll(URL)].map((match) => [match.index, match.index + match[0].length]);
 }
 
+/**
+ * An unquoted tag value: everything up to whitespace, minus trailing punctuation.
+ *
+ * A fork, and a deliberately wide one. Spec §Tag allows only letters, digits,
+ * `_` and `-`, which cost two bugs one character at a time - `#repeat=+7d`
+ * parsed as `#repeat=` with no value, and `#est=1.5h` as `#est=1`, both in
+ * silence. Widening it character by character was the wrong shape of fix.
+ *
+ * Trailing `.,;:!?)]}` and quotes are trimmed, for exactly the reason the
+ * *name* stays narrow: `#tag=value.` ends a sentence, and `(#tag=bar)` is
+ * written in prose. The syntax guide pins that behaviour for names in tags/2 -
+ * `[ ] This is a #tag.` must give `#tag` - and a value wants the same courtesy.
+ *
+ * A leading quote is excluded so an unterminated quoted value still falls to
+ * the tags/9 rule, "the value is disregarded altogether", rather than being
+ * read raw.
+ */
+const UNQUOTED = String.raw`(?!['"])(?:[^\s]*[^\s.,;:!?)\]}'"])?`;
+
 const TAG = new RegExp(
 	'(?<=[\\s\\p{P}])'
 	+ '#(?<name>[\\p{L}\\d_-]+)'
-	+ '(?:=(?<value>\'[^\'\\n]*\'|"[^"\\n]*"|[\\p{L}\\d_+.-]+)?)?',
+	+ `(?:=(?<value>'[^'\\n]*'|"[^"\\n]*"|${UNQUOTED})?)?`,
 	'gu',
 );
 
