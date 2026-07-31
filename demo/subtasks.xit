@@ -1,24 +1,25 @@
 Subtasks are a fork of the format
 [ ] Ship the release
-  [x] Write the notes
-  [x] Tag the commit
-  [ ] Publish
+	[x] Write the notes
+	[x] Tag the commit
+	[ ] Publish
 [x] Tidy the office
-  [x] Move the plants
-  [x] Find whose mug that is
+	[x] Move the plants
+	[x] Find whose mug that is
 
-Indent with two spaces or more, or a tab
+Tabs or two spaces or more, to any depth
 [ ] Any depth works
-  [ ] Two spaces
-      [ ] Six more
-          [ ] And deeper still
+	[ ] One tab
+		[ ] Two tabs
+			[ ] Three
 
 A subtask keeps its own due date
 [ ] Parent -> 2026-12-31
-  [ ] Child has its own -> 2026-08-14
-  [ ] So does this one -> 2026-09-01
+	[ ] Child has its own -> 2026-08-14
+	[ ] So does this one -> 2026-09-01
 
-Description continuations still work
+Descriptions still continue, with a tab or four spaces
 [ ] This one has a description ...
-    ... continued on the next line
-  [ ] and a subtask under that
+	... continued with a tab
+	[ ] and a subtask under that
+		... which continues too

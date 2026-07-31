@@ -119,6 +119,8 @@ Check the last outstanding subtask and the parent checks itself, all the way up 
 
 Depth is compared as a prefix, not as a width, so a tab-indented nest and a space-indented one do not nest inside each other. Pick one. Four tabs is four characters and six spaces is six, so measuring by width would make the deeper-looking line the shallower one.
 
+Tabs work for description continuations too, which the specification does not allow — it asks for exactly four spaces, and the syntax guide lists a tab as invalid. Without that second fork, the Tab key would nest a subtask but break a continuation, and you would need tabs and spaces in the same document. `.xit` files also default to `editor.insertSpaces: false`, so Tab inserts a real tab; override it per language if you prefer spaces, which still work everywhere.
+
 **This is a fork of the format.** [Discussion #2](https://github.com/jotaen/xit/discussions/2) is the most-upvoted open request on [x]it!, at 21, and jotaen has not adopted it — his stated hesitation is whether editors can implement it at all. Other xit tools will read a subtask as the parent's description text, which still reads correctly to a person, but the nesting is ours alone.
 
 The one thing it costs: a description continuation can no longer begin with a literal `[ ]`, because that is now a subtask. The syntax guide has an example of exactly that, and `test/conformance.test.mjs` records the divergence.

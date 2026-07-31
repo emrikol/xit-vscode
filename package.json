@@ -116,6 +116,12 @@
                 }
             }
         },
+        "configurationDefaults": {
+            "[xit]": {
+                "editor.insertSpaces": false,
+                "editor.tabSize": 4
+            }
+        },
         "colors": [
             {
                 "id": "xit.overdueDueDateBackground",

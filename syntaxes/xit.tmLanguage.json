@@ -49,7 +49,7 @@
 					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
 				}
 			},
-			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -70,7 +70,7 @@
 					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
 			"patterns": [
 				{
@@ -93,7 +93,7 @@
 			]
 		},
 		"open-subitem": {
-			"comment": "A subtask: an item indented from its parent by two or more spaces, or by one tab. This rule is reachable only from inside another item, which is what stops an indented checkbox with nothing above it from counting - the specification says a checkbox cannot be preceded by whitespace, and outside a parent that still holds. The end pattern back-references the parent's indentation, which is the only way a nested rule can find its parent's edge: TextMate cannot count indentation, but it can compare a line against the exact prefix that was matched. Nesting is a fork of the specification, which has none - see discussion #2.",
+			"comment": "A subtask: an item indented from its parent by two or more spaces, or by one tab. This rule is reachable only from inside another item, which is what stops an indented checkbox with nothing above it from counting - the specification says a checkbox cannot be preceded by whitespace, and outside a parent that still holds. The end pattern back-references the parent's indentation, which is the only way a nested rule can find its parent's edge: TextMate cannot count indentation, but it can compare a line against the exact prefix that was matched. Nesting is a fork of the specification, which has none - see discussion #2. A tab also continues a description, which the specification does not allow - it asks for exactly four spaces, and the syntax guide lists a tab as invalid. Forked so that the Tab key works everywhere in the file rather than nesting subtasks but breaking continuations.",
 			"begin": "^([ ]{2,}|\\t+)(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
 				"2": {
@@ -106,7 +106,7 @@
 					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
 				}
 			},
-			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -127,7 +127,7 @@
 					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"end": "^(?!\\1(?:    (?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
 			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
 			"patterns": [
 				{

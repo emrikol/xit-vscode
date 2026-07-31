@@ -424,6 +424,21 @@ describe('subtasks (fork, discussion #2)', () => {
 		assert.deepEqual(scoped(lines[3], CHECKBOX), []);
 	});
 
+	it('continues a description with a tab, which the spec does not allow', async () => {
+		// Spec §Description asks for exactly four spaces, and the syntax guide
+		// lists "\tinvalid (tab)" as invalid. Forked so the Tab key works
+		// everywhere in the file: without it, tabs would nest subtasks but
+		// break continuations, and you would need both in one document.
+		const lines = await tokenize('[ ] Item ...\n\t-> 2026-01-31');
+		assert.deepEqual(scoped(lines[1], DATE), ['-> 2026-01-31']);
+	});
+
+	it('continues a subtask with a deeper tab', async () => {
+		const lines = await tokenize('[ ] Parent\n\t[ ] Child ...\n\t\t-> 2026-01-31');
+		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
+		assert.deepEqual(scoped(lines[2], DATE), ['-> 2026-01-31']);
+	});
+
 	it('carries the closed styling into a subtask', async () => {
 		const lines = await tokenize('[ ] Parent\n  [x] Done child');
 		assert.deepEqual(scoped(lines[1], CHECKED), ['[x]']);
