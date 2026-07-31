@@ -74,15 +74,16 @@ const LEDGER = {
 	},
 	sort: {
 		must: { priority: 'sort.test.mjs', due: 'sort.test.mjs', title: 'sort.test.mjs', nesting: 'sort.test.mjs',
-			comment: 'sort.test.mjs', start: 'sort.test.mjs', status: 'sort.test.mjs' },
-		gap: { ids: '#86' },
+			comment: 'sort.test.mjs', start: 'sort.test.mjs', status: 'sort.test.mjs',
+			ids: 'invariants.test.mjs' },
+		gap: {},
 		na: { tags: 'carried with the line', estimate: 'ranking by estimate is not what this sorts by',
 			directive: 'lives in a comment' },
 	},
 	archive: {
 		must: { status: 'archive.test.mjs', title: 'archive.test.mjs', comment: 'archive.test.mjs',
-			nesting: 'archive.test.mjs', directive: 'directive.test.mjs' },
-		gap: { ids: '#86' },
+			nesting: 'archive.test.mjs', directive: 'directive.test.mjs', ids: 'invariants.test.mjs' },
+		gap: {},
 		na: { priority: 'carried with the line', due: 'carried with the line',
 			start: 'carried with the line', tags: 'carried with the line', estimate: 'carried with the line' },
 	},
@@ -187,6 +188,16 @@ describe('every reader is classified against every element', () => {
 		}
 		assert.deepEqual(unproven, [],
 			`a cell claims to be covered and is not:\n  ${unproven.join('\n  ')}`);
+	});
+
+	it('has no gap left', () => {
+		// Every one of the 154 cells is now `must` with a test that exercises
+		// it, or `n/a` with a reason. This assertion is not decoration: it is
+		// what stops a future gap being parked here indefinitely instead of
+		// being fixed, and it fails the moment one is added.
+		const open = Object.entries(LEDGER).flatMap(([reader, { gap }]) =>
+			Object.entries(gap).map(([element, task]) => `${reader} x ${element}: ${task}`));
+		assert.deepEqual(open, [], `cells still recorded as gaps:\n  ${open.join('\n  ')}`);
 	});
 
 	it('gives every gap a task number', () => {
