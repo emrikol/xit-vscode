@@ -96,6 +96,26 @@ Comments are a fork of the [x]it! specification, not part of the official
 format, so other [x]it! tools will not understand them. See
 [emrikol/xit](https://github.com/emrikol/xit).
 
+## In Markdown
+
+A fenced code block tagged `xit` is highlighted inside any Markdown file.
+
+````markdown
+Notes from the meeting.
+
+```xit
+Follow-ups
+[ ] ! Write it up -> 2026-08-14 #work
+[x] Book the room
+```
+````
+
+This is the format author's own suggestion for keeping a list inside a larger
+document, from [discussion #10](https://github.com/jotaen/xit/discussions/10).
+Nothing about the fence is special to this extension: ` ``` ` and `~~~` both
+work, the language name is case-insensitive, and the block is ordinary
+Markdown everywhere else.
+
 ## Development
 
 ```sh

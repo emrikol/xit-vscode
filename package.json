@@ -49,6 +49,7 @@
         "package": "npm run compile && node scripts/build.mjs --production",
         "watch": "node scripts/build.mjs --watch",
         "icons": "sh scripts/render-icons.sh",
+        "verify:injection": "node scripts/verify-markdown-injection.mjs",
         "corpus": "node scripts/fetch-corpus.mjs",
         "corpus:check": "node scripts/fetch-corpus.mjs --check",
         "open-web": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. test/fixtures",
@@ -97,6 +98,16 @@
                 "language": "xit",
                 "scopeName": "source.xit",
                 "path": "./syntaxes/xit.tmLanguage.json"
+            },
+            {
+                "scopeName": "markdown.xit.codeblock",
+                "path": "./syntaxes/xit.markdown.tmLanguage.json",
+                "injectTo": [
+                    "text.html.markdown"
+                ],
+                "embeddedLanguages": {
+                    "meta.embedded.block.xit": "xit"
+                }
             }
         ],
         "keybindings": [

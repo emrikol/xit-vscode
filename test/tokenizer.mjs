@@ -26,9 +26,24 @@ export const FIXTURE_PATH = resolve(here, 'fixtures/reference.xit');
 
 const SCOPE_NAME = 'source.xit';
 
-let grammarPromise;
+/**
+ * Every grammar this extension ships, by the scope name it declares.
+ *
+ * The Markdown one is here so its fenced-code rule can be tested without a
+ * Markdown grammar to inject into. Loaded on its own it still tokenizes a
+ * fenced block, because its patterns are top-level; the injectionSelector
+ * only decides where VS Code splices it in. That keeps the test independent
+ * of a downloaded copy of VS Code, which only exists after `test:integration`
+ * has run once and is not in the repository.
+ */
+const GRAMMARS = {
+	[SCOPE_NAME]: GRAMMAR_PATH,
+	'markdown.xit.codeblock': resolve(REPO_ROOT, 'syntaxes/xit.markdown.tmLanguage.json'),
+};
 
-async function loadGrammar() {
+const grammarPromises = new Map();
+
+async function loadGrammar(scopeName) {
 	await oniguruma.loadWASM(await readFile(require.resolve('vscode-oniguruma/release/onig.wasm')));
 
 	const registry = new textmate.Registry({
@@ -36,20 +51,21 @@ async function loadGrammar() {
 			createOnigScanner: (patterns) => new oniguruma.OnigScanner(patterns),
 			createOnigString: (string) => new oniguruma.OnigString(string),
 		}),
-		loadGrammar: async (scopeName) => {
-			if (scopeName !== SCOPE_NAME) return null;
-			return textmate.parseRawGrammar(await readFile(GRAMMAR_PATH, 'utf8'), GRAMMAR_PATH);
+		loadGrammar: async (wanted) => {
+			const path = GRAMMARS[wanted];
+			if (!path) return null;
+			return textmate.parseRawGrammar(await readFile(path, 'utf8'), path);
 		},
 	});
 
-	const grammar = await registry.loadGrammar(SCOPE_NAME);
-	if (!grammar) throw new Error(`could not load grammar for ${SCOPE_NAME}`);
+	const grammar = await registry.loadGrammar(scopeName);
+	if (!grammar) throw new Error(`could not load grammar for ${scopeName}`);
 	return grammar;
 }
 
-export function grammar() {
-	grammarPromise ??= loadGrammar();
-	return grammarPromise;
+export function grammar(scopeName = SCOPE_NAME) {
+	if (!grammarPromises.has(scopeName)) grammarPromises.set(scopeName, loadGrammar(scopeName));
+	return grammarPromises.get(scopeName);
 }
 
 /**
@@ -60,10 +76,11 @@ export function grammar() {
  * in the editor.
  *
  * @param {string} text
+ * @param {string} [scopeName] which of this extension's grammars to use
  * @returns {Promise<Array<{ text: string, tokens: Array<{ text: string, scopes: string[] }> }>>}
  */
-export async function tokenize(text) {
-	const rules = await grammar();
+export async function tokenize(text, scopeName) {
+	const rules = await grammar(scopeName);
 	let stack = textmate.INITIAL;
 
 	return text.split(/\r?\n/).map((line) => {

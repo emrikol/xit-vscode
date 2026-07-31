@@ -1,0 +1,47 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "[x]it! in Markdown",
+	"scopeName": "markdown.xit.codeblock",
+	"comment": "Highlights ```xit fenced code blocks inside Markdown. This is jotaen's own suggestion for writing [x]it! inside another document, from Discussion #10, the most-upvoted open request on the format: \"another approach would be to make use of embedded code blocks\". The rule is modelled on the fenced_code_block_* rules in VS Code's own markdown grammar rather than written from scratch, because the details are load-bearing: `(^|\\G)` anchors each line, the backreferences to groups 2 and 3 close the block on a fence of the same character and the same indentation, and the inner begin/while rule is what keeps the embedded language from swallowing the closing fence.",
+	"injectionSelector": "L:text.html.markdown",
+	"patterns": [
+		{
+			"include": "#xit-code-block"
+		}
+	],
+	"repository": {
+		"xit-code-block": {
+			"begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(xit)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+			"name": "markup.fenced_code.block.markdown",
+			"end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+			"beginCaptures": {
+				"3": {
+					"name": "punctuation.definition.markdown"
+				},
+				"4": {
+					"name": "fenced_code.block.language.markdown"
+				},
+				"5": {
+					"name": "fenced_code.block.language.attributes.markdown"
+				}
+			},
+			"endCaptures": {
+				"3": {
+					"name": "punctuation.definition.markdown"
+				}
+			},
+			"patterns": [
+				{
+					"begin": "(^|\\G)(\\s*)(.*)",
+					"while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+					"contentName": "meta.embedded.block.xit",
+					"patterns": [
+						{
+							"include": "source.xit"
+						}
+					]
+				}
+			]
+		}
+	}
+}

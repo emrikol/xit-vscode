@@ -210,6 +210,32 @@ describe('contributed files', () => {
 		assert.equal(entry.scopeName, grammar.scopeName);
 	});
 
+	it('injects the Markdown grammar into Markdown, under its own scope', () => {
+		// A grammar contributed with injectTo must not also claim a language:
+		// it is spliced into someone else's, and it needs a scope name of its
+		// own so the two are not confused for one another.
+		const injection = manifest.contributes.grammars.find((entry) => entry.injectTo);
+		assert.ok(injection, 'no injection grammar contributed');
+		assert.deepEqual(injection.injectTo, ['text.html.markdown']);
+		assert.equal(injection.language, undefined);
+		assert.notEqual(injection.scopeName, grammar.scopeName);
+
+		const file = JSON.parse(readFileSync(contributedPath(injection.path), 'utf8'));
+		assert.equal(file.scopeName, injection.scopeName);
+		// Where VS Code splices it in. Naming a scope Markdown never produces
+		// is silent: the extension loads, and nothing is ever highlighted.
+		// scripts/verify-markdown-injection.mjs checks that end to end.
+		assert.equal(file.injectionSelector, `L:${injection.injectTo[0]}`);
+	});
+
+	it('maps the embedded scope back to the xit language', () => {
+		// Without this the fenced block is text as far as VS Code is
+		// concerned, so comment toggling and bracket behaviour inside it
+		// follow Markdown rather than xit.
+		const injection = manifest.contributes.grammars.find((entry) => entry.injectTo);
+		assert.deepEqual(injection.embeddedLanguages, { 'meta.embedded.block.xit': LANGUAGE_ID });
+	});
+
 	it('uses one language id throughout', () => {
 		assert.deepEqual(
 			manifest.contributes.languages.map((language) => language.id),

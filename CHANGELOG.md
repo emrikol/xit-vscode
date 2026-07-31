@@ -8,6 +8,14 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 ### Added
 
+- Highlighting for ```` ```xit ```` fenced code blocks in Markdown, so a list
+  can live inside a larger document. This is the format author's own
+  suggestion in [discussion #10](https://github.com/jotaen/xit/discussions/10),
+  the most-upvoted open request on the format.
+- A conformance suite built from the author's own
+  [syntax guide](https://xit.jotaen.net/syntax-guide). Every example on that
+  page is marked up with the token it is expected to be, which makes it an
+  oracle; it found four defects that the hand-written tests did not.
 - Web extension support. The extension now runs on vscode.dev and
   github.dev. It had no `browser` entry point, and an extension without one
   is ignored by the web extension host entirely.
