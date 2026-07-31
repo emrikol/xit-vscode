@@ -165,6 +165,11 @@
                     "type": "string",
                     "default": "Archive",
                     "description": "Title of the group finished items are moved under, at the end of the file."
+                },
+                "xit.estimateTag": {
+                    "type": "string",
+                    "default": "est",
+                    "description": "Name of the tag that carries a time estimate. Its value is a number and a unit: 30m, 2h, 1.5h, 1d or 1w. A day is eight hours and a week is five days, which only affects how totals read."
                 }
             }
         },

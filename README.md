@@ -311,6 +311,18 @@ They come from **the whole workspace**, not just the open file, which is the poi
 
 Names fold case and values do not, because the specification says so — §Tag makes names case-insensitive and values case-sensitive. So a name written both `#Work` and `#work` is offered once, spelled whichever way you use more often, while `#size=S` and `#size=s` are two different values and both are offered. Ties in spelling are broken by code-unit order rather than by locale, so the same workspace suggests the same spelling on every machine.
 
+## Time Estimates
+
+`#est=2h` on an item, and the workspace view totals each group beside its count.
+
+Values are a number and a unit: `30m`, `2h`, `1.5h`, `1d`, `1w`. A day is eight hours and a week is five days — a convention rather than a fact, written down because it changes how totals read. `xit.estimateTag` names the tag.
+
+A group with unestimated items in it shows `6h + 4`, not `6h`. A total that quietly leaves things out reads as "this group is six hours" when it is six hours plus however long four other things take, and a number that lies is worse than no number.
+
+It has its own parser rather than sharing the repeat interval's, and they are not duplicates: `2m` is two minutes here and two months there. That difference is the reason, not an oversight — there is no drift detector between them because there is no shared rule to drift from.
+
+A tag rather than an arrow, unlike the start date. The rule says syntax is for what you author, and an estimate *is* authored, so that alone would allow one. What decides it is cost: adding a single character to the status set touched eleven hand-written patterns across the grammar, the TypeScript and a test. An estimate is not a date and pairs with no existing arrow, so it buys none of that back.
+
 ## Archiving Finished Items
 
 **xit!: Archive Finished Items** moves everything checked or obsolete to a group at the end of the file, under a title (`xit.archiveTitle`, default `Archive`).

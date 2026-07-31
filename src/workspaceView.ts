@@ -9,7 +9,8 @@
 
 import * as vscode from 'vscode';
 
-import { Collected, Urgency, isOpen, overdueCount, urgencyOf } from './collect';
+import { Collected, Urgency, isOpen, overdueCount, totalEstimate, urgencyOf } from './collect';
+import { formatEstimate } from './estimate';
 import { todayFrom } from './dueDate';
 import { WorkspaceIndex } from './workspaceIndex';
 
@@ -56,7 +57,20 @@ class Provider implements vscode.TreeDataProvider<Element> {
 	getTreeItem(element: Element): vscode.TreeItem {
 		if (element instanceof Group) {
 			const item = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
-			item.description = String(element.rows.length);
+
+			// The count, and the work in it. A total that quietly leaves out
+			// unestimated items would read as "this group is six hours" when
+			// it is six hours plus however long four other things take, so
+			// the leftovers are named rather than dropped.
+			const { minutes, unestimated } = totalEstimate(element.rows.map((row) => row.item));
+			const total = minutes > 0
+				? unestimated > 0 ? `${formatEstimate(minutes)} + ${unestimated}` : formatEstimate(minutes)
+				: '';
+
+			item.description = [String(element.rows.length), total].filter(Boolean).join('  ');
+			item.tooltip = minutes > 0 && unestimated > 0
+				? `${formatEstimate(minutes)} estimated, and ${unestimated} item${unestimated === 1 ? '' : 's'} with no estimate.`
+				: undefined;
 			item.contextValue = 'xit.group';
 			return item;
 		}

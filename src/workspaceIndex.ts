@@ -22,6 +22,11 @@ export interface FileItems {
 
 const PATTERN = '**/*.xit';
 
+/** The configured estimate tag, read where the files are read. */
+function estimateTag(): string {
+	return vscode.workspace.getConfiguration('xit').get<string>('estimateTag', 'est');
+}
+
 /** How long to wait after a keystroke before re-reading a document. */
 const SETTLE = 300;
 
@@ -115,7 +120,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 	private fromDocument(document: vscode.TextDocument) {
 		const lines: string[] = [];
 		for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
-		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines), tags: tagUsage(lines) });
+		this.files.set(document.uri.toString(), { uri: document.uri, items: collect(lines, estimateTag()), tags: tagUsage(lines) });
 	}
 
 	private async read(uri: vscode.Uri): Promise<void> {
@@ -129,7 +134,7 @@ export class WorkspaceIndex implements vscode.Disposable {
 		try {
 			const bytes = await vscode.workspace.fs.readFile(uri);
 			const lines = new TextDecoder().decode(bytes).split(/\r?\n/);
-			this.files.set(uri.toString(), { uri, items: collect(lines), tags: tagUsage(lines) });
+			this.files.set(uri.toString(), { uri, items: collect(lines, estimateTag()), tags: tagUsage(lines) });
 		} catch {
 			// Deleted between being found and being read, or unreadable. Not
 			// worth a message: the watcher will bring it back if it returns.

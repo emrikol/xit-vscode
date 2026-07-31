@@ -15,6 +15,7 @@
 import { Status } from './checkbox';
 import { commentLines } from './comment';
 import { Day, daysBetween, dueDatesOn, startDatesOn, startOfPeriod } from './dueDate';
+import { estimateOn } from './estimate';
 import { tags } from './tag';
 import { items } from './tree';
 
@@ -31,6 +32,8 @@ export interface Collected {
 	start: { text: string; startOfPeriod: Day } | null;
 	/** Folded tag names, so `#Work` and `#work` are one tag. */
 	tags: string[];
+	/** How long it is expected to take, in minutes, or null. */
+	estimate: number | null;
 	parent: number | null;
 	children: number[];
 }
@@ -41,7 +44,7 @@ export interface Collected {
  * Items inside a comment are left out. Parked work is not outstanding work,
  * and a list of what is outstanding should not carry it.
  */
-export function collect(lines: readonly string[]): Collected[] {
+export function collect(lines: readonly string[], estimateTag = 'est'): Collected[] {
 	const parked = commentLines(lines);
 	const all = items(lines);
 	const allTags = tags(lines);
@@ -83,6 +86,7 @@ export function collect(lines: readonly string[]): Collected[] {
 				due: due ? { text: due.text, endOfPeriod: due.endOfPeriod } : null,
 				start: start ? { text: start.text, startOfPeriod: startOfPeriod(start.parts) } : null,
 				tags: [...new Set(allTags.filter((tag) => tag.item === item.line).map((tag) => tag.key))],
+				estimate: estimateOn(text, estimateTag),
 				parent: item.parent,
 				children: item.children,
 			};
@@ -160,4 +164,24 @@ export function overdueCount(files: { items: Collected[] }[], thresholds: Thresh
 	}
 
 	return { overdue, critical };
+}
+
+/**
+ * The estimates of everything outstanding in a list, totalled.
+ *
+ * Returns the total and how many items had no estimate, because a total that
+ * quietly leaves things out reads as "this group is six hours" when it is six
+ * hours plus however long four unestimated items take. Saying "6h + 4" is
+ * honest; saying "6h" is not.
+ */
+export function totalEstimate(items: readonly Collected[]): { minutes: number; unestimated: number } {
+	let minutes = 0;
+	let unestimated = 0;
+
+	for (const item of items) {
+		if (item.estimate === null) unestimated += 1;
+		else minutes += item.estimate;
+	}
+
+	return { minutes, unestimated };
 }
