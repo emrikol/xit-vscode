@@ -1,17 +1,20 @@
 /**
- * Integration tests. These run inside a real Extension Development Host,
- * driven by @vscode/test-cli, so they exercise the parts the unit tests
- * cannot reach: activation, command registration, and the edits themselves.
+ * Integration tests. These run inside a real Extension Development Host, so
+ * they exercise the parts the unit tests cannot reach: activation, command
+ * registration, and the edits themselves.
  *
- * Run them with `npm run test:integration`. They are not part of `npm test`,
- * which stays fast enough to run on every commit.
+ * They run in both hosts, from the same source: `npm run test:web` in a
+ * headless browser, `npm run test:integration` in desktop Electron. Nothing
+ * here may assume Node. No require(), no fs, no path, no process. See
+ * ./manifest.ts for the one place that used to.
+ *
+ * They are not part of `npm test`, which stays fast enough for every commit.
  */
 
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
-const manifest = require('../../package.json');
-const EXTENSION_ID = `${manifest.publisher}.${manifest.name}`;
+import { COMMANDS, EXTENSION_ID } from './manifest';
 
 /** Open a scratch xit document and put the cursor on it. */
 async function openXit(content: string): Promise<vscode.TextEditor> {
@@ -42,8 +45,8 @@ describe('activation', () => {
 	it('registers every command it contributes', async () => {
 		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();
 		const registered = await vscode.commands.getCommands(true);
-		for (const command of manifest.contributes.commands) {
-			assert.ok(registered.includes(command.command), `${command.command} is not registered`);
+		for (const command of COMMANDS) {
+			assert.ok(registered.includes(command), `${command} is not registered`);
 		}
 	});
 });

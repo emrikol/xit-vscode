@@ -18,6 +18,7 @@ import { REPO_ROOT, GRAMMAR_PATH } from './tokenizer.mjs';
 const manifest = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf8'));
 const grammar = JSON.parse(readFileSync(GRAMMAR_PATH, 'utf8'));
 const extensionSource = readFileSync(resolve(REPO_ROOT, 'src/extension.ts'), 'utf8');
+const testManifestSource = readFileSync(resolve(REPO_ROOT, 'src/test/manifest.ts'), 'utf8');
 
 const LANGUAGE_ID = 'xit';
 
@@ -28,6 +29,15 @@ function registeredCommands() {
 		ids.add(id);
 	}
 	return ids;
+}
+
+/** A string or string-array constant exported by src/test/manifest.ts. */
+function testConstant(name) {
+	const match = testManifestSource.match(new RegExp(`export const ${name} = (\\[[^\\]]*\\]|'[^']*')`));
+	assert.ok(match, `src/test/manifest.ts does not export ${name}`);
+	return match[1].startsWith('[')
+		? [...match[1].matchAll(/'([^']*)'/g)].map(([, value]) => value)
+		: match[1].slice(1, -1);
 }
 
 /** A file that the packaged extension must contain, resolved from the repo root. */
@@ -326,6 +336,27 @@ describe('icons', () => {
 			assert.ok(existsSync(contributedPath(png)), `${png} does not exist`);
 			assert.ok(existsSync(contributedPath(svg)), `${svg} does not exist`);
 		}
+	});
+});
+
+describe('the integration tests copy of the manifest', () => {
+	// src/test/manifest.ts holds publisher, name and the command ids as
+	// literals, because the integration tests also run in a web worker, where
+	// require('../../package.json') cannot work. Literals drift. This is the
+	// thing that stops them: without it, a rename would leave the integration
+	// tests looking for an extension id that no longer exists, and they would
+	// fail somewhere far from the cause.
+
+	it('agrees with package.json on the extension identity', () => {
+		assert.equal(testConstant('PUBLISHER'), manifest.publisher);
+		assert.equal(testConstant('NAME'), manifest.name);
+	});
+
+	it('lists exactly the contributed commands', () => {
+		assert.deepEqual(
+			testConstant('COMMANDS'),
+			manifest.contributes.commands.map((command) => command.command),
+		);
 	});
 });
 
