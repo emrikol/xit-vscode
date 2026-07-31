@@ -29,6 +29,22 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+
+const require_ = createRequire(import.meta.url);
+const { collect, urgencyOf, isOpen } = require_('../out/collect.js');
+const { outline } = require_('../out/outline.js');
+const { folds } = require_('../out/folding.js');
+const { sortGroup } = require_('../out/sort.js');
+const { archive } = require_('../out/archive.js');
+const { migrate } = require_('../out/migrate.js');
+const { problems } = require_('../out/diagnostics.js');
+const { alignments } = require_('../out/align.js');
+const { blocked, linkProblems } = require_('../out/link.js');
+const { nextOccurrence } = require_('../out/repeat.js');
+const { dueDatesOn } = require_('../out/dueDate.js');
+const { tagUsage } = require_('../out/tag.js');
+const { directives } = require_('../out/directive.js');
 
 /** How to recognise a document exercising each element, in a test's source. */
 const ELEMENTS = {
@@ -135,11 +151,11 @@ const LEDGER = {
 	},
 	tag: {
 		must: { tags: 'tag.test.mjs', ids: 'tag.test.mjs', estimate: 'tag.test.mjs',
-			nesting: 'tag.test.mjs', comment: 'tag.test.mjs' },
+			nesting: 'tag.test.mjs', comment: 'tag.test.mjs', directive: 'directive.test.mjs' },
 		gap: {},
 		na: { status: 'a tag is read from a description, whatever the checkbox',
 			priority: 'read separately', due: 'read separately', start: 'read separately',
-			title: 'has no description', directive: 'read by src/directive.ts, not here' },
+			title: 'has no description' },
 	},
 	cycle: {
 		must: { tags: 'cycle.test.mjs' },
@@ -163,6 +179,46 @@ const LEDGER = {
 			nesting: 'file-level, not per item', ids: 'not a directive key', estimate: 'not a directive key' },
 	},
 };
+
+/**
+ * A reader, reduced to structure, and a pair of documents differing only in
+ * one element's meaning. Used to check that an `n/a` is still true.
+ */
+const BEHAVIOUR = {
+	// The name is the description copied verbatim, so it is left out: a tag
+	// appearing in it is not the outline *interpreting* the tag.
+	outline: (lines) => outline(lines).map((node) => [node.kind, node.detail, node.status, node.children.length]),
+	folding: (lines) => folds(lines),
+	sort: (lines) => sortGroup(lines, 0).map((text) => (text.match(/\[.\]\s*!*\s*(\w+)/) ?? [])[1] ?? '-'),
+	archive: (lines) => archive(lines, 'Archive').moved,
+	migrate: (lines) => migrate(lines).changes.length,
+	diagnostics: (lines) => problems(lines).map((problem) => problem.code),
+	collect: (lines) => collect(lines).map((item) => [urgencyOf(item, THRESHOLDS), isOpen(item), item.estimate, item.took, item.tags]),
+	align: (lines) => alignments(lines),
+	link: (lines) => [[...blocked(lines)], linkProblems(lines).map((one) => one.kind)],
+	repeat: (lines) => lines.map((text) => nextOccurrence(text, 'repeat', dueDatesOn(text)[0] ?? null, THRESHOLDS.today) ?? ''),
+	tag: (lines) => [...tagUsage(lines).keys()].sort(),
+	cycle: (lines) => collect(lines).map((item) => item.took),
+	estimate: (lines) => collect(lines).map((item) => item.estimate),
+	directive: (lines) => directives(lines),
+};
+
+/** Two documents differing only in what the named element means. */
+const PROBES = {
+	status: [['[ ] Alpha'], ['[x] Alpha']],
+	priority: [['[ ] ! Alpha', '[ ] !! Beta'], ['[ ] !!! Alpha', '[ ] ! Beta']],
+	due: [['[ ] Alpha -> 2020-01-01'], ['[ ] Alpha -> 2030-01-01']],
+	start: [['[ ] Alpha <- 2020-01-01 -> 2026-01-01'], ['[ ] Alpha <- 2030-01-01 -> 2026-01-01']],
+	tags: [['[ ] Alpha #aaa'], ['[ ] Alpha #bbb']],
+	title: [['# Aaa', '[ ] Alpha'], ['# Bbb', '[ ] Alpha']],
+	comment: [['<!--', '[ ] Parked', '-->', '[ ] Alpha'], ['<!--', '[ ] Other', '-->', '[ ] Alpha']],
+	nesting: [['[ ] Alpha', '\t[ ] Beta'], ['[ ] Alpha', '[ ] Beta']],
+	ids: [['[ ] Alpha #id=aaaa', '[ ] Beta #after=aaaa'], ['[ ] Alpha #id=aaaa', '[ ] Beta #after=zzzz']],
+	estimate: [['[ ] Alpha #est=1h'], ['[ ] Alpha #est=8h']],
+	directive: [['<!-- xit: tags=aaa -->', '[ ] Alpha'], ['<!-- xit: tags=bbb -->', '[ ] Alpha']],
+};
+
+const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
 
 describe('every reader is classified against every element', () => {
 	const elements = Object.keys(ELEMENTS);
@@ -208,6 +264,38 @@ describe('every reader is classified against every element', () => {
 			}
 		}
 		assert.deepEqual(loose, [], `a gap must name the task tracking it:\n  ${loose.join('\n  ')}`);
+	});
+
+	it('still ignores everything it claims to ignore', () => {
+		// `must` cells are verified by a named test. `n/a` cells were only
+		// promised - and every one of those reasons was written before a dozen
+		// behavioural changes landed, so they need checking rather than
+		// trusting. A reader that now responds to an element it was declared
+		// to ignore has either gained behaviour nobody wrote down, or the
+		// reason was wrong to begin with.
+		//
+		// A failure here can also mean the projection is too coarse to tell
+		// the two documents apart. All three want a human.
+		const talkative = [];
+
+		for (const [reader, { na }] of Object.entries(LEDGER)) {
+			const project = BEHAVIOUR[reader];
+			if (!project) continue;
+
+			for (const element of Object.keys(na)) {
+				const pair = PROBES[element];
+				if (!pair) continue;
+
+				const shape = (lines) => {
+					try { return JSON.stringify(project(lines)); } catch { return 'threw'; }
+				};
+				if (shape(pair[0]) !== shape(pair[1])) {
+					talkative.push(`  ${reader} x ${element}: declared n/a, but it responds`);
+				}
+			}
+		}
+
+		assert.deepEqual(talkative, [], `an n/a reason is no longer true:\n${talkative.join('\n')}`);
 	});
 
 	it('covers every reader that reads a document', () => {
