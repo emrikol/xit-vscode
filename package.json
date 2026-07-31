@@ -52,6 +52,7 @@
         "open-web": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. test/fixtures",
         "open-web:demo": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. demo",
         "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+        "test:web": "npm run build && vscode-test-web --headless --quality stable --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js demo",
         "test:integration": "npm run compile && vscode-test",
         "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
     },

@@ -3,17 +3,29 @@
 # Last gate before anything leaves the machine: the unit tests, the
 # integration tests, then a packaging check.
 #
-# The integration tests launch a real VS Code and take a few seconds, which is
-# why they are here and not on the pre-commit hook. They earn it: they caught
-# a test that assumed opening an xit file activates the extension, which it
-# does not and should not.
+# The integration tests run in the web extension host, in a headless Chromium,
+# and not in desktop Electron. Both hosts run the same suite from the same
+# source, and `npm run test:integration` is still there for the desktop one.
+# The web run is the one on the hook for a plain reason: @vscode/test-electron
+# has no headless mode on any platform, and macOS has no xvfb to hide it
+# behind, so the desktop run opens a real VS Code window that takes focus.
+# A window that appears on its own during a push reads as something going
+# wrong. This one prints to the terminal and shows nothing.
+#
+# What that trades away: a regression that only shows in the desktop host
+# would reach a push. The extension is the same source in both hosts with no
+# host-specific code, so the gap is thin, but it is not nothing. Run
+# `npm run test:integration` by hand before anything that matters.
+#
+# They earn their place either way: they caught a test that assumed opening an
+# xit file activates the extension, which it does not and should not.
 #
 # The packaging check earns its place too. Manifest mistakes are invisible to
 # the test suite and to the compiler, and you only meet them at publish time.
 # It is what caught .claude/settings.local.json being bundled into the vsix.
 #
-# Needs network the first time: vsce, and a ~300 MB VS Code download that is
-# then cached in .vscode-test/.
+# Needs network the first time: vsce, a VS Code web build, and the Chromium
+# that Playwright downloads into ~/Library/Caches/ms-playwright.
 #
 # Bypass with `git push --no-verify` when you need to.
 
@@ -39,10 +51,11 @@ if ! npm test >"$log" 2>&1; then
 	exit 1
 fi
 
-if ! npm run test:integration >"$log" 2>&1; then
+if ! npm run test:web >"$log" 2>&1; then
 	cat "$log" >&2
 	echo >&2
-	echo "pre-push: integration tests failed, push aborted." >&2
+	echo "pre-push: integration tests failed in the web host, push aborted." >&2
+	echo "          the desktop host runs the same suite: npm run test:integration" >&2
 	echo "          fix them, or bypass with: git push --no-verify" >&2
 	exit 1
 fi
@@ -73,4 +86,4 @@ if [ -n "$unexpected" ]; then
 	exit 1
 fi
 
-echo "pre-push: unit and integration tests pass, and the extension packages clean."
+echo "pre-push: unit tests and the web integration run pass, and the extension packages clean."

@@ -339,6 +339,42 @@ describe('icons', () => {
 	});
 });
 
+describe('test scripts', () => {
+	it('passes --headless explicitly to the web run', () => {
+		// @vscode/test-web documents --headless as defaulting to true when an
+		// extensionTestsPath is given. On the command line it does not, and
+		// the reason is worth writing down, because the code reads as though
+		// it works:
+		//
+		//   const headless = options.headless ?? options.extensionTestsPath !== undefined;
+		//
+		// minimist is handed `boolean: [... 'headless' ...]`, and minimist
+		// sets a declared boolean flag to false when it is absent, not to
+		// undefined. `false ?? anything` is false, so the fallback is dead on
+		// the CLI path. It works through the API, where the field really is
+		// undefined. Measured: without the flag, a Chromium window opens.
+		// With it, the launched Chromium carries --headless in its argv.
+		assert.match(manifest.scripts['test:web'], /(^|\s)--headless(\s|$)/);
+	});
+
+	it('runs the tests against a real folder', () => {
+		// The language-association test looks for a .xit file in the
+		// workspace. Without a folder argument the run opens on an empty
+		// workbench and that test fails for a reason that looks like a bug in
+		// the extension.
+		assert.match(manifest.scripts['test:web'], /\sdemo(\s|$)/);
+		assert.match(readFileSync(resolve(REPO_ROOT, '.vscode-test.mjs'), 'utf8'), /workspaceFolder:\s*'demo'/);
+		assert.ok(existsSync(resolve(REPO_ROOT, 'demo/showcase.xit')));
+	});
+
+	it('builds the web test bundle before running it', () => {
+		// vscode-test-web fails with a bare "path does not exist" if the
+		// bundle is stale or missing, which says nothing about the cause.
+		assert.match(manifest.scripts['test:web'], /^npm run build\s*&&/);
+		assert.match(manifest.scripts['test:web'], /--extensionTestsPath=dist\/web\/test\/index\.js/);
+	});
+});
+
 describe('the integration tests copy of the manifest', () => {
 	// src/test/manifest.ts holds publisher, name and the command ids as
 	// literals, because the integration tests also run in a web worker, where
