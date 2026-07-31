@@ -2,9 +2,7 @@
 
 This extension provides language support for [xit!](https://xit.jotaen.net/).
 
-It implements the [x]it! specification v1.1, plus comments, which are a
-[fork](https://github.com/emrikol/xit) of the specification and are not part of
-the official format.
+It implements the [x]it! specification v1.1, plus comments, which are a [fork](https://github.com/emrikol/xit) of the specification and are not part of the official format.
 
 - [Syntax Highlighting](#syntax-highlighting)
 - [Comments](#comments)
@@ -74,9 +72,7 @@ If closed tasks (completed/obsolete) are not striketroughed, then you may want t
 
 ## Comments
 
-A comment occupies whole lines. It starts with `<!--` at the beginning of a
-line, and ends with `-->` followed by nothing but spaces. Both may be on the
-same line.
+A comment occupies whole lines. It starts with `<!--` at the beginning of a line, and ends with `-->` followed by nothing but spaces. Both may be on the same line.
 
 ```
 <!-- This list is on hold -->
@@ -88,13 +84,9 @@ same line.
 -->
 ```
 
-A comment does not split a group, so the items on either side of it stay in
-one group. A comment cannot appear inside an item, between its description
-lines. An unterminated comment runs to the end of the file.
+A comment does not split a group, so the items on either side of it stay in one group. A comment cannot appear inside an item, between its description lines. An unterminated comment runs to the end of the file.
 
-Comments are a fork of the [x]it! specification, not part of the official
-format, so other [x]it! tools will not understand them. See
-[emrikol/xit](https://github.com/emrikol/xit).
+Comments are a fork of the [x]it! specification, not part of the official format, so other [x]it! tools will not understand them. See [emrikol/xit](https://github.com/emrikol/xit).
 
 ## In Markdown
 
@@ -110,20 +102,13 @@ Follow-ups
 ```
 ````
 
-This is the format author's own suggestion for keeping a list inside a larger
-document, from [discussion #10](https://github.com/jotaen/xit/discussions/10).
-Nothing about the fence is special to this extension: ` ``` ` and `~~~` both
-work, the language name is case-insensitive, and the block is ordinary
-Markdown everywhere else.
+This is the format author's own suggestion for keeping a list inside a larger document, from [discussion #10](https://github.com/jotaen/xit/discussions/10). Nothing about the fence is special to this extension: ` ``` ` and `~~~` both work, the language name is case-insensitive, and the block is ordinary Markdown everywhere else.
 
 ## Overdue Dates
 
-A due date whose period has passed is marked. Turn it off with
-`xit.overdueDueDates`, and recolour it with the `xit.overdueDueDate` theme
-colour, which defaults to whatever your theme uses for warnings.
+A due date whose period has passed is marked. Turn it off with `xit.overdueDueDates`, and recolour it with the `xit.overdueDueDate` theme colour, which defaults to whatever your theme uses for warnings.
 
-A due date names a period, not always a day, so it counts as passed only once
-the whole period has ended:
+A due date names a period, not always a day, so it counts as passed only once the whole period has ended:
 
 | Written | Overdue from |
 | --- | --- |
@@ -133,12 +118,9 @@ the whole period has ended:
 | `-> 2026-W01` | 5 January 2026 |
 | `-> 2026` | 1 January 2027 |
 
-Weeks follow ISO 8601, so week 1 is the one containing the first Thursday of
-the year, and a week can end in the following year: `-> 2022-W52` runs out on
-1 January 2023.
+Weeks follow ISO 8601, so week 1 is the one containing the first Thursday of the year, and a week can end in the following year: `-> 2022-W52` runs out on 1 January 2023.
 
-Only the first due date of an item counts, as the specification requires, and
-this only applies to `.xit` files — not to xit inside a Markdown fence.
+Only the first due date of an item counts, as the specification requires, and this only applies to `.xit` files — not to xit inside a Markdown fence.
 
 ## Development
 
@@ -151,121 +133,52 @@ npm run open-web:demo  # serve a real VS Code in the browser, on demo/
 npm run icons          # re-render the icons from their SVG sources
 ```
 
-`npm install` points `core.hooksPath` at `.githooks`, so the hooks install
-themselves with no extra dependency. `pre-commit` runs the unit tests.
-`pre-push` runs those, then `test:web`, then confirms the extension still
-packages, which catches manifest mistakes the tests cannot see. Both take
-`--no-verify` if you need to get past them.
+`npm install` points `core.hooksPath` at `.githooks`, so the hooks install themselves with no extra dependency. `pre-commit` runs the unit tests. `pre-push` runs those, then `test:web`, then confirms the extension still packages, which catches manifest mistakes the tests cannot see. Both take `--no-verify` if you need to get past them.
 
-The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`,
-the same libraries VS Code uses, so they exercise the real Oniguruma engine
-rather than JavaScript's regular expressions. The conformance fixture is the
-reference `test.xit` from
-[jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
+The grammar tests tokenize through `vscode-textmate` and `vscode-oniguruma`, the same libraries VS Code uses, so they exercise the real Oniguruma engine rather than JavaScript's regular expressions. The conformance fixture is the reference `test.xit` from [jotaen/xit-sublime](https://github.com/jotaen/xit-sublime).
 
 ### The two integration runs
 
 `src/test/extension.test.ts` is one suite that runs in both extension hosts.
 
-- **`npm run test:web`** bundles it for a web worker and runs it in a headless
-  Chromium through `@vscode/test-web`. Nothing appears on screen. This is the
-  one on the pre-push hook.
-- **`npm run test:integration`** runs it in desktop Electron through
-  `@vscode/test-cli`. It opens a real VS Code window that takes focus for a
-  few seconds. Run it by hand before anything that matters.
+- **`npm run test:web`** bundles it for a web worker and runs it in a headless Chromium through `@vscode/test-web`. Nothing appears on screen. This is the one on the pre-push hook.
+- **`npm run test:integration`** runs it in desktop Electron through `@vscode/test-cli`. It opens a real VS Code window that takes focus for a few seconds. Run it by hand before anything that matters.
 
-The desktop run cannot be made quiet, and it is worth writing down why so
-nobody spends an afternoon on it again. `@vscode/test-electron` has no
-headless mode on any platform; it launches the real application. On Linux the
-usual answer is to run it under `xvfb`, a virtual X display. macOS has no
-equivalent: its window server is not detachable, and there is no
-`xvfb-run` for Quartz. Hiding the window is not an option either, because the
-tests need a focused editor. Hence the split.
+The desktop run cannot be made quiet, and it is worth writing down why so nobody spends an afternoon on it again. `@vscode/test-electron` has no headless mode on any platform; it launches the real application. On Linux the usual answer is to run it under `xvfb`, a virtual X display. macOS has no equivalent: its window server is not detachable, and there is no `xvfb-run` for Quartz. Hiding the window is not an option either, because the tests need a focused editor. Hence the split.
 
 Two things about the web run are easy to get wrong:
 
-- `--headless` has to be passed explicitly. `@vscode/test-web` documents it as
-  defaulting to true when `--extensionTestsPath` is given, and on the command
-  line it does not: `minimist` is told `headless` is a boolean flag, and
-  minimist sets an absent boolean flag to `false` rather than `undefined`, so
-  the `options.headless ?? …` fallback never fires. A test in
-  `test/manifest.test.mjs` keeps the flag in the script.
-- `src/test/index.ts` lists its test files one `import()` at a time. esbuild
-  has no equivalent of the `require.context` glob the official sample uses, so
-  a new test file that nobody adds to that list would never run and the suite
-  would still report green. `test/bundle.test.mjs` compares the list against
-  `src/test/*.test.ts`.
+- `--headless` has to be passed explicitly. `@vscode/test-web` documents it as defaulting to true when `--extensionTestsPath` is given, and on the command line it does not: `minimist` is told `headless` is a boolean flag, and minimist sets an absent boolean flag to `false` rather than `undefined`, so the `options.headless ?? …` fallback never fires. A test in `test/manifest.test.mjs` keeps the flag in the script.
+- `src/test/index.ts` lists its test files one `import()` at a time. esbuild has no equivalent of the `require.context` glob the official sample uses, so a new test file that nobody adds to that list would never run and the suite would still report green. `test/bundle.test.mjs` compares the list against `src/test/*.test.ts`.
 
-Neither host may see Node. The tests read no files and call no `require`; the
-handful of manifest values they need are literals in `src/test/manifest.ts`,
-checked against `package.json` by the unit suite.
+Neither host may see Node. The tests read no files and call no `require`; the handful of manifest values they need are literals in `src/test/manifest.ts`, checked against `package.json` by the unit suite.
 
 ### How the highlighting is put together
 
-One structural implementation, one oracle, and code only where a grammar
-cannot reach.
+One structural implementation, one oracle, and code only where a grammar cannot reach.
 
-**The grammar does everything structural.** `syntaxes/xit.tmLanguage.json` is
-the only place that knows what an item, a priority, a due date or a tag looks
-like.
+**The grammar does everything structural.** `syntaxes/xit.tmLanguage.json` is the only place that knows what an item, a priority, a due date or a tag looks like.
 
-**The conformance suite is the oracle.** The author's
-[syntax guide](https://xit.jotaen.net/syntax-guide) marks up every example
-with the token it is expected to be, which makes the page an expected-output
-corpus. `npm run corpus` rebuilds `test/fixtures/syntax-guide.json` from it;
-`test/conformance.test.mjs` compares, in both directions, and lists the
-handful of deliberate divergences with a reason for each. It is not on any
-hook, because a push should not fail because a website was edited.
+**The conformance suite is the oracle.** The author's [syntax guide](https://xit.jotaen.net/syntax-guide) marks up every example with the token it is expected to be, which makes the page an expected-output corpus. `npm run corpus` rebuilds `test/fixtures/syntax-guide.json` from it; `test/conformance.test.mjs` compares, in both directions, and lists the handful of deliberate divergences with a reason for each. It is not on any hook, because a push should not fail because a website was edited.
 
-**There is deliberately no semantic token provider.** It is the obvious idea,
-another fork does it, and the format author has said VS Code's engine is one
-of the better ones for it. The reason not to is not activation cost, which is
-negligible. It is that semantic highlighting is opt-in per theme and can be
-switched off, so the grammar has to stay correct on its own regardless. A
-provider therefore never replaces the grammar, it duplicates it — and the
-copy that is not the fallback is the one that silently falls behind.
+**There is deliberately no semantic token provider.** It is the obvious idea, another fork does it, and the format author has said VS Code's engine is one of the better ones for it. The reason not to is not activation cost, which is negligible. It is that semantic highlighting is opt-in per theme and can be switched off, so the grammar has to stay correct on its own regardless. A provider therefore never replaces the grammar, it duplicates it — and the copy that is not the fallback is the one that silently falls behind.
 
-**Date arithmetic is the exception**, because no grammar can know what today
-is. That is `src/dueDate.ts`, drawn with a decoration rather than a semantic
-token, so it adds a rule the grammar does not have instead of restating one
-it does.
+**Date arithmetic is the exception**, because no grammar can know what today is. That is `src/dueDate.ts`, drawn with a decoration rather than a semantic token, so it adds a rule the grammar does not have instead of restating one it does.
 
-**Where duplication is forced, it is detected rather than avoided.** The
-decoration has to find due dates itself, and VS Code exposes no API for
-reading TextMate tokens from an extension, so there is no shared source to be
-had. `test/dueDate.test.mjs` runs the whole corpus through both the grammar
-and the TypeScript matcher and fails on one character of disagreement. Two
-other things in this repo are held the same way: the manifest literals in
-`src/test/manifest.ts` against `package.json`, and the test-file list in
-`src/test/index.ts` against `src/test/*.test.ts`.
+**Where duplication is forced, it is detected rather than avoided.** The decoration has to find due dates itself, and VS Code exposes no API for reading TextMate tokens from an extension, so there is no shared source to be had. `test/dueDate.test.mjs` runs the whole corpus through both the grammar and the TypeScript matcher and fails on one character of disagreement. Two other things in this repo are held the same way: the manifest literals in `src/test/manifest.ts` against `package.json`, and the test-file list in `src/test/index.ts` against `src/test/*.test.ts`.
 
 ### Divergences from upstream, on purpose
 
-Kept here so they are not silently "fixed". Each is also recorded where it
-lives, with the discussion it came from.
+Kept here so they are not silently "fixed". Each is also recorded where it lives, with the discussion it came from.
 
-- **A tag must follow a space or punctuation**, so `a#tag` holds no tag. The
-  spec is silent, and jotaen answered
-  [#51](https://github.com/jotaen/xit/discussions/51) with "Currently, yes" —
-  but his own `xit-sublime` rule carries the same lookbehind, so the
-  reference implementation disagrees with the answer.
-- **Additional spaces before a priority are allowed.** Spec §Item: "Additional
-  space characters MAY appear." The syntax guide says the opposite and marks
-  the line invalid.
-- **A malformed priority does not invalidate the checkbox.** The guide drops
-  all highlighting from `[ ] .!. Invalid`; nothing in the spec says a bad
-  priority unmakes a checkbox, and `xit-sublime` agrees with us here.
+- **A tag must follow a space or punctuation**, so `a#tag` holds no tag. The spec is silent, and jotaen answered [#51](https://github.com/jotaen/xit/discussions/51) with "Currently, yes" — but his own `xit-sublime` rule carries the same lookbehind, so the reference implementation disagrees with the answer.
+- **Additional spaces before a priority are allowed.** Spec §Item: "Additional space characters MAY appear." The syntax guide says the opposite and marks the line invalid.
+- **A malformed priority does not invalidate the checkbox.** The guide drops all highlighting from `[ ] .!. Invalid`; nothing in the spec says a bad priority unmakes a checkbox, and `xit-sublime` agrees with us here.
 - **Comments** (`<!--` … `-->`) are a fork of the format, not part of it.
 
-`npm run open-web` serves the conformance fixture and `npm run open-web:demo`
-serves `demo/showcase.xit`, both in a real VS Code in the browser with this
-extension loaded. That is the only way to check what the grammar actually
-looks like rather than what it ought to look like.
+`npm run open-web` serves the conformance fixture and `npm run open-web:demo` serves `demo/showcase.xit`, both in a real VS Code in the browser with this extension loaded. That is the only way to check what the grammar actually looks like rather than what it ought to look like.
 
-The extension runs in both hosts: `dist/extension.js` for desktop and
-`dist/web/extension.js` for vscode.dev and github.dev. Both come from the
-same source. Nothing here imports from Node, and `test/bundle.test.mjs`
-keeps it that way.
+The extension runs in both hosts: `dist/extension.js` for desktop and `dist/web/extension.js` for vscode.dev and github.dev. Both come from the same source. Nothing here imports from Node, and `test/bundle.test.mjs` keeps it that way.
 
 ## Shortcuts
 

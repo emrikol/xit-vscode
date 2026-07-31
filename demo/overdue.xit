@@ -14,5 +14,5 @@ Not overdue on 2026-07-31
 
 Only the first due date of an item counts
 [ ] The second one is disregarded -> 2020-01-01 -> 2019-01-01
-[ ] Even on a continuation line ...
-    ... this one is disregarded -> 2019-01-01
+[ ] A date only on a continuation line ...
+    ... is still the first one, so it counts -> 2019-01-01
