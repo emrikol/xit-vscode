@@ -62,6 +62,23 @@ describe('aligning a group', () => {
 		assert.equal(pad.column, 5, 'a tab, a checkbox, a space');
 	});
 
+	it('aligns each nesting level within itself', () => {
+		// Padding across levels achieves nothing: a top-level item and a
+		// nested one have different base indents, so their marks cannot form
+		// a column however much padding is added - and it shifts the
+		// shallower item's description right for no gain.
+		assert.deepEqual(
+			drawn(['[ ] !!! Top', '\t[ ] ! Nested', '\t[ ] !!!!! Deep', '[ ] ! Also top']),
+			['[ ] !!! Top', '\t[ ] ····! Nested', '\t[ ] !!!!! Deep', '[ ] ··! Also top'],
+		);
+	});
+
+	it('does not let a deep item pad a shallow one', () => {
+		// The bug: the top-level item was padded by two to match a nested
+		// item's five marks.
+		assert.deepEqual(alignments(['[ ] !!! Top', '\t[ ] !!!!! Deep']), []);
+	});
+
 	it('leaves a comment alone', () => {
 		assert.deepEqual(alignments(['<!--', '[ ] !!! A', '[ ] ! B', '-->']), []);
 	});

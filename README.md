@@ -161,7 +161,7 @@ That is visual presentation stored in the document, and it is not cheap: three o
 [ ]   ! Low        ← what this draws, with the file unchanged
 ```
 
-Nothing is inserted. The padding is a decoration, so the text on disk is untouched and it vanishes with the setting. It aligns within each group, because aligning across a file would let one urgent item indent everything below it.
+Nothing is inserted. The padding is a decoration, so the text on disk is untouched and it vanishes with the setting. It aligns within each group *and each nesting level*: aligning across a file would let one urgent item indent everything below it, and aligning across levels achieves nothing at all, since a top-level item and a subtask have different base indents and their marks cannot line up however much padding is added.
 
 Off by default on purpose: **Sort Group** answers "which of these is most urgent" definitively, and a column only helps you eyeball it. The dots existed because plain text had no alternative; the alternative turned out to be sorting rather than drawing. One honest cost — inline decoration content is not in the document, so the cursor steps over the gap rather than through it, the same way VS Code's own inlay hints behave.
 

@@ -101,8 +101,8 @@ const LEDGER = {
 			title: 'collect gathers items; titles are the outline\'s business' },
 	},
 	align: {
-		must: { priority: 'align.test.mjs', comment: 'align.test.mjs' },
-		gap: { nesting: '#93' },
+		must: { priority: 'align.test.mjs', comment: 'align.test.mjs', nesting: 'align.test.mjs' },
+		gap: {},
 		na: { status: 'every status can carry a priority, and does', due: 'not on the line\'s left edge',
 			start: 'not on the line\'s left edge', tags: 'not on the line\'s left edge',
 			title: 'has no priority', ids: 'a tag', estimate: 'a tag', directive: 'lives in a comment' },

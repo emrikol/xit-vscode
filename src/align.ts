@@ -48,14 +48,22 @@ export function alignments(lines: readonly string[]): Padding[] {
 	const parked = commentLines(lines);
 	const found: Padding[] = [];
 
-	let group: { line: number; column: number; width: number }[] = [];
+	// Keyed by indentation, because alignment is per nesting level rather than
+	// per group. Padding across levels achieves nothing - a top-level item and
+	// a nested one have different base indents, so their marks cannot form a
+	// column however much padding is added - and it shifts the shallower
+	// item's description right for no gain. `sortGroup` already sorts each
+	// level within its own parent; this aligns the same way.
+	let group = new Map<string, { line: number; column: number; width: number }[]>();
 
 	const flush = () => {
-		const widest = Math.max(0, ...group.map((each) => each.width));
-		for (const each of group) {
-			if (each.width < widest) found.push({ line: each.line, column: each.column, pad: widest - each.width });
+		for (const level of group.values()) {
+			const widest = Math.max(0, ...level.map((each) => each.width));
+			for (const each of level) {
+				if (each.width < widest) found.push({ line: each.line, column: each.column, pad: widest - each.width });
+			}
 		}
-		group = [];
+		group = new Map();
 	};
 
 	for (const [line, text] of lines.entries()) {
@@ -74,7 +82,8 @@ export function alignments(lines: readonly string[]): Padding[] {
 		// The priority starts after the checkbox and whatever spaces follow it.
 		const after = checkbox.column + 3;
 		const column = after + (/^[^\S\n]*/.exec(text.slice(after))?.[0].length ?? 0);
-		group.push({ line, column, width });
+		const indent = text.slice(0, checkbox.column);
+		group.set(indent, [...(group.get(indent) ?? []), { line, column, width }]);
 	}
 
 	flush();
