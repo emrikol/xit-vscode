@@ -5,10 +5,26 @@
  * character, then `]`.
  */
 
-/** The five statuses defined by [x]it! v1.1. */
-export type Status = ' ' | 'x' | '@' | '~' | '?';
+/**
+ * The five statuses defined by [x]it! v1.1, and one of this fork's own.
+ *
+ * `>` is waiting: the item should happen, you cannot act on it, and someone or
+ * something else holds it. None of the five covers that. `@` ongoing means you
+ * are doing it; `?` in question means it is unclear the thing should happen at
+ * all. Status is the primary axis of the format - it is why the checkbox is
+ * the leftmost thing on the line - and waiting gates what you can do, which is
+ * what a status is for. A tag would describe it; only a status gates it.
+ *
+ * `>` rather than any other character, and the choice is measured. The syntax
+ * guide names its invalid examples: `[*]`, `[o]`, `[X]`, and `[ ]` with a
+ * non-breaking space. `>` is not among them, so no example in the conformance
+ * corpus changes meaning. `*` or `o` would each have flipped one from invalid
+ * to valid. It collides with nothing - priority uses `!` and `.`, and the
+ * due-date arrow is unambiguous inside brackets - and it reads as handed off.
+ */
+export type Status = ' ' | 'x' | '@' | '~' | '?' | '>';
 
-export const STATUSES: readonly Status[] = [' ', 'x', '@', '~', '?'];
+export const STATUSES: readonly Status[] = [' ', 'x', '@', '~', '?', '>'];
 
 /**
  * The statuses as the body of a regular-expression character class.
@@ -71,18 +87,26 @@ export function writeStatus(line: string, status: Status): string {
 }
 
 /**
- * Open and in-question items become checked; every other status opens again.
- * This keeps the behaviour the command had before the logic moved here.
+ * Open, in-question and waiting items become checked; every other status opens
+ * again. Waiting joins the first group because the thing you do to a waiting
+ * item when it stops waiting is finish it.
  */
 export function toggle(status: Status): Status {
-	return status === ' ' || status === '?' ? 'x' : ' ';
+	return status === ' ' || status === '?' || status === '>' ? 'x' : ' ';
 }
 
-/** Step through every status in a fixed cycle: open → ongoing → obsolete → in question → checked. */
+/**
+ * Step through every status in a fixed cycle:
+ * open → ongoing → waiting → obsolete → in question → checked.
+ *
+ * Waiting sits after ongoing so the three you can still act on, or are
+ * waiting to act on, stay together at the front of the cycle.
+ */
 export function shuffle(status: Status): Status {
 	switch (status) {
 		case ' ': return '@';
-		case '@': return '~';
+		case '@': return '>';
+		case '>': return '~';
 		case '~': return '?';
 		case '?': return 'x';
 		case 'x': return ' ';

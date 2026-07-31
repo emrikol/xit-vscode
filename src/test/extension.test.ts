@@ -14,6 +14,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 
+import { STATUSES } from '../checkbox';
 import { COMMANDS, EXTENSION_ID } from './manifest';
 
 /** Open a scratch xit document and put the cursor on it. */
@@ -117,13 +118,17 @@ describe('xit.shuffle', () => {
 		const editor = await openXit('[ ] Do this');
 		editor.selection = at(0);
 
+		// The loop length follows STATUSES so adding a status cannot leave
+		// this test walking a partial cycle and still passing. The order is
+		// written out on purpose: it is the thing being asserted, it lives in
+		// src/checkbox.ts, and a human should have to agree to changing it.
 		const seen = [editor.document.lineAt(0).text.slice(0, 3)];
-		for (let i = 0; i < 5; i++) {
+		for (let i = 0; i < STATUSES.length; i++) {
 			await vscode.commands.executeCommand('xit.shuffle');
 			seen.push(editor.document.lineAt(0).text.slice(0, 3));
 		}
 
-		assert.deepEqual(seen, ['[ ]', '[@]', '[~]', '[?]', '[x]', '[ ]']);
+		assert.deepEqual(seen, ['[ ]', '[@]', '[>]', '[~]', '[?]', '[x]', '[ ]']);
 	});
 });
 

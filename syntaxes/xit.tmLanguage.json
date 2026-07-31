@@ -37,7 +37,7 @@
 		},
 		"open-item": {
 			"comment": "Spec §Item: an item starts at the beginning of a line. The empty capture group is there only so the end pattern can be written once and shared with the nested form, where it back-references the parent's indentation.",
-			"begin": "^()(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
+			"begin": "^()(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\])|(\\[>\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
 				"2": {
 					"name": "variable.function.xit markup.other.task.checkbox.open.xit"
@@ -47,9 +47,12 @@
 				},
 				"4": {
 					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
+				},
+				"5": {
+					"name": "keyword.control.xit markup.other.task.checkbox.waiting.xit"
 				}
 			},
-			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?>]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -70,7 +73,7 @@
 					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?>]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -93,7 +96,7 @@
 		},
 		"open-subitem": {
 			"comment": "A subtask: an item indented from its parent by two or more spaces, or by one tab. This rule is reachable only from inside another item, which is what stops an indented checkbox with nothing above it from counting - the specification says a checkbox cannot be preceded by whitespace, and outside a parent that still holds. The end pattern back-references the parent's indentation, which is the only way a nested rule can find its parent's edge: TextMate cannot count indentation, but it can compare a line against the exact prefix that was matched. Nesting is a fork of the specification, which has none - see discussion #2. A tab also continues a description, which the specification does not allow - it asks for exactly four spaces, and the syntax guide lists a tab as invalid. Forked so that the Tab key works everywhere in the file rather than nesting subtasks but breaking continuations.",
-			"begin": "^([ ]{2,}|\\t+)(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\]))(?=[^\\S\\n]|$)",
+			"begin": "^([ ]{2,}|\\t+)(?:(\\[ \\])|(\\[@\\])|(\\[\\?\\])|(\\[>\\]))(?=[^\\S\\n]|$)",
 			"beginCaptures": {
 				"2": {
 					"name": "variable.function.xit markup.other.task.checkbox.open.xit"
@@ -103,9 +106,12 @@
 				},
 				"4": {
 					"name": "entity.name.type.enum.xit markup.other.task.checkbox.in-question.xit"
+				},
+				"5": {
+					"name": "keyword.control.xit markup.other.task.checkbox.waiting.xit"
 				}
 			},
-			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?>]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -126,7 +132,7 @@
 					"name": "comment.xit markup.other.task.checkbox.obsolete.xit"
 				}
 			},
-			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?]\\](?=[^\\S\\n]|$)))",
+			"end": "^(?!\\1(?:(?:    |\\t+)(?=.*\\S)|(?:[ ]{2,}|\\t+)\\[[ x@~?>]\\](?=[^\\S\\n]|$)))",
 			"patterns": [
 				{
 					"include": "#subitem"
@@ -139,7 +145,7 @@
 		"closed-body": {
 			"comment": "The struck-through part of a closed item: its description, and not its subtasks. This used to be a contentName on closed-item itself, which painted the whole begin/end region - and a subtask lives inside that region, so an open subtask under a checked parent rendered as though it were done. TextMate scopes are additive, so the subtask could not undo it. Ending at any line that starts with a checkbox hands those lines back to closed-item, which matches them with #subitem instead. After the subtask closes, this rule starts again for whatever description follows. Its end has to cover the end of the item as well as a subtask, because TextMate only tests the end of the innermost rule on the stack - relying on the enclosing item to pop this one let it run past a blank line and swallow the next title as struck-through description. So it ends at a line holding a checkbox, at a blank line, and at any line starting in column zero.",
 			"begin": "(?=[^\\n])",
-			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?]\\](?=[^\\S\\n]|$))|(?![^\\S\\n]*\\S)|(?=\\S))",
+			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?>]\\](?=[^\\S\\n]|$))|(?![^\\S\\n]*\\S)|(?=\\S))",
 			"contentName": "comment.xit markup.strikethrough.xit markup.other.task.description.closed.xit",
 			"patterns": [
 				{
@@ -162,7 +168,7 @@
 		},
 		"priority": {
 			"comment": "Spec §Priority: \"any number of exclamation marks (`!`) and dots (`.`)\", with the dots on one side only. Any number includes none, so `...` on its own is a priority with an importance of zero; the syntax guide shows it as one. Spec §Item allows additional space characters between the checkbox and the priority, so the separator is `[^\\S\\n]+` rather than a single space.",
-			"match": "(?<=^\\[[ x@~?]\\])[^\\S\\n]+((?:!+\\.*)|(?:\\.+!*))(?=[^\\S\\n]|$)",
+			"match": "(?<=^\\[[ x@~?>]\\])[^\\S\\n]+((?:!+\\.*)|(?:\\.+!*))(?=[^\\S\\n]|$)",
 			"captures": {
 				"1": {
 					"name": "markup.deleted.xit markup.other.task.priority.xit"
@@ -177,7 +183,7 @@
 					"name": "constant.other.xit markup.other.task.date.xit"
 				}
 			},
-			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?]\\](?=[^\\S\\n]|$))|(?!    (?=.*\\S)))",
+			"end": "^(?:(?=[^\\S\\n]*\\[[ x@~?>]\\](?=[^\\S\\n]|$))|(?!    (?=.*\\S)))",
 			"patterns": [
 				{
 					"include": "#tag"

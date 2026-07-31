@@ -24,6 +24,16 @@
         "body": ["[?] $1"],
         "description": "In Question item"
     },
+    "Waiting Item (w)": {
+        "prefix": "w",
+        "body": ["[>] $1"],
+        "description": "Waiting item"
+    },
+    "Waiting Item (>)": {
+        "prefix": ">",
+        "body": ["[>] $1"],
+        "description": "Waiting item"
+    },
     "Obsolete Item (o)": {
         "prefix": "o",
         "body": ["[~] $1"],

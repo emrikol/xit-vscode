@@ -18,6 +18,7 @@ const CHECKED = 'task.checkbox.checked';
 const ONGOING = 'task.checkbox.ongoing';
 const OBSOLETE = 'task.checkbox.obsolete';
 const IN_QUESTION = 'task.checkbox.in-question';
+const WAITING = 'task.checkbox.waiting';
 const PRIORITY = 'task.priority';
 const DATE = 'task.date';
 const TAG = 'task.tag';
@@ -39,7 +40,7 @@ async function assertNoScope(line, fragment) {
 }
 
 describe('checkbox (spec §Checkbox)', () => {
-	it('recognises all five statuses', async () => {
+	it('recognises the five statuses of the specification', async () => {
 		await assertScope('[ ] Open', OPEN, '[ ]');
 		await assertScope('[x] Checked', CHECKED, '[x]');
 		await assertScope('[@] Ongoing', ONGOING, '[@]');
@@ -47,9 +48,23 @@ describe('checkbox (spec §Checkbox)', () => {
 		await assertScope('[?] In question', IN_QUESTION, '[?]');
 	});
 
-	it('gives the in-question status its own scope, not the ongoing one', async () => {
+	it('recognises waiting, which is this fork\'s own', async () => {
+		await assertScope('[>] Waiting', WAITING, '[>]');
+	});
+
+	it('gives every status a scope no other status carries', async () => {
 		// Regression: the v1.1 commit copy-pasted the ongoing scope onto [?].
-		await assertNoScope('[?] In question', ONGOING);
+		// Now checked for all six rather than that one pair, because the same
+		// slip is one careless paste away every time a status is added.
+		const scopes = [OPEN, CHECKED, ONGOING, OBSOLETE, IN_QUESTION, WAITING];
+		const lines = ['[ ] x', '[x] x', '[@] x', '[~] x', '[?] x', '[>] x'];
+
+		for (const [index, line] of lines.entries()) {
+			for (const [other, scope] of scopes.entries()) {
+				if (other === index) await assertScope(line, scope, line.slice(0, 3));
+				else await assertNoScope(line, scope);
+			}
+		}
 	});
 
 	it('requires exactly three characters', async () => {
@@ -373,6 +388,17 @@ describe('subtasks (fork, discussion #2)', () => {
 	it('recognises an item indented from its parent', async () => {
 		const lines = await tokenize('[ ] Parent\n  [ ] Child');
 		assert.deepEqual(scoped(lines[1], OPEN), ['[ ]']);
+	});
+
+	it('nests every status, not only the ones the specification has', async () => {
+		// A subtask is an item. Whatever status one can hold, the other must.
+		// The structural half of this is asserted in test/checkbox.test.mjs by
+		// comparing the grammar's rules against STATUSES; this is the half
+		// that checks it actually tokenizes.
+		for (const [status, scope] of [[' ', OPEN], ['x', CHECKED], ['@', ONGOING], ['~', OBSOLETE], ['?', IN_QUESTION], ['>', WAITING]]) {
+			const lines = await tokenize(`[ ] Parent\n\t[${status}] Child`);
+			assert.deepEqual(scoped(lines[1], scope), [`[${status}]`], `nested [${status}]`);
+		}
 	});
 
 	it('takes two spaces, or a tab', async () => {

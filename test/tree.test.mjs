@@ -119,13 +119,21 @@ describe('auto-checking a parent', () => {
 		assert.equal(after[0], '[ ] A');
 	});
 
-	it('does not touch a parent that is ongoing, obsolete or in question', () => {
+	it('does not touch a parent that is ongoing, obsolete, in question or waiting', () => {
 		// Those were set deliberately. A child being ticked is not a reason to
 		// overrule someone who marked the parent as blocked or abandoned.
-		for (const status of ['@', '~', '?']) {
+		for (const status of ['@', '~', '?', '>']) {
 			const after = applied([`[${status}] Parent`, '  [x] Child'], [1]);
 			assert.equal(after[0], `[${status}] Parent`, `[${status}] was overwritten`);
 		}
+	});
+
+	it('does not count a waiting child as done', () => {
+		// The whole point of waiting is that it is not finished. A parent
+		// checking itself over one would be the format asserting something
+		// false, which is the reason auto-check exists in the first place.
+		const after = applied(['[ ] Parent', '  [x] One', '  [>] Waiting'], [1]);
+		assert.equal(after[0], '[ ] Parent');
 	});
 
 	it('does not count an obsolete child as done', () => {

@@ -30,6 +30,7 @@ If the colors and looks of the syntax highlighting is not correct or as fancy as
             // - markup.other.task.checkbox.checked.xit
             // - markup.other.task.checkbox.obsolete.xit
             // - markup.other.task.checkbox.in-question.xit
+            // - markup.other.task.checkbox.waiting.xit
             // - markup.other.task.description.closed.xit
             // - markup.other.task.priority.xit
             // - markup.other.task.date.xit
@@ -69,6 +70,24 @@ If closed tasks (completed/obsolete) are not striketroughed, then you may want t
     }
 }
 ```
+
+## Waiting
+
+`[>]` means the item should happen, you cannot act on it, and someone or something else holds it.
+
+```
+[>] Waiting on the contract to come back
+[@] Writing the release notes
+[ ] Publish
+```
+
+None of the five statuses in the specification covers this. `[@]` ongoing means you are doing it, and `[?]` in question means it is unclear the thing should happen at all. Status is the primary axis of the format — it is why the checkbox is the leftmost thing on the line — and waiting gates what you can do, which is what a status is for. A tag would describe it; only a status gates it.
+
+A waiting item is outstanding: it is not finished, so it appears in the workspace view and the shuffle cycle passes through it. Toggling one checks it, on the grounds that what you do to a waiting item when it stops waiting is finish it.
+
+`>` was chosen rather than any other character, and the choice is measured rather than aesthetic. The syntax guide names the characters it considers invalid — `[*]`, `[o]`, `[X]`, and `[ ]` with a non-breaking space — and `>` is not among them, so no example in the conformance corpus changes meaning and the divergence costs nothing. `*` or `o` would each have flipped one example from invalid to valid. It also collides with nothing: priority uses `!` and `.`, and the due-date arrow is unambiguous inside brackets.
+
+**This is a fork of the format.** Other [x]it! tools read `[>] Waiting` as neither an item nor a title, so the line disappears from their lists rather than rendering oddly. That is a worse failure than the other forks here cost, and it is accepted deliberately — see [emrikol/xit](https://github.com/emrikol/xit).
 
 ## Comments
 
@@ -268,12 +287,13 @@ The extension provides shortcuts for toggling/shuffling checkbox state. The shor
 
 - `ctrl+space` - Toggle checkboxes if available, else trigger editor suggestions.
 - `ctrl+alt+x` - Toggle all selected checkboxes.
-- `ctrl+alt+d` - Shuffle all selected checkboxes. This will shift the checkbox state to `' ' -> '@' -> '~' -> '?' -> 'x'`.
+- `ctrl+alt+d` - Shuffle all selected checkboxes. This will shift the checkbox state to `' ' -> '@' -> '>' -> '~' -> '?' -> 'x'`.
 
 ## Snippets
 
 - `u` - Unchecked (`[ ] `)
 - `a`/`@` - Ongoing (`[@] `)
+- `w`/`>` - Waiting (`[>] `)
 - `o`/`~` - Obsolete (`[~] `)
 - `x` - Checked (`[x] `)
 - `q` - Question (`[?] `)

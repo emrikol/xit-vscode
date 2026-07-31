@@ -109,7 +109,7 @@ describe('shuffle', () => {
 			status = shuffle(status);
 			seen.push(status);
 		}
-		assert.deepEqual(seen, [' ', '@', '~', '?', 'x', ' ']);
+		assert.deepEqual(seen, [' ', '@', '>', '~', '?', 'x', ' ']);
 	});
 
 	it('reaches every status', () => {

@@ -87,8 +87,10 @@ describe('urgency', () => {
 });
 
 describe('what counts as outstanding', () => {
-	it('counts open, ongoing and in-question', () => {
-		for (const status of [' ', '@', '?']) {
+	it('counts open, ongoing, in-question and waiting', () => {
+		// Waiting is this fork's own status. You cannot act on it, but it is
+		// not finished, so it is still outstanding work and still listed.
+		for (const status of [' ', '@', '?', '>']) {
 			assert.equal(isOpen(collect([`[${status}] x`])[0]), true, status);
 		}
 	});
