@@ -434,6 +434,62 @@ describe('the checkbox hover', () => {
 		assert.equal(document.lineAt(0).text, 'Not an item');
 	});
 
+	it('works on a real file, decoding the link exactly as VS Code would', async () => {
+		// Every other test here uses an untitled document, whose URI is
+		// `untitled:Untitled-1`. A file on disk is `file:///...`, and it is
+		// what anyone actually has open. This walks the whole chain: render
+		// the hover, pull a command URI out of the Markdown, decode it the way
+		// the Markdown renderer does, and invoke the command with the result.
+		// Deliberately the fixture whose name has a space in it. Its URI carries
+		// `%20`, and one percent-decode too many turns that back into a space,
+		// so the document gets looked up under a name nothing is open as. Every
+		// status link in that file did nothing, and every test here passed,
+		// because every other fixture has a plain path.
+		const [found] = await vscode.workspace.findFiles('**/Meeting TODOs.xit', undefined, 1);
+		assert.ok(found, 'the spaced fixture is missing from the test workspace');
+		assert.match(found.toString(), /%20/, 'the fixture no longer exercises an encoded path');
+
+		const document = await vscode.workspace.openTextDocument(found);
+		await vscode.window.showTextDocument(document);
+
+		const line = [...Array(document.lineCount).keys()].find((at) => /^\s*\[.\]\s/.test(document.lineAt(at).text));
+		assert.ok(line !== undefined, 'no item in the fixture');
+
+		const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+			'vscode.executeHoverProvider',
+			document.uri,
+			new vscode.Position(line, 1),
+		);
+		const markdown = hovers
+			.flatMap((hover) => hover.contents)
+			.map((part) => (typeof part === 'string' ? part : part.value))
+			.join('\n');
+
+		const [, encoded] = /command:xit\.setStatus\?([^\s")]+)/.exec(markdown) ?? [];
+		assert.ok(encoded, 'no command link in the hover');
+
+		// Decoded twice on purpose. Once is what a well-behaved renderer does;
+		// twice is what makes an encoded path fall apart, and the command has
+		// to survive both because it cannot tell which it was given.
+		const once = JSON.parse(decodeURIComponent(encoded))[0];
+		const twice = JSON.parse(decodeURIComponent(decodeURIComponent(encoded)))[0];
+		assert.deepEqual(once, twice, 'the payload does not survive a second decode');
+
+		// Parsed rather than compared as strings: the link carries the URI
+		// unencoded so that it survives decoding, so it is not `toString()`
+		// character for character.
+		assert.equal(vscode.Uri.parse(once.uri).toString(), document.uri.toString(), 'the link names another document');
+
+		for (const payload of [once, twice]) {
+			const before = document.lineAt(line).text;
+			await vscode.commands.executeCommand('xit.setStatus', {
+				...payload,
+				status: before.includes('[x]') ? ' ' : 'x',
+			});
+			assert.notEqual(document.lineAt(line).text, before, `the command did nothing for ${payload.uri}`);
+		}
+	});
+
 	it('cascades to a parent, like every other way of setting a status', async () => {
 		// The whole reason it goes through editSelectedCheckboxes rather than
 		// writing the line itself.

@@ -437,7 +437,10 @@ function registerHover(context: vscode.ExtensionContext, index: WorkspaceIndex) 
 						urgency: urgencyOf(item, thresholds()),
 						today: todayFrom(new Date()),
 						blockers: blockersOf(document, item, index),
-						target: { uri: document.uri.toString(), line: position.line },
+						// `true` skips encoding, so a path with a space carries a
+						// space rather than `%20`. See setStatusLink: a payload
+						// holding no `%` cannot be corrupted by a second decode.
+						target: { uri: document.uri.toString(true), line: position.line },
 						// The tags the panel restates in words below. Read from
 						// the settings, because every one of them is renameable.
 						explained: [estimateTag(), ID_TAG, AFTER_TAG, dateTags().creation, dateTags().completion],
@@ -463,7 +466,12 @@ function registerHover(context: vscode.ExtensionContext, index: WorkspaceIndex) 
 			// beneath it active, and the first version of this checked
 			// `activeTextEditor` and returned in silence when it did not match -
 			// which is exactly what "clicking does nothing" looks like.
-			const document = vscode.workspace.textDocuments.find((each) => each.uri.toString() === target.uri);
+			// Compared after parsing rather than as strings. The link carries
+			// the URI unencoded so it survives decoding, which means it does
+			// not match `uri.toString()` character for character; parsing both
+			// sides puts them in the same form.
+			const wanted = vscode.Uri.parse(target.uri).toString();
+			const document = vscode.workspace.textDocuments.find((each) => each.uri.toString() === wanted);
 			if (!document) {
 				void vscode.window.showWarningMessage('That item’s file is no longer open.');
 				return;

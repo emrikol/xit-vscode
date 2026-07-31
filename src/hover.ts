@@ -120,7 +120,23 @@ export function describeUrgency(item: Collected, urgency: Urgency, today: Day): 
 	return label;
 }
 
-/** The `command:` URI that sets this item to a status. */
+/**
+ * The `command:` URI that sets this item to a status.
+ *
+ * The payload must survive being percent-decoded more than once, and that is
+ * not a hypothetical: `file:///Users/me/Meeting TODOs.xit` becomes
+ * `…/Meeting%20TODOs.xit` under `Uri.toString()`, and one decode too many
+ * turns that back into a literal space, so the document is looked up under a
+ * name nothing is open as. Every status link on every item in that file did
+ * nothing, and every test passed, because no fixture here had a space in its
+ * name.
+ *
+ * The rule that makes it safe is simple: nothing inside the payload may
+ * contain a `%`. The caller passes the URI with encoding skipped, so a space
+ * arrives as a space; `encodeURIComponent` below turns it into `%20` for the
+ * link, the first decode turns it back, and any further decode has nothing
+ * left to act on. Correct whether it is decoded once or twice.
+ */
 function setStatusLink(target: { uri: string; line: number }, status: Status): string {
 	const argument = encodeURIComponent(JSON.stringify([{ ...target, status }]));
 	return `command:xit.setStatus?${argument}`;
