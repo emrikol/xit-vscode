@@ -3,7 +3,7 @@
     "displayName": "xit!",
     "description": "Language support for todo lists with xit syntax.",
     "version": "0.1.0",
-    "publisher": "tscpp",
+    "publisher": "emrikol",
     "license": "MIT",
     "icon": "assets/icon.png",
     "repository": {

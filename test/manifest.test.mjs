@@ -77,9 +77,26 @@ describe('manifest identity', () => {
 });
 
 describe('marketplace metadata', () => {
+	it('publishes under this fork, not the original', () => {
+		// publisher is an account id, not a credit line. Publishing under
+		// tscpp is not possible without that account, and publisher + name is
+		// the extension's global identity: leaving it would make this build
+		// claim to be tscpp.xit and collide with the original on install.
+		assert.equal(manifest.publisher, 'emrikol');
+	});
+
 	it('states its licence, and ships the file the field names', () => {
 		assert.equal(manifest.license, 'MIT');
 		assert.ok(existsSync(resolve(REPO_ROOT, 'LICENSE')));
+	});
+
+	it('keeps the original copyright notice', () => {
+		// The one thing MIT actually requires of a fork: the copyright notice
+		// and the permission notice survive in copies. Removing the original
+		// line would breach the licence this code is used under.
+		const licence = readFileSync(resolve(REPO_ROOT, 'LICENSE'), 'utf8');
+		assert.match(licence, /Copyright \(c\) 2022 Elias Skogevall/);
+		assert.match(licence, /Permission is hereby granted, free of charge/);
 	});
 
 	it('describes the repository in object form', () => {

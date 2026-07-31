@@ -87,6 +87,12 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Removed the `onCommand:` activation events, which VS Code has inferred from
   contributed commands since 1.74.
 - `.claude` and source maps are no longer bundled into the extension.
+- Publisher changed from `tscpp` to `emrikol`, so the extension identity is
+  `emrikol.xit` rather than `tscpp.xit`. The publisher is a Marketplace
+  account, not a credit line: the original `tscpp.xit` is a different
+  extension and this build would otherwise collide with it. The LICENSE
+  keeps Elias Skogevall's copyright notice, as MIT requires, with the fork's
+  added beside it.
 - Git hooks run the suite before a commit, and the suite, the integration
   tests and a packaging check before a push. They install themselves on
   `npm install` through `core.hooksPath`, with no extra dependency.
