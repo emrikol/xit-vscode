@@ -303,6 +303,16 @@ Checked and obsolete items are hidden; the toolbar toggles them back. Both count
 
 This is the part that makes a plain-text todo list bearable across more than one file. Three people built it outside VS Code before this existed: a shell script in [#12](https://github.com/jotaen/xit/discussions/12), an HTML view in [#7](https://github.com/jotaen/xit/discussions/7), and a whole terminal UI in [#38](https://github.com/jotaen/xit/discussions/38), whose author described his todos as "littered with undone, forgotten `[ ] things`".
 
+## Postponing
+
+**xit!: Postpone** pushes the due date of the selected items forward — tomorrow, in three days, next week, next Monday, or next month.
+
+It counts from **today**, not from the due date, because that is what postponing means: "not until next week" is next week from now, not a week after a deadline that has already gone by.
+
+The arithmetic is the same code that reschedules a repeating item, so a date keeps whichever pattern it was written in. `-> 2026-01` postponed by a week becomes `-> 2026-08`, the next month, rather than a day inside one.
+
+An item with no due date is left alone rather than given one. Adding a date is a bigger edit than was asked for, and it is the same restraint an unrecognised repeat interval already shows: doing nothing beats scheduling something on a date nobody chose.
+
 ## Status Bar
 
 A count of what is overdue across the workspace, always visible, costing no screen space. Click it to open the workspace view.

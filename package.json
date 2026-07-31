@@ -298,6 +298,10 @@
                 {
                     "command": "xit.migrate",
                     "when": "editorLangId == 'xit'"
+                },
+                {
+                    "command": "xit.postpone",
+                    "when": "editorLangId == 'xit'"
                 }
             ],
             "view/title": [
@@ -341,6 +345,11 @@
             {
                 "title": "Migrate to the Current Format",
                 "command": "xit.migrate",
+                "category": "xit!"
+            },
+            {
+                "command": "xit.postpone",
+                "title": "Postpone",
                 "category": "xit!"
             }
         ],

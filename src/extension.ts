@@ -5,7 +5,7 @@ import { cascade } from './tree';
 import { outline, Node } from './outline';
 import { folds } from './folding';
 import { stamp, isTagName } from './stamp';
-import { nextOccurrence } from './repeat';
+import { nextOccurrence, parseInterval, postpone } from './repeat';
 import { dueDatesOn } from './dueDate';
 import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
@@ -133,6 +133,61 @@ function registerEditorCommand(
 		if (!editor) return;
 		return run(editor);
 	}));
+}
+
+/** What the postpone picker offers, in the order it offers them. */
+const POSTPONE_TO: { label: string; detail: string; interval: string }[] = [
+	{ label: 'Tomorrow', detail: 'one day from today', interval: '1d' },
+	{ label: 'In three days', detail: 'three days from today', interval: '3d' },
+	{ label: 'Next week', detail: 'seven days from today', interval: '1w' },
+	{ label: 'Next Monday', detail: 'the next Monday after today', interval: 'monday' },
+	{ label: 'Next month', detail: 'one month from today', interval: '1m' },
+];
+
+/**
+ * Push the due date of the selected items forward.
+ *
+ * The arithmetic is src/repeat.ts, which already knows how to move every date
+ * pattern the format has and keep the one it was written in - so a
+ * month-precision date postponed by a week becomes the next month rather than
+ * a day inside it.
+ *
+ * One `edit` for the whole selection, so undo takes all of it back together.
+ * Items with no due date are left alone rather than given one, which is the
+ * same restraint an unrecognised repeat interval already shows.
+ */
+async function postponeSelected(editor: vscode.TextEditor) {
+	if (editor.document.languageId !== 'xit') return;
+
+	const lines = selectedLines(editor.selections)
+		.filter((line) => readCheckbox(editor.document.lineAt(line).text));
+	if (lines.length === 0) return;
+
+	const picked = await vscode.window.showQuickPick(POSTPONE_TO, {
+		title: lines.length === 1 ? 'Postpone until' : `Postpone ${lines.length} items until`,
+		placeHolder: 'Items with no due date are left alone',
+	});
+	if (!picked) return;
+
+	const interval = parseInterval(picked.interval)!;
+	const today = todayFrom(new Date());
+
+	const edits = new Map<number, string>();
+	for (const line of lines) {
+		const moved = postpone(editor.document.lineAt(line).text, interval, today);
+		if (moved !== null) edits.set(line, moved);
+	}
+
+	if (edits.size === 0) {
+		void vscode.window.showInformationMessage('Nothing to postpone: none of the selected items has a due date.');
+		return;
+	}
+
+	await editor.edit(builder => {
+		for (const [line, text] of edits) {
+			builder.replace(editor.document.lineAt(line).range, text);
+		}
+	});
 }
 
 /**
@@ -490,6 +545,8 @@ export function activate(context: vscode.ExtensionContext) {
 	registerFolding(context);
 
 	registerEditorCommand(context, 'xit.migrate', editor => migrateDocument(editor));
+
+	registerEditorCommand(context, 'xit.postpone', editor => postponeSelected(editor));
 
 	registerEditorCommand(context, 'xit.toggle', editor => editSelectedCheckboxes(editor, toggle));
 

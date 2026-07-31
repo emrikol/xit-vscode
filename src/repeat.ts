@@ -17,7 +17,7 @@
  */
 
 import { STATUS_CLASS } from './checkbox';
-import { Day, Parts, renderDueDate } from './dueDate';
+import { Day, Parts, dueDatesOn, renderDueDate } from './dueDate';
 import { tagsOn } from './tag';
 
 export type Unit = 'day' | 'weekday' | 'week' | 'month' | 'quarter' | 'year';
@@ -315,4 +315,32 @@ function isoWeekOf(year: number, month: number, date: number): { year: number; w
 	const week = Math.ceil(((at.getTime() - firstDay) / 86400000 + 1) / 7);
 
 	return { year: at.getUTCFullYear(), week };
+}
+
+/**
+ * `text` with its due date moved forward.
+ *
+ * Postponing, which is the same arithmetic as repeating pointed at a different
+ * starting day. `advance` already knows how to move every pattern the format
+ * has and keep the one it was written in, so a month-precision date postponed
+ * by a week becomes the next month rather than a day in it.
+ *
+ * Counted from today rather than from the due date, because that is what
+ * postponing means: "not until next week" is next week from now, not a week
+ * after a deadline that has already gone by.
+ *
+ * An item with no due date is returned unchanged. Adding one is a defensible
+ * reading of "postpone" and a bigger edit than was asked for, and the same
+ * restraint an unrecognised repeat interval already shows: doing nothing beats
+ * scheduling something on a date nobody chose.
+ */
+export function postpone(text: string, interval: Interval, today: Day): string | null {
+	const [due] = dueDatesOn(text);
+	if (!due) return null;
+
+	const from = atPrecisionOf(today, due.parts);
+	const moved = renderDueDate(advance(from, interval));
+	if (moved === due.text) return null;
+
+	return text.slice(0, due.start) + moved + text.slice(due.end);
 }

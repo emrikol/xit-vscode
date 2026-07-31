@@ -60,7 +60,7 @@ describe('the new interval forms', () => {
 	it('takes an -after suffix, meaning from the day it was checked', () => {
 		// A leading `+` would read better and is not available: spec §Tag
 		// allows only letters, digits, `_` and `-` in an unquoted value, so
-		// `#repeat=7d-after` parses as `#repeat=` with no value at all, silently.
+		// `#repeat=+7d` parses as `#repeat=` with no value at all, silently.
 		assert.deepEqual(parseInterval('7d-after'), { unit: 'day', count: 7, fromCompletion: true });
 		assert.deepEqual(parseInterval('weekly-after'), { unit: 'week', count: 1, fromCompletion: true });
 		assert.deepEqual(parseInterval('monday-after'), { unit: 'week', count: 1, fromCompletion: true, weekday: 1 });
@@ -132,7 +132,7 @@ describe('repeating from completion', () => {
 		);
 	});
 
-	it('still counts from the due date without the plus', () => {
+	it('still counts from the due date without the suffix', () => {
 		// Rent. Late payment does not move the next rent day.
 		assert.equal(
 			next('[x] Pay rent -> 2026-08-03 #repeat=7d', 20260806),
@@ -252,6 +252,49 @@ describe('the next occurrence of an item', () => {
 		assert.equal(
 			next('[x] ! Pay rent -> 2026-01-31 #repeat=monthly #home'),
 			'[ ] ! Pay rent -> 2026-02-28 #repeat=monthly #home',
+		);
+	});
+});
+
+describe('postponing', () => {
+	const { postpone } = require_('../out/repeat.js');
+	const later = (line, interval, today = 20260731) => postpone(line, parseInterval(interval), today);
+
+	it('counts from today, not from the due date', () => {
+		// "Not until next week" means next week from now, not a week after a
+		// deadline that has already gone by.
+		assert.equal(later('[ ] Do it -> 2020-01-01', '1w'), '[ ] Do it -> 2026-08-07');
+		assert.equal(later('[ ] Do it -> 2026-12-25', '1d'), '[ ] Do it -> 2026-08-01');
+	});
+
+	it('keeps the pattern the date was written in', () => {
+		assert.equal(later('[ ] Do it -> 2026-01', '1w'), '[ ] Do it -> 2026-08');
+		assert.equal(later('[ ] Do it -> 2026-Q1', '1m'), '[ ] Do it -> 2026-Q4');
+		assert.equal(later('[ ] Do it -> 2026', '1d'), '[ ] Do it -> 2027');
+	});
+
+	it('takes a named day', () => {
+		// 31 July 2026 is a Friday, so the next Monday is 3 August.
+		assert.equal(later('[ ] Do it -> 2026-01-01', 'monday'), '[ ] Do it -> 2026-08-03');
+	});
+
+	it('leaves an item with no due date alone', () => {
+		// Adding one is a bigger edit than was asked for, and the same
+		// restraint an unrecognised repeat interval already shows.
+		assert.equal(later('[ ] Do it', '1w'), null);
+	});
+
+	it('leaves the rest of the line alone', () => {
+		assert.equal(
+			later('\t[@] ! Ship it -> 2026-01-01 #release', '1d'),
+			'\t[@] ! Ship it -> 2026-08-01 #release',
+		);
+	});
+
+	it('touches only the first due date, which is the one that counts', () => {
+		assert.equal(
+			later('[ ] Do it -> 2026-01-01 -> 2026-02-02', '1d'),
+			'[ ] Do it -> 2026-08-01 -> 2026-02-02',
 		);
 	});
 });
