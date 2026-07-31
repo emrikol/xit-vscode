@@ -11,6 +11,7 @@ import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { sortGroup } from './sort';
 import { alignments } from './align';
+import { collect, isOpen, urgencyOf } from './collect';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
 import { registerWorkspaceView } from './workspaceView';
@@ -714,7 +715,25 @@ function registerOverdueDecoration(context: vscode.ExtensionContext) {
 
 		const marks: Record<Tier, vscode.DecorationOptions[]> = { overdue: [], critical: [] };
 
-		for (const date of overdue(lines, todayFrom(new Date()))) {
+		// Which lines the sidebar would call late, so the editor cannot
+		// disagree with the panel and the status bar about the same item. It
+		// did: a checked item with a past due date was still painted overdue,
+		// and so were waiting and not-yet-started ones, while both other
+		// surfaces excluded all three. One definition, three readers.
+		const today = todayFrom(new Date());
+		const thresholds = {
+			today,
+			criticalAfterDays,
+			soonWithinDays: vscode.workspace.getConfiguration(LANGUAGE).get<number>('dueSoonWithinDays', 7),
+		};
+		const late = new Set(collect(lines)
+			.filter((item) => isOpen(item))
+			.filter((item) => ['critical', 'overdue'].includes(urgencyOf(item, thresholds)))
+			.map((item) => item.line));
+
+		for (const date of overdue(lines, today)) {
+			if (!late.has(date.line)) continue;
+
 			// A threshold of zero or less turns the second tier off rather
 			// than making everything critical, which is what a user typing 0
 			// into the setting almost certainly means.

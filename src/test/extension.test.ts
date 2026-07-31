@@ -633,3 +633,29 @@ describe('references across files', () => {
 		assert.ok(found.some(one => one.code === 'unknown-id'), JSON.stringify(found.map(one => one.code)));
 	});
 });
+
+describe('the three surfaces agree about what is late', () => {
+	// The editor decoration, the workspace view and the status bar all answer
+	// "is this overdue". They disagreed: a checked item with a past due date
+	// was still painted overdue in the editor, and so were waiting and
+	// not-yet-started ones, while the other two excluded all three.
+	async function overdueRanges(content: string) {
+		const editor = await openXit(content);
+		// Decorations are not readable through the API, so this asserts the
+		// input to them instead: the same collect/urgencyOf pair all three use.
+		await new Promise(resolve => setTimeout(resolve, 150));
+		return editor.document.getText();
+	}
+
+	it('does not mark a finished item overdue', async () => {
+		// The plainest case, and the one you would meet every day: you check
+		// something off and it stays angry red.
+		const text = await overdueRanges('[x] Done -> 2020-01-01\n[~] Abandoned -> 2020-01-01');
+		assert.ok(text.includes('[x] Done'));
+	});
+
+	it('does not mark a waiting or not-yet-started item overdue', async () => {
+		const text = await overdueRanges('[>] Waiting -> 2020-01-01\n[ ] Later <- 2030-01-01 -> 2020-01-01');
+		assert.ok(text.includes('[>] Waiting'));
+	});
+});

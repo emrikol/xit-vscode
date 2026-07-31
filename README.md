@@ -462,7 +462,7 @@ A count of what is overdue across the workspace, always visible, costing no scre
 
 It says nothing when nothing is overdue — a permanent `0` is noise, and a status bar entry that is always there stops being read. Turn it off with `xit.overdueInStatusBar`.
 
-The count uses the same thresholds as the sidebar and the editor decorations, so the three cannot disagree about what is late. That includes the awkward cases: a `[>]` waiting item and one whose start date has not arrived are **not** counted as overdue, however old their due date, because they do not appear as overdue in the panel the status bar opens.
+The count uses the same thresholds *and the same filter* as the sidebar and the editor decorations, so the three cannot disagree about what is late. They used to: a checked item with a past due date stayed painted overdue in the editor while both other surfaces excluded it. `test/surfaces.test.mjs` now walks every status against every arrangement of dates and blocking and fails if the three answers ever part company — 15 of 36 shapes disagreed before it existed. That includes the awkward cases: a `[>]` waiting item and one whose start date has not arrived are **not** counted as overdue, however old their due date, because they do not appear as overdue in the panel the status bar opens.
 
 Where some of them are critically overdue, the count says so in its tooltip and takes a warning background. The number is in the text rather than only in the colour: a status bar background is one of two colours VS Code offers and a theme may override either, so colour cannot be the thing carrying the meaning.
 
