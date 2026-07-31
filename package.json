@@ -49,6 +49,8 @@
         "package": "npm run compile && node scripts/build.mjs --production",
         "watch": "node scripts/build.mjs --watch",
         "icons": "sh scripts/render-icons.sh",
+        "corpus": "node scripts/fetch-corpus.mjs",
+        "corpus:check": "node scripts/fetch-corpus.mjs --check",
         "open-web": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. test/fixtures",
         "open-web:demo": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. demo",
         "test": "npm run build && node --test \"test/**/*.test.mjs\"",
