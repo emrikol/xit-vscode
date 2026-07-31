@@ -82,6 +82,25 @@ function isDeeper(inner: string, outer: string): boolean {
 }
 
 /**
+ * Whether an indent continues a description rather than starting an item.
+ *
+ * Four spaces past whatever encloses it, and no tab, which is what the grammar
+ * reads as a continuation. Without an enclosing item there is nothing to
+ * continue, and the specification's rule that a checkbox cannot be preceded by
+ * whitespace applies again - so an indented checkbox with nothing above it is
+ * neither an item nor a continuation, and stays reportable.
+ */
+function isContinuation(indent: string, enclosing: Item | undefined): boolean {
+	if (!enclosing || !indent.startsWith(enclosing.indent)) return false;
+
+	// The tab test is on the *inner* part, not the whole indent: a subtask's
+	// own continuation is written `\t    `, where the tab belongs to the
+	// subtask and only the spaces continue it.
+	const inner = indent.slice(enclosing.indent.length);
+	return !inner.includes('\t') && inner.length >= 4;
+}
+
+/**
  * Every item in the document, with its parent and children resolved.
  *
  * A blank line ends the nest entirely, per spec §Item ("The item MUST NOT
@@ -132,10 +151,25 @@ export function items(lines: readonly string[]): Map<number, Item> {
 			continue;
 		}
 
+		const indent = text.slice(0, checkbox.column);
+
+		// A checkbox can sit in a *description* rather than start an item, and
+		// the grammar has always known it: four spaces is a continuation, and
+		// the syntax guide's description/8 is exactly `[ ]` at the start of
+		// one. This did not know, so `    [ ] not a subtask, just description`
+		// was listed in the sidebar as a task. Found by the drift detector in
+		// test/drift.test.mjs on its first run.
+		//
+		// Only spaces, never tabs: a tab is how a subtask is written, and the
+		// grammar prefers the subitem rule to the continuation rule for one.
+		if (isContinuation(indent, ancestors[ancestors.length - 1])) {
+			if (ancestors.length) ancestors[ancestors.length - 1].endLine = line;
+			continue;
+		}
+
 		// The parent is the nearest item above whose indentation is a proper
 		// prefix of this line's. Anything else is a sibling or a cousin, and is
 		// finished as far as this line is concerned.
-		const indent = text.slice(0, checkbox.column);
 		closeThrough((item) => isDeeper(indent, item.indent), line);
 
 		const parent = ancestors[ancestors.length - 1] ?? null;

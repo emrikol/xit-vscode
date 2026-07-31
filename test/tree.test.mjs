@@ -70,12 +70,27 @@ describe('reading the nesting', () => {
 	});
 
 	it('still records a space-indented item, rather than losing it', () => {
-		// The safe failure. Indentation only decides parentage; every line
-		// holding a checkbox is an item either way, so a file written before
-		// this rule loses its nesting and not its tasks.
-		const tree = items(['[ ] Top', '    [x] Was a subtask']);
+		// The safe failure. Indentation only decides parentage; a line holding
+		// a checkbox at an indent that cannot nest is an item either way, so a
+		// file written before this rule loses its nesting and not its tasks.
+		const tree = items(['[ ] Top', '  [x] Was a subtask']);
 		assert.equal(tree.size, 2);
 		assert.equal(tree.get(1).status, 'x');
+	});
+
+	it('reads a four-space checkbox as description, which is what it is', () => {
+		// Four spaces is a continuation, and the syntax guide's description/8
+		// is exactly `[ ]` at the start of one. This used to be listed in the
+		// sidebar as a task. Found by test/drift.test.mjs on its first run.
+		const tree = items(['[ ] Parent', '    [ ] not a subtask, just description']);
+		assert.deepEqual([...tree.keys()], [0]);
+		assert.equal(tree.get(0).endLine, 1, 'the item owns the line');
+	});
+
+	it('continues a subtask with a tab and four spaces', () => {
+		// The tab belongs to the subtask; only the spaces continue it.
+		const tree = items(['[ ] Parent', '\t[ ] Sub', '\t    [ ] continuing the sub']);
+		assert.deepEqual([...tree.keys()], [0, 1]);
 	});
 
 	it('does not nest a tab inside spaces, or the reverse', () => {

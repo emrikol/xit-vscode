@@ -283,10 +283,16 @@ export function problems(lines: readonly string[], known: KnownTags = DEFAULT_TA
 		// are marked in this fork, which is the only reason this state exists
 		// at all - before the marker, every one of these was a heading.
 		//
-		// Column zero only, matching the grammar's `invalid` rule exactly. An
-		// indented line is a description continuation, and the two must agree
-		// about which lines are wrong or the squiggles and the colours would
-		// contradict each other.
+		// Column zero only, matching the grammar's `invalid` rule. An indented
+		// line is a description continuation.
+		//
+		// The two do not agree line for line, and the comment here used to
+		// claim they did: `[ x] Typo` is `invalid` to the grammar and
+		// `malformed-checkbox` here, which is a more specific message rather
+		// than a contradiction. What holds - and what test/drift.test.mjs
+		// checks, rather than anyone asserting it - is that every line the
+		// grammar refuses to colour is a line this objects to, by whichever
+		// name fits best.
 		if (text.trim() !== '' && /^\S/.test(text) && !all.has(line) && !isTitle(text)) {
 			found.push({
 				line,
