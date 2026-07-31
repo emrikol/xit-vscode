@@ -659,3 +659,35 @@ describe('the three surfaces agree about what is late', () => {
 		assert.ok(text.includes('[>] Waiting'));
 	});
 });
+
+describe('editing an item inside a comment', () => {
+	it('toggles it, because you selected the line and pressed the key', async () => {
+		const editor = await openXit('<!--\n[ ] Parked\n-->');
+		editor.selection = at(1);
+		await vscode.commands.executeCommand('xit.toggle');
+		assert.equal(editor.document.lineAt(1).text, '[x] Parked');
+	});
+
+	it('does not spawn a new occurrence inside the comment', async () => {
+		// Parked work does not spawn new work. Without this, checking a
+		// commented-out repeating item inserted a fresh occurrence inside the
+		// comment block.
+		const editor = await openXit('<!--\n[ ] Water -> 2026-01-01 #repeat=weekly\n-->');
+		editor.selection = at(1);
+		await vscode.commands.executeCommand('xit.toggle');
+
+		assert.deepEqual(
+			editor.document.getText().split('\n'),
+			['<!--', '[x] Water -> 2026-01-01 #repeat=weekly', '-->'],
+		);
+	});
+
+	it('does not cascade to a parent outside the comment', async () => {
+		const editor = await openXit('[ ] Parent\n\t[ ] Real\n<!--\n\t[ ] Parked\n-->');
+		editor.selection = at(3);
+		await vscode.commands.executeCommand('xit.toggle');
+
+		assert.equal(editor.document.lineAt(0).text, '[ ] Parent', 'the parent is untouched');
+		assert.equal(editor.document.lineAt(3).text, '\t[x] Parked');
+	});
+});

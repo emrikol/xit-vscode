@@ -327,3 +327,16 @@ describe('a repeating item with a start date', () => {
 		assert.equal(next('[x] Something #repeat=weekly'), '[ ] Something #repeat=weekly');
 	});
 });
+
+describe('a repeating item inside a comment', () => {
+	it('is still rescheduled by the pure function, which sees one line', () => {
+		// nextOccurrence takes a line, not a document, so it cannot know a
+		// line is parked. The decision lives in extension.ts, where the whole
+		// document is in hand, and src/test/extension.test.ts asserts that a
+		// parked repeating item does not spawn an occurrence into the comment.
+		assert.equal(
+			next('[x] Water -> 2026-01-01 #repeat=weekly'),
+			'[ ] Water -> 2026-01-08 #repeat=weekly',
+		);
+	});
+});

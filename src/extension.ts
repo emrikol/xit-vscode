@@ -50,18 +50,33 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 	for (let line = 0; line < document.lineCount; line++) before.push(document.lineAt(line).text);
 
 	const after = [...before];
+	// Two lists on purpose. `written` is every line whose text changed and so
+	// has to reach the document; `edited` is the subset whose *consequences*
+	// fire. A parked line belongs to the first and not the second.
+	const written: number[] = [];
 	const edited: number[] = [];
+
+	// Toggling a parked item still toggles it: you selected the line and
+	// pressed the key, and silently refusing would be its own kind of wrong.
+	// What does not happen is the automatic consequences - no cascade to a
+	// parent, no completion date, and above all no repeat, which would insert
+	// a fresh occurrence *inside* the comment block. Parked work does not
+	// spawn new work. The creation-date stamp already worked this way; the
+	// other three did not, so the extension disagreed with itself.
+	const parked = commentLines(before);
 
 	for (const line of selectedLines(editor.selections)) {
 		const checkbox = readCheckbox(after[line]);
 		if (!checkbox) continue;
 		after[line] = writeStatus(after[line], replacer(checkbox.status));
-		edited.push(line);
+		written.push(line);
+		if (!parked.has(line)) edited.push(line);
 	}
 
 	if (settings.autoCheckParents) {
 		for (const [line, status] of cascade(after, edited)) {
 			after[line] = writeStatus(after[line], status);
+			written.push(line);
 			edited.push(line);
 		}
 	}
@@ -103,7 +118,7 @@ function editSelectedCheckboxes(editor: vscode.TextEditor, replacer: (status: St
 	// caller that awaits the command would otherwise see the document before
 	// the edit landed.
 	return editor.edit(builder => {
-		for (const line of new Set(edited)) {
+		for (const line of new Set(written)) {
 			if (after[line] === before[line]) continue;
 			builder.replace(document.lineAt(line).range, after[line]);
 		}

@@ -436,7 +436,15 @@ Two things it refuses to move:
 - **a checked parent with an open subtask** — whatever the parent's own checkbox says, filing it away would hide work. The auto-check exists to stop that state arising; this does not trust that it always did.
 - **a finished subtask of an unfinished parent** — it is part of work still in progress.
 
-Anything inside a comment is left alone, and running it twice does nothing the second time. New arrivals go directly under the title, so the most recently finished work is the easiest to find.
+Anything inside a comment is left alone, and running it twice does nothing the second time.
+
+## Editing Something Inside a Comment
+
+Toggling a commented-out item **toggles it** — you selected the line and pressed the key, and silently refusing would be its own kind of wrong.
+
+What does not happen is any of the automatic consequences. No cascade to a parent, no completion date, and above all **no repeat** — which would otherwise insert a fresh occurrence *inside* the comment block. Parked work does not spawn new work.
+
+The creation-date stamp already behaved this way and the other three did not, so the extension disagreed with itself about its own rule. New arrivals go directly under the title, so the most recently finished work is the easiest to find.
 
 ## Sorting a Group
 

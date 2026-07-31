@@ -45,7 +45,15 @@ const ELEMENTS = {
 	directive: /xit: /,
 };
 
-const source = (file) => readFileSync(new URL(`./${file}`, import.meta.url), 'utf8');
+/**
+ * A named test's source.
+ *
+ * Integration tests live in `src/test/` and are named with that prefix. Some
+ * behaviour can only be covered there - a command's guard needs a real
+ * document - and a ledger that could not point at them would push cells to
+ * `n/a` that are genuinely tested.
+ */
+const source = (file) => readFileSync(new URL(file.startsWith('../') ? file : `./${file}`, import.meta.url), 'utf8');
 
 const LEDGER = {
 	outline: {
@@ -118,8 +126,9 @@ const LEDGER = {
 	},
 	repeat: {
 		must: { status: 'repeat.test.mjs', priority: 'repeat.test.mjs', due: 'repeat.test.mjs',
-			start: 'repeat.test.mjs', tags: 'repeat.test.mjs', nesting: 'repeat.test.mjs' },
-		gap: { comment: '#96' },
+			start: 'repeat.test.mjs', tags: 'repeat.test.mjs', nesting: 'repeat.test.mjs',
+			comment: '../src/test/extension.test.ts' },
+		gap: {},
 		na: { title: 'not an item', ids: 'carried to the next occurrence unchanged, like any tag',
 			estimate: 'carried unchanged', directive: 'lives in a comment' },
 	},
