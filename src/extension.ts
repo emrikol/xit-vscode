@@ -11,7 +11,8 @@ import { problems, Severity } from './diagnostics';
 import { migrate } from './migrate';
 import { registerWorkspaceView } from './workspaceView';
 import { WorkspaceIndex } from './workspaceIndex';
-import { commonSpelling, foldName } from './tag';
+import { commonSpelling, foldName, tagsOn } from './tag';
+import { commentLines } from './comment';
 import { overdue, todayFrom } from './dueDate';
 
 const LANGUAGE = 'xit';
@@ -135,6 +136,83 @@ function registerEditorCommand(
 		if (!editor) return;
 		return run(editor);
 	}));
+}
+
+/**
+ * Record when an item was created, as a tag.
+ *
+ * jotaen's own example in discussion #59 is `#created=… #completed=…`, and
+ * only half of it was built. With both, an item records its own cycle time.
+ *
+ * The hard part is deciding when an item is *new*. The obvious hook - any
+ * change that leaves a line holding a checkbox - stamps a pasted block with
+ * today, re-stamps on undo, and fires when a line is merely moved. A wrong
+ * date is worse than no date, so the trigger is narrowed until it is only
+ * true of a checkbox someone just finished typing:
+ *
+ *   - one content change, so a multi-line paste never qualifies;
+ *   - not undo or redo, which VS Code tells us through `reason`;
+ *   - the change touched the checkbox itself, not the description;
+ *   - the line holds a checkbox now and carries no created tag yet.
+ *
+ * What that gives up is deliberate and documented: pasting items does not
+ * stamp them, and neither does a file arriving on disk. Both are cases where
+ * "created" would be a lie.
+ *
+ * Off by default, like the completion date.
+ */
+function registerCreationDate(context: vscode.ExtensionContext) {
+	context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(async (event) => {
+		const document = event.document;
+		if (document.languageId !== LANGUAGE) return;
+
+		const configuration = vscode.workspace.getConfiguration(LANGUAGE);
+		if (!configuration.get<boolean>('stampCreationDate', false)) return;
+
+		// Undo and redo are the user putting the file back, not writing an
+		// item. Stamping there would fight them.
+		if (event.reason !== undefined) return;
+		if (event.contentChanges.length !== 1) return;
+
+		const [change] = event.contentChanges;
+		if (change.text.includes('\n')) return;
+
+		const line = change.range.start.line;
+		if (line >= document.lineCount) return;
+
+		const text = document.lineAt(line).text;
+		const checkbox = readCheckbox(text);
+		if (!checkbox) return;
+
+		// The change has to have touched the checkbox. Typing in a description
+		// is not creating an item.
+		if (change.range.start.character > checkbox.column + 3) return;
+
+		const tag = configuration.get<string>('creationDateTag', 'created');
+		const name = isTagName(tag) ? tag : 'created';
+		if (tagsOn(text).some((found) => found.key === foldName(name))) return;
+		if (commentLines(documentLines(document)).has(line)) return;
+
+		const stamped = stamp(text, name, todayFrom(new Date()));
+		if (stamped === text) return;
+
+		const editor = vscode.window.activeTextEditor;
+		if (!editor || editor.document !== document) return;
+
+		await editor.edit(builder => builder.replace(document.lineAt(line).range, stamped), {
+			// Its own undo step, so one Ctrl+Z takes the stamp off and leaves
+			// the item you just typed alone.
+			undoStopBefore: true,
+			undoStopAfter: false,
+		});
+	}));
+}
+
+/** Every line of a document, which several things here need. */
+function documentLines(document: vscode.TextDocument): string[] {
+	const lines: string[] = [];
+	for (let line = 0; line < document.lineCount; line++) lines.push(document.lineAt(line).text);
+	return lines;
 }
 
 /**
@@ -597,6 +675,7 @@ function registerDiagnostics(context: vscode.ExtensionContext) {
 export function activate(context: vscode.ExtensionContext) {
 	registerDiagnostics(context);
 	registerCompletion(context, registerWorkspaceView(context));
+	registerCreationDate(context);
 	registerOverdueDecoration(context);
 	registerOutline(context);
 	registerFolding(context);

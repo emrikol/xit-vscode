@@ -125,6 +125,16 @@
                     "default": "done",
                     "description": "Name of the tag used to record a completion date. Must be a valid tag name: letters, digits, underscore or hyphen."
                 },
+                "xit.stampCreationDate": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Record when an item was created, as a tag, when you finish typing its checkbox. Deliberately narrow: a pasted block is not stamped, and neither is undo or redo, because a wrong date is worse than no date. With the completion date, an item records its own cycle time."
+                },
+                "xit.creationDateTag": {
+                    "type": "string",
+                    "default": "created",
+                    "description": "Name of the tag used to record a creation date. Must be a valid tag name: letters, digits, underscore or hyphen."
+                },
                 "xit.repeatItems": {
                     "type": "boolean",
                     "default": true,

@@ -428,3 +428,52 @@ describe('tag completion', () => {
 		assert.deepEqual(await completionsFor('[ ] Something', 0, 13), []);
 	});
 });
+
+describe('creation dates', () => {
+	/** Run `body` with an xit setting changed, and put it back afterwards. */
+	async function withCreationStamp(body: () => Promise<void>) {
+		const configuration = vscode.workspace.getConfiguration('xit');
+		await configuration.update('stampCreationDate', true, vscode.ConfigurationTarget.Global);
+		try {
+			await body();
+		} finally {
+			await configuration.update('stampCreationDate', undefined, vscode.ConfigurationTarget.Global);
+		}
+	}
+
+	/** Wait for the document to settle, since the stamp is a second edit. */
+	async function settled(document: vscode.TextDocument, expected: RegExp) {
+		for (let tries = 0; tries < 40; tries++) {
+			if (expected.test(document.getText())) return;
+			await new Promise(resolve => setTimeout(resolve, 25));
+		}
+	}
+
+	it('stamps a checkbox as it is finished', async () => {
+		await withCreationStamp(async () => {
+			const editor = await openXit('');
+			await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ]'));
+			await settled(editor.document, /#created=\d{4}-\d{2}-\d{2}/);
+			assert.match(editor.document.lineAt(0).text, /^\[ \] #created=\d{4}-\d{2}-\d{2}$/);
+		});
+	});
+
+	it('does not stamp a pasted block', async () => {
+		// A paste is one change carrying several lines. Stamping it would put
+		// today on work that is not from today, which is the failure this
+		// whole trigger is narrowed to avoid.
+		await withCreationStamp(async () => {
+			const editor = await openXit('');
+			await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ] One\n[ ] Two'));
+			await new Promise(resolve => setTimeout(resolve, 300));
+			assert.ok(!editor.document.getText().includes('#created='), editor.document.getText());
+		});
+	});
+
+	it('does nothing at all when the setting is off', async () => {
+		const editor = await openXit('');
+		await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '[ ]'));
+		await new Promise(resolve => setTimeout(resolve, 300));
+		assert.equal(editor.document.lineAt(0).text, '[ ]');
+	});
+});

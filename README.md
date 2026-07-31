@@ -359,6 +359,16 @@ Both use tags rather than new syntax, because **syntax is for what you author an
 
 `xit.stampCompletionDate`, **off by default**, records when an item was checked and removes the record if it is reopened. `xit.completionDateTag` names the tag, default `done`. This is the format author's own suggestion, from [#59](https://github.com/jotaen/xit/discussions/59): `[ ] Paint the room #created=2023-02-01 #completed=2023-03-04`.
 
+`xit.stampCreationDate`, also off by default, is the other half of that example. It records when an item was created, as you finish typing its checkbox, so an item with both tags records its own cycle time.
+
+Its trigger is deliberately narrow, because a wrong date is worse than no date. It fires only on a single change that touched the checkbox itself, which means:
+
+- **a pasted block is not stamped** — a paste is one change carrying several lines, and today is not when that work was created;
+- **undo and redo do not stamp** — those are you putting the file back, not writing an item;
+- typing in a description does not stamp, only finishing a checkbox does.
+
+Neither is git a substitute for these tags, and the reason is worth knowing. Sorting a group and archiving finished items both rewrite lines, so after either runs once `git blame` records when you *sorted*, not when you *wrote*. Once a format gains reordering, it has to carry its own dates.
+
 An item tagged `#repeat=` is rescheduled when you check it — the checked one stays, and its next occurrence is inserted below:
 
 ```
