@@ -509,6 +509,49 @@ describe('the checkbox hover', () => {
 	});
 });
 
+describe('the parsed view', () => {
+	it('opens in the same tab and keeps the document as the model', async () => {
+		const [found] = await vscode.workspace.findFiles('**/Meeting TODOs.xit', undefined, 1);
+		assert.ok(found, 'the spaced fixture is missing');
+
+		const document = await vscode.workspace.openTextDocument(found);
+		await vscode.window.showTextDocument(document);
+		const before = document.getText();
+
+		await vscode.commands.executeCommand('vscode.openWith', found, 'xit.preview');
+		// The custom editor replaces the text editor in the tab, so there is no
+		// active text editor for it - which is precisely why the status change
+		// below goes through a WorkspaceEdit rather than a TextEditorEdit.
+		assert.equal(document.getText(), before, 'resolving the preview changed the file');
+
+		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+	});
+
+	it('cycles a status through a WorkspaceEdit, so undo works', async () => {
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Parent\n\t[ ] Child' });
+		await vscode.window.showTextDocument(document);
+
+		// The path the webview message takes. Applied to the document rather
+		// than to an editor, because the preview is not one.
+		const edit = new vscode.WorkspaceEdit();
+		edit.replace(document.uri, document.lineAt(1).range, '\t[x] Child');
+		await vscode.workspace.applyEdit(edit);
+
+		assert.equal(document.lineAt(1).text, '\t[x] Child');
+		assert.equal(document.isDirty, true, 'a WorkspaceEdit should mark the document dirty');
+	});
+
+	it('registers the toggle, and it does not throw with an xit file in front', async () => {
+		const registered = await vscode.commands.getCommands(true);
+		assert.ok(registered.includes('xit.togglePreview'));
+
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Item' });
+		await vscode.window.showTextDocument(document);
+		await vscode.commands.executeCommand('xit.togglePreview');
+		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+	});
+});
+
 describe('the workspace view', () => {
 	it('registers its commands', async () => {
 		await vscode.extensions.getExtension(EXTENSION_ID)!.activate();

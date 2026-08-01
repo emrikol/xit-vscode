@@ -27,6 +27,7 @@ export const COMMANDS = [
 	'xit.shuffle',
 	'xit.refreshItems',
 	'xit.toggleDoneItems',
+	'xit.togglePreview',
 	'xit.setStatus',
 	'xit.filterItemsByTag',
 	'xit.clearItemFilter',

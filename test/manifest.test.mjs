@@ -477,6 +477,11 @@ describe('overdue due dates', () => {
 			...Object.values(manifest.contributes.views)
 				.flat()
 				.map((entry) => entry.id),
+			// A custom editor's viewType is an identifier the source names when
+			// it registers the provider, exactly like a command id. It was not
+			// here until the preview added the first one, and the detector
+			// caught that rather than letting the two spellings drift.
+			...(manifest.contributes.customEditors ?? []).map((entry) => entry.viewType),
 			...Object.keys(manifest.contributes.configuration.properties),
 			// Settings are read without their prefix, so both spellings count.
 			...Object.keys(manifest.contributes.configuration.properties).map((id) => id.replace(/^xit\./, '')),

@@ -13,6 +13,7 @@ import { sortGroup } from './sort';
 import { alignments } from './align';
 import { type Collected, collect, isOpen, urgencyOf } from './collect';
 import { type Blocker, hoverMarkdown } from './hover';
+import { escapeHtml, preview, previewHtml } from './preview';
 import { dateTags, estimateTag, thresholds } from './settings';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
@@ -1127,6 +1128,7 @@ export function activate(context: vscode.ExtensionContext) {
 	registerCompletion(context, index);
 	registerLinks(context, index);
 	registerHover(context, index);
+	registerPreview(context);
 	registerDiagnostics(context, index);
 	registerCreationDate(context);
 
@@ -1156,3 +1158,149 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
+
+/** A nonce for the webview's content security policy. One per resolve. */
+function nonce(): string {
+	const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+	let value = '';
+	// Not cryptographic, and does not need to be: a CSP nonce only has to be
+	// unpredictable to content on the page, and the only content on the page
+	// is ours.
+	for (let at = 0; at < 32; at++) value += alphabet[Math.floor(Math.random() * alphabet.length)];
+	return value;
+}
+
+/**
+ * The parsed view of a document, in the same tab as the text.
+ *
+ * A CustomTextEditorProvider rather than a side-by-side panel, which is both
+ * simpler and better: the document is the data model, so VS Code handles undo,
+ * dirty state and save itself, and there is no second copy of the state and no
+ * scroll to keep in sync. `priority: "option"` in the manifest keeps the text
+ * editor the default - opening a text format in a webview by default would be
+ * wrong - and `workbench.action.toggleEditorType` flips between them.
+ */
+function registerPreview(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+		vscode.window.registerCustomEditorProvider(
+			'xit.preview',
+			{
+				resolveCustomTextEditor(document, panel) {
+					panel.webview.options = { enableScripts: true };
+
+					const render = () => {
+						const token = nonce();
+						const blocks = preview(documentLines(document), {
+							thresholds: thresholds(),
+							estimateTag: estimateTag(),
+							dateTags: dateTags(),
+						});
+
+						// default-src 'none' first, so anything not named below is
+						// refused rather than merely unused. No external anything:
+						// the styles are inline and carry the nonce.
+						const csp = ["default-src 'none'", `style-src 'nonce-${token}'`, `script-src 'nonce-${token}'`].join('; ');
+
+						panel.webview.html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><title>${escapeHtml(document.uri.path.split('/').pop() ?? 'xit')}</title></head><body>${previewHtml(blocks, token)}</body></html>`;
+					};
+
+					const changed = vscode.workspace.onDidChangeTextDocument((event) => {
+						if (event.document.uri.toString() === document.uri.toString()) render();
+					});
+
+					const received = panel.webview.onDidReceiveMessage((message: { type?: string; line?: number }) => {
+						if (message?.type !== 'cycle' || typeof message.line !== 'number') return;
+						void cycleStatusAt(document, message.line);
+					});
+
+					panel.onDidDispose(() => {
+						changed.dispose();
+						received.dispose();
+					});
+
+					render();
+				},
+			},
+			// The document is a TextDocument, so VS Code keeps the webview alive
+			// across tab switches rather than re-rendering from scratch.
+			{ webviewOptions: { retainContextWhenHidden: true } },
+		),
+
+		// The Raw/Parsed toggle. VS Code already has the command; this wraps it
+		// so there is one button with an xit title rather than asking people to
+		// find "Reopen Editor With…" in the palette.
+		vscode.commands.registerCommand('xit.togglePreview', () =>
+			vscode.commands.executeCommand('workbench.action.toggleEditorType'),
+		),
+	);
+}
+
+/**
+ * Move one item to its next status, from the preview.
+ *
+ * A WorkspaceEdit rather than a TextEditorEdit, because the preview is not a
+ * text editor and there may not be one open for this document at all. Undo,
+ * the dirty marker and save all still work, which is the whole reason a
+ * CustomTextEditorProvider is worth using.
+ *
+ * Everything that follows a status change follows this one too - the parent
+ * auto-check, the completion stamp, a repeating item's next occurrence - by
+ * reusing the same pure functions the editor commands use rather than a second
+ * implementation beside them.
+ */
+async function cycleStatusAt(document: vscode.TextDocument, line: number): Promise<void> {
+	if (line < 0 || line >= document.lineCount) return;
+
+	const before = documentLines(document);
+	const checkbox = readCheckbox(before[line]);
+	if (!checkbox) return;
+
+	const settings = editSettings();
+	const after = [...before];
+	after[line] = writeStatus(after[line], shuffle(checkbox.status));
+
+	const written = new Set([line]);
+	const parked = commentLines(before);
+	const edited = parked.has(line) ? [] : [line];
+
+	if (settings.autoCheckParents) {
+		for (const [at, status] of cascade(after, edited)) {
+			after[at] = writeStatus(after[at], status);
+			written.add(at);
+			edited.push(at);
+		}
+	}
+
+	const repeats = new Map<number, string>();
+	if (settings.repeatItems) {
+		for (const at of edited) {
+			if (readCheckbox(before[at])?.status === 'x') continue;
+			if (readCheckbox(after[at])?.status !== 'x') continue;
+			const [due] = dueDatesOn(after[at]);
+			const next = nextOccurrence(after[at], settings.repeatTag, due ?? null, todayFrom(new Date()));
+			if (next) repeats.set(at, next);
+		}
+	}
+
+	if (settings.stampCompletionDate) {
+		const today = todayFrom(new Date());
+		for (const at of edited) {
+			const was = readCheckbox(before[at])?.status;
+			const now = readCheckbox(after[at])?.status;
+			if (was === now) continue;
+			if (now === 'x') after[at] = stamp(after[at], settings.completionDateTag, today);
+			else if (was === 'x') after[at] = stamp(after[at], settings.completionDateTag, null);
+		}
+	}
+
+	const edit = new vscode.WorkspaceEdit();
+	for (const at of written) {
+		if (after[at] === before[at]) continue;
+		edit.replace(document.uri, document.lineAt(at).range, after[at]);
+	}
+	for (const [at, text] of repeats) {
+		edit.insert(document.uri, document.lineAt(at).range.end, `\n${text}`);
+	}
+
+	await vscode.workspace.applyEdit(edit);
+}

@@ -7,8 +7,8 @@
  * hole was found by hand: alignment padding across nesting levels, a group
  * with a comment in it never sorting, parked tags leaking into completion.
  *
- * This is the ledger that closes it. Sixteen readers by eleven elements is
- * 176 cells, and every one must be declared:
+ * This is the ledger that closes it. Seventeen readers by eleven elements is
+ * 187 cells, and every one must be declared:
  *
  *   must  the reader has to understand this, and a named test exercises it
  *   gap   it does not, and a task says so
@@ -47,6 +47,7 @@ const { tagUsage } = require_('../out/tag.js');
 const { directives } = require_('../out/directive.js');
 const { tagChoices } = require_('../out/filter.js');
 const { hoverMarkdown } = require_('../out/hover.js');
+const { preview } = require_('../out/preview.js');
 
 /** How to recognise a document exercising each element, in a test's source. */
 const ELEMENTS = {
@@ -302,6 +303,25 @@ const LEDGER = {
 			estimate: 'not a directive key',
 		},
 	},
+	preview: {
+		must: {
+			status: 'preview.test.mjs',
+			priority: 'preview.test.mjs',
+			due: 'preview.test.mjs',
+			start: 'preview.test.mjs',
+			tags: 'preview.test.mjs',
+			title: 'preview.test.mjs',
+			comment: 'preview.test.mjs',
+			nesting: 'preview.test.mjs',
+			ids: 'preview.test.mjs',
+			estimate: 'preview.test.mjs',
+			directive: 'preview.test.mjs',
+		},
+		gap: {},
+		// Every element, with nothing waved away. The preview draws the whole
+		// document, so there is nothing about it the preview may ignore.
+		na: {},
+	},
 	hover: {
 		must: {
 			status: 'hover.test.mjs',
@@ -365,6 +385,10 @@ const BEHAVIOUR = {
 	// appearing in it are not the hover *interpreting* them. What is left is
 	// everything the hover derives - the urgency sentence, the facts row, the
 	// blockers and the status links.
+	// Only the model. The markup is checked in a real browser, in
+	// test/browser/preview.mjs, which is where a `<ul>` that never closed or a
+	// subtask rendered as a sibling actually shows up.
+	preview: (lines) => preview(lines, { thresholds: THRESHOLDS }),
 	hover: (lines) =>
 		collect(lines).map((item) =>
 			hoverMarkdown({
@@ -517,6 +541,7 @@ describe('every reader is classified against every element', () => {
 			'link',
 			'migrate',
 			'outline',
+			'preview',
 			'repeat',
 			'sort',
 			'tag',

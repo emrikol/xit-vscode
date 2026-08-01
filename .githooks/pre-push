@@ -51,6 +51,18 @@ if ! npm test >"$log" 2>&1; then
 	exit 1
 fi
 
+# The preview's markup, in a real browser. Not on pre-commit: launching
+# Chromium per commit is too slow, and this is where the browser is already
+# being started anyway.
+if ! npm run test:dom >"$log" 2>&1; then
+	cat "$log" >&2
+	echo >&2
+	echo "pre-push: the preview markup tests failed, push aborted." >&2
+	echo "          run them yourself: npm run test:dom" >&2
+	echo "          or bypass with: git push --no-verify" >&2
+	exit 1
+fi
+
 if ! npm run test:web >"$log" 2>&1; then
 	cat "$log" >&2
 	echo >&2

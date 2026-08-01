@@ -59,12 +59,14 @@
         "open-web": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. test/fixtures",
         "open-web:demo": "npm run build && vscode-test-web --browser none --quality stable --extensionDevelopmentPath=. demo",
         "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+        "test:dom": "npm run compile && node --test test/browser/*.mjs",
         "test:web": "npm run build && vscode-test-web --headless --quality stable --extensionDevelopmentPath=. --extensionTestsPath=dist/web/test/index.js demo",
         "test:integration": "npm run compile && vscode-test",
         "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"
     },
     "devDependencies": {
         "@biomejs/biome": "2.5.6",
+        "playwright-core": "^1.62.1",
         "@types/mocha": "^10.0.10",
         "@types/node": "^20.19.43",
         "@types/vscode": "~1.75.0",
@@ -84,6 +86,18 @@
         "workspaceContains:**/*.xit"
     ],
     "contributes": {
+        "customEditors": [
+            {
+                "viewType": "xit.preview",
+                "displayName": "xit! Parsed",
+                "selector": [
+                    {
+                        "filenamePattern": "*.xit"
+                    }
+                ],
+                "priority": "option"
+            }
+        ],
         "configuration": {
             "title": "xit!",
             "properties": {
@@ -327,6 +341,10 @@
                     "when": "false"
                 },
                 {
+                    "command": "xit.togglePreview",
+                    "when": "resourceExtname == '.xit'"
+                },
+                {
                     "command": "xit.toggle",
                     "when": "editorLangId == 'xit'"
                 },
@@ -373,6 +391,13 @@
                 {
                     "command": "xit.giveId",
                     "when": "editorLangId == 'xit'"
+                }
+            ],
+            "editor/title": [
+                {
+                    "command": "xit.togglePreview",
+                    "when": "resourceExtname == '.xit'",
+                    "group": "navigation@1"
                 }
             ],
             "view/title": [
@@ -427,6 +452,12 @@
                 "title": "Show Completed Items",
                 "category": "xit!",
                 "icon": "$(check-all)"
+            },
+            {
+                "command": "xit.togglePreview",
+                "title": "Toggle Raw and Parsed",
+                "category": "xit!",
+                "icon": "$(preview)"
             },
             {
                 "command": "xit.setStatus",

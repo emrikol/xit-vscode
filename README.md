@@ -10,7 +10,7 @@ Files written for it still open anywhere. Files written for the official format 
 [Titles](#titles) · [Subtasks](#subtasks) · [Waiting](#waiting) · [Priority](#priority) · [Start Dates](#start-dates) · [Overdue Dates](#overdue-dates) · [Tag Values](#tag-values) · [Comments](#comments) · [Blank Lines Inside an Item](#blank-lines-inside-an-item) · [Links](#links) · [One Item Waiting on Another](#one-item-waiting-on-another) · [Time Estimates](#time-estimates) · [Completion Dates and Repeats](#completion-dates-and-repeats) · [What a File Says About Itself](#what-a-file-says-about-itself) · [In Markdown](#in-markdown)
 
 **Using it**  
-[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Pointing at a Checkbox](#pointing-at-a-checkbox) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
+[Syntax Highlighting](#syntax-highlighting) · [Workspace Items](#workspace-items) · [Filtering by Tag](#filtering-by-tag) · [Status Bar](#status-bar) · [Pointing at a Checkbox](#pointing-at-a-checkbox) · [Raw and Parsed](#raw-and-parsed) · [Outline and Folding](#outline-and-folding) · [Sorting a Group](#sorting-a-group) · [Archiving Finished Items](#archiving-finished-items) · [Postponing](#postponing) · [Tag Completion](#tag-completion) · [Editing Something Inside a Comment](#editing-something-inside-a-comment) · [Problems](#problems) · [Migrating an Older File](#migrating-an-older-file)
 
 **Reference**  
 [Development](#development) · [Installing your own build](#installing-your-own-build) · [Lint and formatting](#lint-and-formatting) · [The two integration runs](#the-two-integration-runs) · [Shortcuts](#shortcuts) · [Snippets](#snippets)
@@ -520,6 +520,22 @@ The link carries its document's URI with encoding skipped. A payload holding a `
 
 **Why hover rather than click.** VS Code gives an extension no click handler for editor text — there is no "on click this range", and decorations are not clickable. A `DocumentLink` would work but needs Cmd+click and would underline every checkbox in the file. Hover is the only thing that answers a plain mouse.
 
+## Raw and Parsed
+
+`.xit` files open as text. The toolbar button, or **Toggle Raw and Parsed**, switches the same tab to a rendered view — the way Chrome switches a JSON file between Raw and Parsed.
+
+Parsed draws the file as components: a real checkbox you click, priority as a badge, dates and estimates as chips coloured by the same urgency tiers the editor and sidebar use, tags as pills, and a progress bar per group. Subtasks nest. Clicking a checkbox moves it to the next status, and goes through the same path as Toggle — so the parent still auto-checks, the completion date is still stamped, and a repeating item still spawns its next occurrence. It is an ordinary document edit, so `Cmd+Z` undoes it and the file goes dirty exactly as if you had typed.
+
+You cannot edit text while parsed. That is the point, and it is what Chrome does too. Switch back to Raw to write.
+
+**A parsed view never hides work.** Anything it cannot draw as a component — a Markdown-style `- [ ] task`, a malformed checkbox, a line that is not an item — is shown as written with a marker beside it. The specification defined a title by what it is *not*, so `- [ ] Buy milk` was silently promoted to a heading and the task disappeared from every list; a preview that quietly omitted what it could not parse would reintroduce exactly that, one layer up. A test walks generated documents and fails if any non-blank line is unaccounted for.
+
+Comments are the one thing it hides, because parked work is not outstanding work and every other view already treats them that way. They collapse to `3 parked lines` that expands in place, rather than vanishing — the outline and the sidebar sit *beside* the text where a comment is still visible, and the parsed view replaces it.
+
+**Why a custom editor rather than a side-by-side preview.** The document is the data model, so VS Code handles undo, dirty state and save itself; there is no second copy of the state, and no scroll position to keep in sync. It is registered as an option rather than a default, because opening a text format in a webview by default would be wrong.
+
+Nothing from the file reaches the page as markup. Every description, title and comment is escaped, and there are tests that a description cannot inject an element, that a `-->` cannot become a real HTML comment, and that a title cannot break out of its heading.
+
 ## Outline and Folding
 
 Titles and items fill the Outline panel, with subtasks nested under their parents, which also gives Go to Symbol and breadcrumbs. Both arrows show beside each row — `<- 2026-09-01  -> 2026-09-30` — so the outline doubles as a schedule rather than repeating the dates in the item names.
@@ -647,6 +663,7 @@ npm test               # build, then run the unit tests
 npm run install:local  # package the extension and install it into VS Code
 npm run lint           # Biome: lint and formatting, over src, test and scripts
 npm run lint:fix       # fix what can be fixed automatically
+npm run test:dom       # check the parsed view's markup in a real browser
 npm run test:web       # run the integration tests in a headless browser
 npm run test:integration   # run the same tests in desktop VS Code
 npm run open-web:demo  # serve a real VS Code in the browser, on demo/
