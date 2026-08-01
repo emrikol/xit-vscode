@@ -1282,11 +1282,24 @@ function registerPreview(context: vscode.ExtensionContext) {
 			reopened.delete(target.toString());
 			return vscode.commands.executeCommand('vscode.openWith', target, 'default');
 		}),
-		// Kept for the palette and a keybinding, where a direction-free toggle
-		// is the more useful shape.
-		vscode.commands.registerCommand('xit.togglePreview', () =>
-			vscode.commands.executeCommand('workbench.action.toggleEditorType'),
-		),
+		// The direction-free form, for the keybinding and the palette.
+		//
+		// It works out the direction itself rather than delegating to
+		// `workbench.action.toggleEditorType`, which is what it used to do and
+		// which asked "do you want to save?" on a dirty document - it closes
+		// the editor rather than swapping it, and the parsed view makes a
+		// document dirty the moment you tick anything. The two commands below
+		// round-trip a dirty document without touching it, and there is a test
+		// that says so.
+		vscode.commands.registerCommand('xit.togglePreview', () => {
+			const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+			if (input instanceof vscode.TabInputCustom && input.viewType === 'xit.preview') {
+				return vscode.commands.executeCommand('xit.openRaw', input.uri);
+			}
+
+			const uri = vscode.window.activeTextEditor?.document.uri;
+			return uri ? vscode.commands.executeCommand('xit.openParsed', uri) : undefined;
+		}),
 	);
 }
 

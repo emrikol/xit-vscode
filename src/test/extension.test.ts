@@ -567,6 +567,49 @@ describe('the parsed view', () => {
 		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 	});
 
+	it('toggles a DIRTY document without losing it', async () => {
+		// The save prompt says something is closing the editor rather than
+		// swapping it, and the document is dirty because clicking checkboxes in
+		// the parsed view makes unsaved edits. This is that exact state.
+		const [found] = await vscode.workspace.findFiles('**/Meeting TODOs.xit', undefined, 1);
+		assert.ok(found);
+
+		const document = await vscode.workspace.openTextDocument(found);
+		await vscode.window.showTextDocument(document);
+
+		const edit = new vscode.WorkspaceEdit();
+		edit.insert(document.uri, new vscode.Position(0, 0), '');
+		edit.replace(document.uri, document.lineAt(0).range, document.lineAt(0).text);
+		await vscode.workspace.applyEdit(edit);
+
+		const dirtyEdit = new vscode.WorkspaceEdit();
+		dirtyEdit.insert(document.uri, new vscode.Position(0, 0), ' ');
+		await vscode.workspace.applyEdit(dirtyEdit);
+		assert.equal(document.isDirty, true, 'the fixture is not dirty, so this proves nothing');
+
+		const before = document.getText();
+
+		// Through the toggle, which is what the keybinding runs. Delegating to
+		// `workbench.action.toggleEditorType` here is what produced the save
+		// prompt: it closes the editor rather than swapping it.
+		await vscode.commands.executeCommand('xit.togglePreview');
+		const parsed = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+		assert.ok(parsed instanceof vscode.TabInputCustom, 'the toggle did not reach the parsed view');
+
+		await vscode.commands.executeCommand('xit.togglePreview');
+		assert.ok(
+			vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputText,
+			'the toggle did not come back to text',
+		);
+
+		assert.equal(document.isClosed, false, 'the document was closed by the round trip');
+		assert.equal(document.getText(), before, 'the round trip lost the unsaved edit');
+		assert.equal(document.isDirty, true, 'the round trip silently saved the document');
+
+		// Leave the fixture as it was on disk.
+		await vscode.commands.executeCommand('workbench.action.files.revert');
+	});
+
 	it('registers the toggle, and it does not throw with an xit file in front', async () => {
 		const registered = await vscode.commands.getCommands(true);
 		assert.ok(registered.includes('xit.togglePreview'));
