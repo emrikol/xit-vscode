@@ -393,11 +393,49 @@ li ul { margin-inline-start: 1.5rem; }
 	border-inline-start: 2px solid var(--vscode-editorError-foreground, currentColor); padding-inline-start: .5rem; margin: .25rem 0;
 }
 .continued { margin: .1rem 0 .2rem 1.9rem; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
+.viewswitch {
+	position: fixed; inset-block-start: .5rem; inset-inline-end: 1rem; z-index: 2;
+	display: flex; border-radius: 4px; overflow: hidden;
+	border: 1px solid var(--vscode-widget-border, var(--vscode-contrastBorder, transparent));
+	background: var(--vscode-editorWidget-background, transparent);
+}
+.switch {
+	font: inherit; font-size: .85em; line-height: 1.6;
+	padding: .1rem .7rem; border: 0; margin: 0;
+	color: var(--vscode-foreground); background: transparent;
+}
+button.switch { cursor: pointer; }
+button.switch:hover { background: var(--vscode-toolbar-hoverBackground, rgba(128 128 128 / .2)); }
+button.switch:focus-visible { outline: 2px solid var(--vscode-focusBorder, currentColor); outline-offset: -2px; }
+.switch.current { background: var(--vscode-button-background, rgba(128 128 128 / .3)); color: var(--vscode-button-foreground, inherit); }
+body { padding-block-start: 2.2rem; }
 a { color: var(--vscode-textLink-foreground, currentColor); }
 a:hover { color: var(--vscode-textLink-activeForeground, currentColor); }
 .empty { color: var(--vscode-descriptionForeground); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 `;
+
+/**
+ * The Raw/Parsed control, in the page.
+ *
+ * Chrome's JSON viewer puts it at the top right of the document itself, which
+ * is the shape that was asked for and is better than a toolbar icon for a
+ * reason beyond looks: an editor title action competes for a row that other
+ * extensions are already using, and can be pushed into an overflow menu.
+ * Nothing can push this out of its own page.
+ *
+ * Only half of it can live here, honestly: the raw side is VS Code's text
+ * editor, and there is nowhere in that to draw. So Raw is a button and Parsed
+ * is the state you are in, which is exactly how the pair reads anyway.
+ */
+function viewSwitch(): string {
+	return (
+		'<nav class="viewswitch" aria-label="View">' +
+		'<button type="button" class="switch" data-view="raw">Raw</button>' +
+		'<span class="switch current" aria-current="true">Parsed</span>' +
+		'</nav>'
+	);
+}
 
 /** A chip, or nothing when there is nothing to say. */
 function chip(text: string | null, className = ''): string {
@@ -465,7 +503,7 @@ export function previewBody(blocks: readonly Block[]): string {
 }
 
 export function previewHtml(blocks: readonly Block[], nonce: string): string {
-	return `<style nonce="${nonce}">${STYLE}</style><main>${previewBody(blocks)}</main><script nonce="${nonce}">${CLIENT}</script>`;
+	return `<style nonce="${nonce}">${STYLE}</style>${viewSwitch()}<main>${previewBody(blocks)}</main><script nonce="${nonce}">${CLIENT}</script>`;
 }
 
 /**
@@ -481,6 +519,12 @@ export const CLIENT = `
 const vscode = acquireVsCodeApi();
 
 document.addEventListener('click', (event) => {
+	const view = event.target.closest('[data-view]');
+	if (view) {
+		vscode.postMessage({ type: 'view', view: view.dataset.view });
+		return;
+	}
+
 	const box = event.target.closest('.box');
 	if (!box) return;
 	vscode.postMessage({ type: 'cycle', line: Number(box.dataset.line) });

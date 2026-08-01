@@ -202,6 +202,54 @@ describe('updating without reloading the page', () => {
 	});
 });
 
+describe('the Raw/Parsed control, in the page', () => {
+	it('is there, marks Parsed as current, and puts Raw first', async () => {
+		await render(['[ ] Only']);
+		const segments = await page.$$eval('.viewswitch .switch', (nodes) =>
+			nodes.map((node) => ({ text: node.textContent, tag: node.tagName, current: node.getAttribute('aria-current') })),
+		);
+		assert.deepEqual(segments, [
+			{ text: 'Raw', tag: 'BUTTON', current: null },
+			{ text: 'Parsed', tag: 'SPAN', current: 'true' },
+		]);
+	});
+
+	it('asks for the raw view when Raw is clicked', async () => {
+		await render(['[ ] Only']);
+		await page.click('.viewswitch [data-view="raw"]');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'view', view: 'raw' }]);
+	});
+
+	it('stays put when the page is scrolled', async () => {
+		// It is the way out. Having to scroll back to the top to leave is the
+		// kind of thing that makes a view feel like a trap.
+		await render(Array.from({ length: 200 }, (_, at) => `[ ] Item ${at}`));
+		const before = await page.$eval('.viewswitch', (node) => node.getBoundingClientRect().top);
+		await page.evaluate(() => window.scrollTo(0, 1500));
+		const after = await page.$eval('.viewswitch', (node) => node.getBoundingClientRect().top);
+		assert.equal(after, before, 'the control scrolled away with the content');
+	});
+
+	it('does not report a status click when Raw is pressed', async () => {
+		await render(['[ ] Only']);
+		await page.click('.viewswitch [data-view="raw"]');
+		const posted = await page.evaluate(() => window.__posted);
+		assert.equal(
+			posted.some((message) => message.type === 'cycle'),
+			false,
+		);
+	});
+
+	it('is reachable and operable from the keyboard', async () => {
+		await render(['[ ] Only']);
+		await page.focus('.viewswitch [data-view="raw"]');
+		const outline = await page.$eval('.viewswitch [data-view="raw"]', (node) => getComputedStyle(node).outlineStyle);
+		assert.notEqual(outline, 'none', 'no visible focus ring on the way out');
+		await page.keyboard.press('Enter');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'view', view: 'raw' }]);
+	});
+});
+
 describe('clicking', () => {
 	it('posts the line it was clicked on', async () => {
 		await render(['[ ] First', '[ ] Second']);

@@ -505,7 +505,7 @@
                 "command": "xit.openRaw",
                 "title": "Open Raw View",
                 "category": "xit!",
-                "icon": "$(go-to-file)"
+                "icon": "$(code)"
             },
             {
                 "command": "xit.setStatus",

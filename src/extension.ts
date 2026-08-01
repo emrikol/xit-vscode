@@ -1282,10 +1282,16 @@ function registerPreview(context: vscode.ExtensionContext) {
 						if (event.affectsConfiguration(LANGUAGE)) void update();
 					});
 
-					const received = panel.webview.onDidReceiveMessage((message: { type?: string; line?: number }) => {
-						if (message?.type !== 'cycle' || typeof message.line !== 'number') return;
-						void cycleStatusAt(document, message.line);
-					});
+					const received = panel.webview.onDidReceiveMessage(
+						(message: { type?: string; line?: number; view?: string }) => {
+							if (message?.type === 'view' && message.view === 'raw') {
+								void vscode.commands.executeCommand('xit.openRaw', document.uri);
+								return;
+							}
+							if (message?.type !== 'cycle' || typeof message.line !== 'number') return;
+							void cycleStatusAt(document, message.line);
+						},
+					);
 
 					panel.onDidDispose(() => {
 						changed.dispose();
