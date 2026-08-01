@@ -13,7 +13,7 @@ import { sortGroup } from './sort';
 import { alignments } from './align';
 import { type Collected, collect, isOpen, urgencyOf } from './collect';
 import { type Blocker, hoverMarkdown } from './hover';
-import { escapeHtml, preview, previewBody, previewHtml } from './preview';
+import { escapeHtml, isSafeLink, preview, previewBody, previewHtml } from './preview';
 import { dateTags, estimateTag, thresholds } from './settings';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
@@ -1323,7 +1323,17 @@ function registerPreview(context: vscode.ExtensionContext) {
 					});
 
 					const received = panel.webview.onDidReceiveMessage(
-						(message: { type?: string; line?: number; view?: string }) => {
+						(message: { type?: string; line?: number; view?: string; href?: string }) => {
+							if (message?.type === 'open' && typeof message.href === 'string') {
+								// Checked again here. src/preview.ts refuses an
+								// executing scheme when it draws the link; this
+								// is the same rule applied to what actually
+								// reaches the operating system.
+								if (isSafeLink(message.href)) {
+									void vscode.env.openExternal(vscode.Uri.parse(message.href));
+								}
+								return;
+							}
 							if (message?.type === 'view' && message.view === 'raw') {
 								void vscode.commands.executeCommand('xit.openRaw', document.uri);
 								return;

@@ -536,7 +536,7 @@ You cannot edit text while parsed. That is the point, and it is what Chrome does
 
 **A parsed view never hides work.** Anything it cannot draw as a component — a Markdown-style `- [ ] task`, a malformed checkbox, a line that is not an item — is shown as written with a marker beside it. The specification defined a title by what it is *not*, so `- [ ] Buy milk` was silently promoted to a heading and the task disappeared from every list; a preview that quietly omitted what it could not parse would reintroduce exactly that, one layer up. A test walks generated documents and fails if any non-blank line is unaccounted for.
 
-Descriptions get their links made clickable — both bare URLs and `[label](target)` — with any scheme allowed except the ones that execute, which are shown as plain text instead.
+Descriptions get their links made clickable — both bare URLs and `[label](target)` — with any scheme allowed except the ones that execute, which are shown as plain text instead. Clicking one hands it to the operating system, so a `quill://` meeting link opens the app that claims it. A webview does not follow links by itself, and refuses an unknown scheme outright, so this is handled rather than left to the browser. The scheme is checked twice: once where the link is drawn, and again before anything is launched.
 
 **Comments do not appear at all.** Not collapsed, not marked: absent. Parked work is not outstanding work, and every other view already drops it — the outline skips it, the sidebar never lists it, its tags never reach completion. Raw is where you read a comment, and it is one keystroke away. A comment still ends the group above it, because one cannot sit inside an item.
 

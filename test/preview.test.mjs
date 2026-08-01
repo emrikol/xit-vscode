@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
-const { escapeHtml, linkify, preview } = require_('../out/preview.js');
+const { escapeHtml, isSafeLink, linkify, preview } = require_('../out/preview.js');
 const { STATUSES } = require_('../out/checkbox.js');
 const { commentLines } = require_('../out/comment.js');
 
@@ -272,6 +272,19 @@ describe('links', () => {
 			linkify('Ends at https://example.com.'),
 			'Ends at <a href="https://example.com">https://example.com</a>.',
 		);
+	});
+
+	it('refuses the same schemes at the point of opening, not only of drawing', () => {
+		// Two checks, because they guard different things: one decides what the
+		// page shows, the other what the extension asks the operating system to
+		// launch. Only the second can do damage.
+		assert.equal(isSafeLink('https://example.com'), true);
+		assert.equal(isSafeLink('quill://meeting/1'), true);
+		assert.equal(isSafeLink('javascript:alert(1)'), false);
+		assert.equal(isSafeLink('  JavaScript:alert(1)'), false);
+		assert.equal(isSafeLink('data:text/html,x'), false);
+		assert.equal(isSafeLink(''), false);
+		assert.equal(isSafeLink('   '), false);
 	});
 
 	it('leaves text with no link alone', () => {

@@ -118,6 +118,18 @@ export function escapeHtml(text: string): string {
 const DANGEROUS = /^(javascript|data|vbscript):/i;
 
 /**
+ * Whether a link may be followed.
+ *
+ * Applied where the link is drawn and again where it is opened. The second
+ * check is not redundant: the first is about what the page shows, the second
+ * about what the extension asks the operating system to launch, and only one of
+ * those two things can do damage.
+ */
+export function isSafeLink(href: string): boolean {
+	return href.trim().length > 0 && !DANGEROUS.test(href.trim());
+}
+
+/**
  * `[label](target)`, and a bare URL, in one pass so neither can nest in the
  * other.
  *
@@ -519,6 +531,16 @@ export const CLIENT = `
 const vscode = acquireVsCodeApi();
 
 document.addEventListener('click', (event) => {
+	// A webview does not follow a link on its own, and will not hand a custom
+	// scheme like quill:// anywhere at all. The href goes to the extension,
+	// which asks the operating system to open it.
+	const link = event.target.closest('a[href]');
+	if (link) {
+		event.preventDefault();
+		vscode.postMessage({ type: 'open', href: link.getAttribute('href') });
+		return;
+	}
+
 	const view = event.target.closest('[data-view]');
 	if (view) {
 		vscode.postMessage({ type: 'view', view: view.dataset.view });

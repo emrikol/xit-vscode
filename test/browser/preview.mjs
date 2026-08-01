@@ -202,6 +202,47 @@ describe('updating without reloading the page', () => {
 	});
 });
 
+describe('following a link', () => {
+	it('hands the href to the extension instead of doing nothing', async () => {
+		// A webview does not follow a link on its own, and will not hand a
+		// custom scheme like quill:// anywhere at all - which is every meeting
+		// link in a real file.
+		await render(['[ ] Call [Kickoff, Jul 14](quill://meeting/9e0ef127)']);
+		await page.click('.text a');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'open', href: 'quill://meeting/9e0ef127' }]);
+	});
+
+	it('works for a bare URL too', async () => {
+		await render(['[ ] See https://example.com/x']);
+		await page.click('.text a');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'open', href: 'https://example.com/x' }]);
+	});
+
+	it('does not also report a status change', async () => {
+		await render(['[ ] Call [K](quill://m/1)']);
+		await page.click('.text a');
+		const posted = await page.evaluate(() => window.__posted);
+		assert.equal(
+			posted.some((message) => message.type === 'cycle'),
+			false,
+		);
+	});
+
+	it('does not navigate the page away', async () => {
+		// preventDefault, or the whole view is replaced by whatever the href
+		// resolves to and there is no way back.
+		await render(['[ ] See https://example.com/x']);
+		await page.click('.text a');
+		assert.match(await page.textContent('main'), /See/);
+	});
+
+	it('follows a link in a continuation line', async () => {
+		await render(['[ ] Parent', '    [Notes, Jul 7](quill://meeting/abc)']);
+		await page.click('.continued a');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'open', href: 'quill://meeting/abc' }]);
+	});
+});
+
 describe('the Raw/Parsed control, in the page', () => {
 	it('is there, marks Parsed as current, and puts Raw first', async () => {
 		await render(['[ ] Only']);
