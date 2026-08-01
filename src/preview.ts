@@ -24,7 +24,7 @@
 
 import { type Status, priorityOf } from './checkbox';
 import { type Collected, type Thresholds, type Urgency, collect, isOpen, totalEstimate, urgencyOf } from './collect';
-import { commentBlocks } from './comment';
+import { commentLines } from './comment';
 import { formatCycleTime } from './cycle';
 import { formatEstimate } from './estimate';
 import { STATUS_LABEL, withoutTags } from './hover';
@@ -75,17 +75,6 @@ export interface Group {
 	unestimated: number;
 }
 
-/** A comment block, collapsed. Hidden by default, never dropped. */
-export interface Parked {
-	kind: 'parked';
-	line: number;
-	endLine: number;
-	/** How many lines are inside, so the marker can say. */
-	count: number;
-	/** The lines themselves. Without these the disclosure opened onto nothing. */
-	lines: string[];
-}
-
 /** A line the renderer could not turn into anything, shown as written. */
 export interface Raw {
 	kind: 'raw';
@@ -93,7 +82,7 @@ export interface Raw {
 	text: string;
 }
 
-export type Block = Group | Parked | Raw;
+export type Block = Group | Raw;
 
 export interface PreviewOptions {
 	thresholds: Thresholds;
@@ -236,12 +225,7 @@ export function preview(lines: readonly string[], options: PreviewOptions): Bloc
 	const byLine = new Map(collected.map((item) => [item.line, item]));
 	const all = items(lines);
 
-	// Which lines a comment owns, so they collapse rather than disappear.
-	const parked = new Map(commentBlocks(lines).map((block) => [block.start, block]));
-	const inComment = new Set<number>();
-	for (const block of parked.values()) {
-		for (let line = block.start; line <= block.end; line++) inComment.add(line);
-	}
+	const inComment = commentLines(lines);
 
 	const blocks: Block[] = [];
 	let group: Group | null = null;
@@ -281,19 +265,18 @@ export function preview(lines: readonly string[], options: PreviewOptions): Bloc
 	});
 
 	for (const [line, text] of lines.entries()) {
+		// A comment does not appear at all. Parked work is not outstanding work,
+		// and every other view already drops it - the outline skips it, collect
+		// filters it, the sidebar never lists it, its tags never reach
+		// completion. A marker offering to expand it was a half-measure: it put
+		// five rows of furniture at the top of the file for content nobody was
+		// asking to see, and the way to read a comment is to switch to Raw,
+		// where it is right there in the text.
+		//
+		// It still ends the group above it, because a comment cannot sit inside
+		// an item.
 		if (inComment.has(line)) {
-			const block = parked.get(line);
-			// Only the opening line emits; the rest are inside it.
-			if (block) {
-				close();
-				blocks.push({
-					kind: 'parked',
-					line: block.start,
-					endLine: block.end,
-					count: block.end - block.start + 1,
-					lines: lines.slice(block.start, block.end + 1),
-				});
-			}
+			close();
 			continue;
 		}
 
@@ -377,9 +360,6 @@ li ul { margin-inline-start: 1.5rem; }
 	font-family: var(--vscode-editor-font-family); white-space: pre-wrap; overflow-wrap: anywhere;
 	border-inline-start: 2px solid var(--vscode-editorError-foreground, currentColor); padding-inline-start: .5rem; margin: .25rem 0;
 }
-details.parked { margin: .5rem 0; color: var(--vscode-descriptionForeground); }
-details.parked summary { cursor: pointer; }
-details.parked pre { margin: .25rem 0 0; overflow-x: auto; font-family: var(--vscode-editor-font-family); }
 .continued { margin: .1rem 0 .2rem 1.9rem; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
 a { color: var(--vscode-textLink-foreground, currentColor); }
 a:hover { color: var(--vscode-textLink-activeForeground, currentColor); }
@@ -428,17 +408,6 @@ function rowHtml(row: Row): string {
 function blockHtml(block: Block): string {
 	if (block.kind === 'raw') {
 		return `<p class="raw" data-line="${block.line}"><span class="unparsed">Not recognised</span> ${escapeHtml(block.text)}</p>`;
-	}
-
-	if (block.kind === 'parked') {
-		// A native disclosure: keyboard support and correct semantics with no
-		// script at all. Parked work is hidden, never dropped.
-		const count = block.count === 1 ? '1 parked line' : `${block.count} parked lines`;
-		// The lines themselves. Leaving them out made the disclosure open onto
-		// nothing, which is worse than not offering it: it says there is
-		// something here and then shows you an empty box.
-		const inside = block.lines.map(escapeHtml).join('\n');
-		return `<details class="parked" data-line="${block.line}"><summary>${count}</summary><pre>${inside}</pre></details>`;
 	}
 
 	const total =

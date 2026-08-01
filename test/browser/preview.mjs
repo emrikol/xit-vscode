@@ -99,13 +99,12 @@ describe('the markup a browser actually parses', () => {
 		assert.equal(await page.textContent('.count'), '1 of 3');
 	});
 
-	it('keeps a parked block collapsed, and keyboard reachable', async () => {
+	it('puts nothing on the page for a comment', async () => {
 		await render(['[ ] Real', '<!--', '[ ] Parked', '-->']);
-		const open = await page.$eval('details.parked', (node) => node.open);
-		assert.equal(open, false, 'parked work should start collapsed');
-		assert.equal(await page.textContent('details.parked summary'), '3 parked lines');
-		// A native <details> is focusable without any script of ours.
-		assert.equal(await page.$$eval('summary', (nodes) => nodes.length), 1);
+		assert.equal(await page.$$eval('details', (nodes) => nodes.length), 0, 'a comment left furniture behind');
+		const text = await page.textContent('main');
+		assert.match(text, /Real/);
+		assert.doesNotMatch(text, /Parked|parked line/);
 	});
 
 	it('shows a line it cannot parse rather than dropping it', async () => {
@@ -144,18 +143,6 @@ describe('nothing from the file becomes markup', () => {
 		await render(['# </h2><script>window.__pwned=1</script>', '[ ] Item']);
 		assert.equal(await page.evaluate(() => window.__pwned), undefined);
 		assert.equal(await page.$$eval('h2', (nodes) => nodes.length), 1);
-	});
-});
-
-describe('what the parked disclosure opens onto', () => {
-	it('shows the parked lines, rather than an empty box', async () => {
-		// It rendered a summary and nothing else, so expanding it did nothing
-		// visible - which is worse than not offering it at all.
-		await render(['[ ] Real', '<!--', '[ ] Parked idea', '-->']);
-		await page.click('details.parked summary');
-		const text = await page.textContent('details.parked pre');
-		assert.match(text, /\[ \] Parked idea/);
-		assert.equal(await page.$eval('details.parked', (node) => node.open), true);
 	});
 });
 

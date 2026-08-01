@@ -406,6 +406,19 @@
                     "when": "editorLangId == 'xit'"
                 }
             ],
+            "editor/context": [
+                {
+                    "command": "xit.openParsed",
+                    "when": "resourceLangId == xit",
+                    "group": "navigation@1"
+                }
+            ],
+            "editor/title/context": [
+                {
+                    "command": "xit.togglePreview",
+                    "when": "resourceLangId == xit"
+                }
+            ],
             "editor/title": [
                 {
                     "command": "xit.openParsed",
@@ -416,6 +429,11 @@
                     "command": "xit.openRaw",
                     "when": "activeCustomEditorId == 'xit.preview'",
                     "group": "navigation@1"
+                },
+                {
+                    "command": "xit.togglePreview",
+                    "when": "resourceLangId == xit || activeCustomEditorId == 'xit.preview'",
+                    "group": "1_xit"
                 }
             ],
             "view/title": [

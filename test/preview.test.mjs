@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 const require_ = createRequire(import.meta.url);
 const { escapeHtml, linkify, preview } = require_('../out/preview.js');
 const { STATUSES } = require_('../out/checkbox.js');
+const { commentLines } = require_('../out/comment.js');
 
 const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
 
@@ -43,17 +44,20 @@ describe('no line is ever lost', () => {
 			if (block.kind === 'group') {
 				if (block.line !== null) seen.add(block.line);
 				walk(block.rows);
-			} else if (block.kind === 'parked') {
-				for (let line = block.line; line <= block.endLine; line++) seen.add(line);
 			} else {
 				seen.add(block.line);
 			}
 		}
 
-		// Blank lines carry no content and are the one thing a view may drop.
+		// Blank lines and comments are the two things a view may drop: one
+		// carries no content, and the other is work deliberately set aside.
+		// Everything else must be somewhere.
+		const parked = commentLines(lines);
+
 		return lines
 			.map((text, line) => ({ text, line }))
 			.filter(({ text }) => text.trim() !== '')
+			.filter(({ line }) => !parked.has(line))
 			.filter(({ line }) => !seen.has(line))
 			.map(({ line, text }) => `${line}: ${JSON.stringify(text)}`);
 	}
@@ -83,20 +87,24 @@ describe('no line is ever lost', () => {
 		);
 	});
 
-	it('carries the parked lines themselves, so the disclosure has something to open onto', () => {
-		// It rendered a `<details>` with only a summary, so expanding it showed
-		// an empty box - which is worse than not offering it, because it says
-		// there is something here and then shows nothing.
-		const [, parked] = blocks(['[ ] Real', '<!--', '[ ] Parked idea', '-->']);
-		assert.deepEqual(parked.lines, ['<!--', '[ ] Parked idea', '-->']);
+	it('does not show a comment at all', () => {
+		// Not collapsed, not marked: absent. Parked work is not outstanding
+		// work, and every other view already drops it. A marker offering to
+		// expand one put rows of furniture at the top of a file for content
+		// nobody asked to see; Raw is where you read a comment.
+		const found = blocks(['[ ] Real', '<!--', '[ ] Parked', 'notes', '-->']);
+		assert.deepEqual(
+			found.map((block) => block.kind),
+			['group'],
+		);
+		assert.equal(JSON.stringify(found).includes('Parked'), false);
 	});
 
-	it('keeps a parked block, collapsed', () => {
-		const [real, parked] = blocks(['[ ] Real', '<!--', '[ ] Parked', 'notes', '-->']);
-		assert.equal(real.kind, 'group');
+	it('still ends the group above a comment, because one cannot sit inside an item', () => {
+		const found = blocks(['[ ] Before', '<!-- note -->', '[ ] After']);
 		assert.deepEqual(
-			{ kind: parked.kind, line: parked.line, endLine: parked.endLine, count: parked.count },
-			{ kind: 'parked', line: 1, endLine: 4, count: 4 },
+			found.map((block) => block.rows.length),
+			[1, 1],
 		);
 	});
 
