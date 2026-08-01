@@ -1251,7 +1251,18 @@ function registerPreview(context: vscode.ExtensionContext) {
 
 				const top = new vscode.Range(0, 0, 0, 0);
 				return [
-					new vscode.CodeLens(top, { title: 'Raw', command: '' }),
+					// Both carry a real command. An empty string is not a
+					// command id, and VS Code drops the lens rather than
+					// rendering inert text - which is why the pair never
+					// appeared at all. `Raw` opening raw while already raw is a
+					// no-op, which is the right behaviour for the state you are
+					// already in.
+					new vscode.CodeLens(top, {
+						title: 'Raw',
+						command: 'xit.openRaw',
+						arguments: [document.uri],
+						tooltip: 'Already showing the raw text',
+					}),
 					new vscode.CodeLens(top, {
 						title: 'Parsed',
 						command: 'xit.openParsed',

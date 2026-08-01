@@ -633,7 +633,15 @@ describe('the parsed view', () => {
 			['Raw', 'Parsed'],
 			'the pair is not at the top of the file',
 		);
-		assert.equal(mine[0].command?.command, '', 'Raw should be the state you are in, not a link');
+		// Both must carry a real command id. An empty string is not one, and
+		// VS Code drops the lens rather than rendering inert text - so the pair
+		// never appeared, while this test happily passed because the *provider*
+		// had returned them. Returning a lens and rendering one are different
+		// things.
+		for (const lens of mine) {
+			assert.ok(lens.command?.command, `${lens.command?.title} has no command, so it will not render`);
+			assert.match(lens.command.command, /^xit\./, `${lens.command.title} names a command that is not ours`);
+		}
 		assert.equal(mine[1].command?.command, 'xit.openParsed');
 		assert.deepEqual(mine[1].command?.arguments, [document.uri]);
 
