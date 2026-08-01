@@ -82,6 +82,8 @@ export interface Parked {
 	endLine: number;
 	/** How many lines are inside, so the marker can say. */
 	count: number;
+	/** The lines themselves. Without these the disclosure opened onto nothing. */
+	lines: string[];
 }
 
 /** A line the renderer could not turn into anything, shown as written. */
@@ -115,6 +117,51 @@ export function escapeHtml(text: string): string {
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;');
+}
+
+/**
+ * Schemes a link may not use, whatever the file says.
+ *
+ * An allow-list would be wrong here: `quill://` is a real scheme someone uses
+ * for meeting links, and so is anything else their tools invent. What must
+ * never survive is a scheme that executes.
+ */
+const DANGEROUS = /^(javascript|data|vbscript):/i;
+
+/** `[label](target)`, and a bare URL, in one pass so neither can nest in the other. */
+const LINK = /\[([^\]\n]*)\]\(([^)\s]+)\)|\b[a-zA-Z][a-zA-Z\d+.-]*:\/\/[^\s)]+/g;
+
+/**
+ * Text with its links made clickable, everything else escaped.
+ *
+ * Tokenised rather than escaped-then-substituted: escaping first would turn a
+ * quote inside a target into `&quot;` before it could be checked, and running
+ * a replacement over already-escaped text is how an injection gets built back
+ * up out of its own escapes.
+ */
+export function linkify(text: string): string {
+	let out = '';
+	let at = 0;
+
+	for (const match of text.matchAll(LINK)) {
+		const start = match.index ?? 0;
+		out += escapeHtml(text.slice(at, start));
+		at = start + match[0].length;
+
+		const [whole, label, target] = match;
+		const href = target ?? whole;
+
+		// A scheme that executes is written out as text, not linked. It stays
+		// visible - the rule is that nothing is hidden - it just is not live.
+		if (DANGEROUS.test(href.trim())) {
+			out += escapeHtml(whole);
+			continue;
+		}
+
+		out += `<a href="${escapeHtml(href)}">${escapeHtml(label ?? whole)}</a>`;
+	}
+
+	return out + escapeHtml(text.slice(at));
 }
 
 /** Everything about an item that the preview shows, from a collected one. */
@@ -239,7 +286,13 @@ export function preview(lines: readonly string[], options: PreviewOptions): Bloc
 			// Only the opening line emits; the rest are inside it.
 			if (block) {
 				close();
-				blocks.push({ kind: 'parked', line: block.start, endLine: block.end, count: block.end - block.start + 1 });
+				blocks.push({
+					kind: 'parked',
+					line: block.start,
+					endLine: block.end,
+					count: block.end - block.start + 1,
+					lines: lines.slice(block.start, block.end + 1),
+				});
 			}
 			continue;
 		}
@@ -328,6 +381,8 @@ details.parked { margin: .5rem 0; color: var(--vscode-descriptionForeground); }
 details.parked summary { cursor: pointer; }
 details.parked pre { margin: .25rem 0 0; overflow-x: auto; font-family: var(--vscode-editor-font-family); }
 .continued { margin: .1rem 0 .2rem 1.9rem; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
+a { color: var(--vscode-textLink-foreground, currentColor); }
+a:hover { color: var(--vscode-textLink-activeForeground, currentColor); }
 .empty { color: var(--vscode-descriptionForeground); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 `;
@@ -362,11 +417,11 @@ function rowHtml(row: Row): string {
 	].join('');
 
 	const continued = row.continuation.length
-		? `<p class="continued">${row.continuation.map((each) => escapeHtml(each.text)).join('<br>')}</p>`
+		? `<p class="continued">${row.continuation.map((each) => linkify(each.text)).join('<br>')}</p>`
 		: '';
 	const children = row.children.length ? `<ul>${row.children.map(rowHtml).join('')}</ul>` : '';
 
-	return `<li${row.open ? '' : ' class="done"'}><div class="item">${box}<span class="text">${priority}${escapeHtml(row.description)}${parts}</span></div>${continued}${children}</li>`;
+	return `<li${row.open ? '' : ' class="done"'}><div class="item">${box}<span class="text">${priority}${linkify(row.description)}${parts}</span></div>${continued}${children}</li>`;
 }
 
 /** One block: a group, a collapsed comment, or a line shown as written. */
@@ -379,7 +434,11 @@ function blockHtml(block: Block): string {
 		// A native disclosure: keyboard support and correct semantics with no
 		// script at all. Parked work is hidden, never dropped.
 		const count = block.count === 1 ? '1 parked line' : `${block.count} parked lines`;
-		return `<details class="parked" data-line="${block.line}"><summary>${count}</summary></details>`;
+		// The lines themselves. Leaving them out made the disclosure open onto
+		// nothing, which is worse than not offering it: it says there is
+		// something here and then shows you an empty box.
+		const inside = block.lines.map(escapeHtml).join('\n');
+		return `<details class="parked" data-line="${block.line}"><summary>${count}</summary><pre>${inside}</pre></details>`;
 	}
 
 	const total =

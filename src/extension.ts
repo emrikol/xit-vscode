@@ -1181,12 +1181,40 @@ function nonce(): string {
  * wrong - and `workbench.action.toggleEditorType` flips between them.
  */
 function registerPreview(context: vscode.ExtensionContext) {
+	/**
+	 * Which view each file was last looked at in.
+	 *
+	 * Only ever written when you choose - resolving the parsed view, or asking
+	 * for raw. Recording it merely because a file opened as text would overwrite
+	 * the choice the instant VS Code opened the default, which is exactly the
+	 * moment the choice is supposed to be applied.
+	 */
+	const remembered = (uri: vscode.Uri) => context.workspaceState.get<'raw' | 'parsed'>(`xit.view:${uri.toString()}`);
+	const remember = (uri: vscode.Uri, view: 'raw' | 'parsed') =>
+		context.workspaceState.update(`xit.view:${uri.toString()}`, view);
+
+	// Files already reopened this session, so a failed reopen cannot become a
+	// loop: the text editor reappears, the listener fires, and round it goes.
+	const reopened = new Set<string>();
+
 	context.subscriptions.push(
+		vscode.window.onDidChangeActiveTextEditor(async (editor) => {
+			if (!editor || editor.document.languageId !== LANGUAGE) return;
+
+			const key = editor.document.uri.toString();
+			if (reopened.has(key) || remembered(editor.document.uri) !== 'parsed') return;
+
+			reopened.add(key);
+			await vscode.commands.executeCommand('vscode.openWith', editor.document.uri, 'xit.preview');
+		}),
+
 		vscode.window.registerCustomEditorProvider(
 			'xit.preview',
 			{
 				resolveCustomTextEditor(document, panel) {
 					panel.webview.options = { enableScripts: true };
+					void remember(document.uri, 'parsed');
+					reopened.add(document.uri.toString());
 
 					const render = () => {
 						const token = nonce();
@@ -1247,6 +1275,11 @@ function registerPreview(context: vscode.ExtensionContext) {
 			const fromTab = input instanceof vscode.TabInputCustom ? input.uri : undefined;
 			const target = uri ?? fromTab;
 			if (!target) return undefined;
+			// Asking for raw is a choice, so it is remembered - and the guard is
+			// cleared, because the file may legitimately be reopened as parsed
+			// again later in the session.
+			void remember(target, 'raw');
+			reopened.delete(target.toString());
 			return vscode.commands.executeCommand('vscode.openWith', target, 'default');
 		}),
 		// Kept for the palette and a keybinding, where a direction-free toggle

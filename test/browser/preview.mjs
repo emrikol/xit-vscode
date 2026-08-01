@@ -147,6 +147,37 @@ describe('nothing from the file becomes markup', () => {
 	});
 });
 
+describe('what the parked disclosure opens onto', () => {
+	it('shows the parked lines, rather than an empty box', async () => {
+		// It rendered a summary and nothing else, so expanding it did nothing
+		// visible - which is worse than not offering it at all.
+		await render(['[ ] Real', '<!--', '[ ] Parked idea', '-->']);
+		await page.click('details.parked summary');
+		const text = await page.textContent('details.parked pre');
+		assert.match(text, /\[ \] Parked idea/);
+		assert.equal(await page.$eval('details.parked', (node) => node.open), true);
+	});
+});
+
+describe('links', () => {
+	it('makes a markdown-style link a real anchor', async () => {
+		await render(['[ ] Call [Kickoff, Jul 14](quill://meeting/9e0ef127)']);
+		const link = await page.$eval('.text a', (node) => ({ href: node.getAttribute('href'), text: node.textContent }));
+		assert.deepEqual(link, { href: 'quill://meeting/9e0ef127', text: 'Kickoff, Jul 14' });
+	});
+
+	it('links a bare URL in a continuation line too', async () => {
+		await render(['[ ] Parent', '    see https://example.com/x']);
+		assert.equal(await page.$eval('.continued a', (node) => node.getAttribute('href')), 'https://example.com/x');
+	});
+
+	it('does not create an anchor for a scheme that executes', async () => {
+		await render(['[ ] [Evil](javascript:alert(1))']);
+		assert.equal(await page.$$eval('.text a', (nodes) => nodes.length), 0, 'javascript: was made clickable');
+		assert.match(await page.textContent('.text'), /javascript:alert/);
+	});
+});
+
 describe('clicking', () => {
 	it('posts the line it was clicked on', async () => {
 		await render(['[ ] First', '[ ] Second']);

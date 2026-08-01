@@ -628,14 +628,34 @@ describe('commands', () => {
 		}
 	});
 
-	it('scopes every keybinding to a focused xit editor', () => {
+	it('scopes every keybinding to an xit file, in one of two documented ways', () => {
+		// A keybinding with no scope steals the key from every other language,
+		// which is what this exists to stop. There are exactly two legitimate
+		// scopes and the test names both rather than accepting anything that
+		// mentions xit - a typo in a `when` clause fails silently, so a loose
+		// check here would pass a binding that never fires.
+		//
+		// The second scope is for the raw/parsed toggle, which has to work
+		// while the parsed view is in front - and that is a webview, so there
+		// is no focused editor and no editorLangId at all.
+		const inEditor = `editorFocus && editorLangId == '${LANGUAGE_ID}'`;
+		const eitherView = `resourceLangId == ${LANGUAGE_ID} || activeCustomEditorId == 'xit.preview'`;
+
 		for (const binding of manifest.contributes.keybindings) {
-			assert.equal(
-				binding.when,
-				`editorFocus && editorLangId == '${LANGUAGE_ID}'`,
-				`${binding.command} would fire outside an xit file`,
+			assert.ok(
+				binding.when === inEditor || binding.when === eitherView,
+				`${binding.command} has an unrecognised scope: ${JSON.stringify(binding.when)}`,
 			);
 		}
+	});
+
+	it('binds the toggle to the scope that reaches the parsed view', () => {
+		// Named specifically, because getting this one wrong is invisible: the
+		// key simply does nothing while the parsed view is open, which reads as
+		// the feature being broken rather than the binding being misscoped.
+		const toggle = manifest.contributes.keybindings.find((binding) => binding.command === 'xit.togglePreview');
+		assert.ok(toggle, 'the raw/parsed toggle has no keybinding');
+		assert.match(toggle.when, /activeCustomEditorId == 'xit\.preview'/);
 	});
 
 	it('hides the internal suggest command from the command palette', () => {

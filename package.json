@@ -315,6 +315,11 @@
         ],
         "keybindings": [
             {
+                "command": "xit.togglePreview",
+                "key": "ctrl+alt+v",
+                "when": "resourceLangId == xit || activeCustomEditorId == 'xit.preview'"
+            },
+            {
                 "command": "xit.suggest",
                 "key": "ctrl+space",
                 "when": "editorFocus && editorLangId == 'xit'"
@@ -404,7 +409,7 @@
             "editor/title": [
                 {
                     "command": "xit.openParsed",
-                    "when": "activeEditor == workbench.editors.files.textFileEditor && resourceLangId == xit",
+                    "when": "resourceLangId == xit && !activeCustomEditorId",
                     "group": "navigation@1"
                 },
                 {

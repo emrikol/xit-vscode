@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require_ = createRequire(import.meta.url);
-const { escapeHtml, preview } = require_('../out/preview.js');
+const { escapeHtml, linkify, preview } = require_('../out/preview.js');
 const { STATUSES } = require_('../out/checkbox.js');
 
 const THRESHOLDS = { today: 20260731, criticalAfterDays: 14, soonWithinDays: 7 };
@@ -81,6 +81,14 @@ describe('no line is ever lost', () => {
 			accountedFor(['- [ ] One', '* [ ] Two', 'x] Slip', '[ x] Malformed', 'bare prose', '  [ ] Cannot nest']),
 			[],
 		);
+	});
+
+	it('carries the parked lines themselves, so the disclosure has something to open onto', () => {
+		// It rendered a `<details>` with only a summary, so expanding it showed
+		// an empty box - which is worse than not offering it, because it says
+		// there is something here and then shows nothing.
+		const [, parked] = blocks(['[ ] Real', '<!--', '[ ] Parked idea', '-->']);
+		assert.deepEqual(parked.lines, ['<!--', '[ ] Parked idea', '-->']);
 	});
 
 	it('keeps a parked block, collapsed', () => {
@@ -198,6 +206,42 @@ describe('what a row carries', () => {
 			group.rows.map((row) => row.blocked),
 			[false, true],
 		);
+	});
+});
+
+describe('links', () => {
+	it('makes a markdown-style link clickable, showing its label', () => {
+		assert.equal(
+			linkify('[Kickoff, Jul 14](quill://meeting/9e0ef127)'),
+			'<a href="quill://meeting/9e0ef127">Kickoff, Jul 14</a>',
+		);
+	});
+
+	it('makes a bare URL clickable without swallowing the words around it', () => {
+		assert.equal(
+			linkify('See https://example.com now'),
+			'See <a href="https://example.com">https://example.com</a> now',
+		);
+	});
+
+	it('allows any scheme, because quill:// is a real one someone uses', () => {
+		// An allow-list would be wrong: the schemes people's tools invent are
+		// not knowable here. Only the ones that execute are refused.
+		assert.match(linkify('[x](weird-app://thing)'), /href="weird-app:\/\/thing"/);
+	});
+
+	it('refuses a scheme that executes, and shows it as text instead', () => {
+		// Still visible - nothing is hidden - just not live.
+		assert.equal(linkify('[Evil](javascript:alert(1))'), '[Evil](javascript:alert(1))');
+		assert.equal(linkify('[Evil](DATA:text/html,x)'), '[Evil](DATA:text/html,x)');
+	});
+
+	it('escapes a target that tries to close the attribute', () => {
+		assert.match(linkify('[q](https://x/"onmouseover="alert(1))'), /&quot;onmouseover=&quot;/);
+	});
+
+	it('leaves text with no link alone', () => {
+		assert.equal(linkify('Plain <text> & more'), 'Plain &lt;text&gt; &amp; more');
 	});
 });
 
