@@ -13,7 +13,7 @@ import { sortGroup } from './sort';
 import { alignments } from './align';
 import { type Collected, collect, isOpen, urgencyOf } from './collect';
 import { type Blocker, hoverMarkdown } from './hover';
-import { escapeHtml, preview, previewHtml } from './preview';
+import { escapeHtml, preview, previewBody, previewHtml } from './preview';
 import { dateTags, estimateTag, thresholds } from './settings';
 import { archive } from './archive';
 import { AFTER_TAG, ID_TAG, dependencies, foldId, freshId, identities } from './link';
@@ -1189,22 +1189,47 @@ function registerPreview(context: vscode.ExtensionContext) {
 	 * the choice the instant VS Code opened the default, which is exactly the
 	 * moment the choice is supposed to be applied.
 	 */
-	const remembered = (uri: vscode.Uri) => context.workspaceState.get<'raw' | 'parsed'>(`xit.view:${uri.toString()}`);
-	const remember = (uri: vscode.Uri, view: 'raw' | 'parsed') =>
-		context.workspaceState.update(`xit.view:${uri.toString()}`, view);
+	// globalState, not workspaceState. The preference is per file, and it was
+	// keyed by absolute uri all along - but workspaceState is scoped to the
+	// workspace, and a file opened straight from the Finder has no workspace at
+	// all. That is the commonest way to open one of these, and it is the case
+	// where the feature would have silently never worked.
+	/**
+	 * Only a saved file has an identity worth remembering.
+	 *
+	 * An untitled document's uri is `untitled:Untitled-1`, and VS Code reuses
+	 * those numbers. Remembering a view against one means the *next* unrelated
+	 * scratch buffer to get that number reopens itself as the parsed view,
+	 * pulling the editor out from under whatever was using it - which is
+	 * exactly what happened to an unrelated command in the test suite, with an
+	 * error naming a TextEditor that no longer existed.
+	 */
+	const persisted = (uri: vscode.Uri) => uri.scheme !== 'untitled';
 
-	// Files already reopened this session, so a failed reopen cannot become a
-	// loop: the text editor reappears, the listener fires, and round it goes.
-	const reopened = new Set<string>();
+	const remembered = (uri: vscode.Uri) =>
+		persisted(uri) ? context.globalState.get<'raw' | 'parsed'>(`xit.view:${uri.toString()}`) : undefined;
+	const remember = (uri: vscode.Uri, view: 'raw' | 'parsed') =>
+		persisted(uri) ? context.globalState.update(`xit.view:${uri.toString()}`, view) : Promise.resolve();
+
+	/**
+	 * Files whose parsed view is open, or being opened.
+	 *
+	 * A guard against a loop: if the reopen fails the text editor stays active,
+	 * the listener fires again, and round it goes. It is cleared when the
+	 * parsed view closes, which is the part the first version got wrong - it
+	 * only ever added, so the memory worked once per file per session and then
+	 * silently stopped.
+	 */
+	const reopening = new Set<string>();
 
 	context.subscriptions.push(
 		vscode.window.onDidChangeActiveTextEditor(async (editor) => {
 			if (!editor || editor.document.languageId !== LANGUAGE) return;
 
 			const key = editor.document.uri.toString();
-			if (reopened.has(key) || remembered(editor.document.uri) !== 'parsed') return;
+			if (reopening.has(key) || remembered(editor.document.uri) !== 'parsed') return;
 
-			reopened.add(key);
+			reopening.add(key);
 			await vscode.commands.executeCommand('vscode.openWith', editor.document.uri, 'xit.preview');
 		}),
 
@@ -1214,7 +1239,21 @@ function registerPreview(context: vscode.ExtensionContext) {
 				resolveCustomTextEditor(document, panel) {
 					panel.webview.options = { enableScripts: true };
 					void remember(document.uri, 'parsed');
-					reopened.add(document.uri.toString());
+					reopening.add(document.uri.toString());
+
+					// The page is built once. Later changes are posted into it, so
+					// the scroll position survives - see CLIENT in src/preview.ts.
+					const update = () =>
+						panel.webview.postMessage({
+							type: 'render',
+							body: previewBody(
+								preview(documentLines(document), {
+									thresholds: thresholds(),
+									estimateTag: estimateTag(),
+									dateTags: dateTags(),
+								}),
+							),
+						});
 
 					const render = () => {
 						const token = nonce();
@@ -1233,7 +1272,14 @@ function registerPreview(context: vscode.ExtensionContext) {
 					};
 
 					const changed = vscode.workspace.onDidChangeTextDocument((event) => {
-						if (event.document.uri.toString() === document.uri.toString()) render();
+						if (event.document.uri.toString() === document.uri.toString()) void update();
+					});
+
+					// Settings change what is drawn - the urgency tiers, the tag
+					// names - with the document untouched, so the view has to be
+					// told separately or it shows yesterday's answer.
+					const configured = vscode.workspace.onDidChangeConfiguration((event) => {
+						if (event.affectsConfiguration(LANGUAGE)) void update();
 					});
 
 					const received = panel.webview.onDidReceiveMessage((message: { type?: string; line?: number }) => {
@@ -1243,7 +1289,12 @@ function registerPreview(context: vscode.ExtensionContext) {
 
 					panel.onDidDispose(() => {
 						changed.dispose();
+						configured.dispose();
 						received.dispose();
+						// Released here, so opening the file again later in the
+						// same session reopens it parsed rather than the memory
+						// working exactly once.
+						reopening.delete(document.uri.toString());
 					});
 
 					render();
@@ -1279,7 +1330,7 @@ function registerPreview(context: vscode.ExtensionContext) {
 			// cleared, because the file may legitimately be reopened as parsed
 			// again later in the session.
 			void remember(target, 'raw');
-			reopened.delete(target.toString());
+			reopening.delete(target.toString());
 			return vscode.commands.executeCommand('vscode.openWith', target, 'default');
 		}),
 		// The direction-free form, for the keybinding and the palette.

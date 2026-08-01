@@ -564,7 +564,7 @@ describe('the parsed view', () => {
 		assert.ok(raw instanceof vscode.TabInputText, 'it did not come back to text');
 
 		assert.equal(document.getText(), before, 'the round trip changed the file');
-		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 
 	it('toggles a DIRTY document without losing it', async () => {
@@ -606,8 +606,36 @@ describe('the parsed view', () => {
 		assert.equal(document.getText(), before, 'the round trip lost the unsaved edit');
 		assert.equal(document.isDirty, true, 'the round trip silently saved the document');
 
-		// Leave the fixture as it was on disk.
+		// Leave nothing behind. These tests open a custom editor and dirty a
+		// real file, and the next suite edits through `activeTextEditor` - so a
+		// stale editor left in front makes an unrelated test fail with
+		// "Illegal argument: TextEditor".
 		await vscode.commands.executeCommand('workbench.action.files.revert');
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+	});
+
+	it('does not remember a view for an untitled buffer', async () => {
+		// Untitled uris are recycled - `untitled:Untitled-1` comes back. A view
+		// remembered against one makes the next unrelated scratch buffer to get
+		// that number reopen itself, pulling the editor out from under whatever
+		// was using it. That is not hypothetical: it broke xit.migrate, with an
+		// error naming a TextEditor that no longer existed.
+		const scratch = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Scratch' });
+		await vscode.window.showTextDocument(scratch);
+		await vscode.commands.executeCommand('xit.openParsed', scratch.uri);
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+		// A fresh untitled document, which may well be handed the same uri.
+		const next = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Different' });
+		const editor = await vscode.window.showTextDocument(next);
+		await new Promise((resolve) => setTimeout(resolve, 300));
+
+		assert.equal(
+			vscode.window.activeTextEditor?.document.uri.toString(),
+			editor.document.uri.toString(),
+			'the editor was pulled away by a remembered view',
+		);
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 
 	it('registers the toggle, and it does not throw with an xit file in front', async () => {
@@ -619,7 +647,7 @@ describe('the parsed view', () => {
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Item' });
 		await vscode.window.showTextDocument(document);
 		await vscode.commands.executeCommand('xit.togglePreview');
-		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 });
 

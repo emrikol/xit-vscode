@@ -248,6 +248,32 @@ describe('links', () => {
 		assert.match(linkify('[q](https://x/"onmouseover="alert(1))'), /&quot;onmouseover=&quot;/);
 	});
 
+	it('keeps a target that contains balanced parentheses', () => {
+		// Cut at the first `)` before. Ordinary in a meeting or wiki URL.
+		assert.equal(linkify('[Doc](https://x.com/a_(b)_c)'), '<a href="https://x.com/a_(b)_c">Doc</a>');
+	});
+
+	it('does not swallow a parenthesis that closes the sentence', () => {
+		// The other half of the same problem, and the two look identical to a
+		// regex. The difference is whether the parentheses balance.
+		assert.equal(linkify('(see https://example.com)'), '(see <a href="https://example.com">https://example.com</a>)');
+	});
+
+	it('keeps a bracketed aside inside a label', () => {
+		assert.equal(linkify('[a [b] c](https://x)'), '<a href="https://x">a [b] c</a>');
+	});
+
+	it('shows the target when the label is empty, rather than an invisible anchor', () => {
+		assert.equal(linkify('[](https://x.com)'), '<a href="https://x.com">https://x.com</a>');
+	});
+
+	it('does not run a URL into the punctuation after it', () => {
+		assert.equal(
+			linkify('Ends at https://example.com.'),
+			'Ends at <a href="https://example.com">https://example.com</a>.',
+		);
+	});
+
 	it('leaves text with no link alone', () => {
 		assert.equal(linkify('Plain <text> & more'), 'Plain &lt;text&gt; &amp; more');
 	});

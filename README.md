@@ -522,7 +522,7 @@ The link carries its document's URI with encoding skipped. A payload holding a `
 
 ## Raw and Parsed
 
-`.xit` files open as text the first time. **Each file then reopens in whichever view you last chose** — pick Parsed once and that file keeps opening parsed until you ask for Raw. The choice is per file and only ever recorded when you make it, so merely opening something never overwrites it.
+`.xit` files open as text the first time. **Each saved file then reopens in whichever view you last chose** — pick Parsed once and that file keeps opening parsed until you ask for Raw. The choice is per file and only ever recorded when you make it, so merely opening something never overwrites it.
 
 **Shift+Cmd+V** toggles, the same chord Markdown preview uses — and scoped so it never fires in a terminal, where that is paste. It is also on the editor's right-click menu, on the tab's right-click menu, in the `…` overflow, and in the command palette — several routes on purpose, because a title-bar icon can be squeezed out by other extensions competing for that row. There is a toolbar button too — the keybinding is the reliable route, because a title-bar icon can be pushed into the `…` overflow when other extensions are competing for that row. The toolbar button switches the same tab to a rendered view and back — the way Chrome switches a JSON file between Raw and Parsed. There are two buttons rather than one, because a single toggle can carry only one icon and so cannot say which direction it goes: **Open Parsed View** shows in the text editor, **Open Raw View** shows in the parsed one. **Toggle Raw and Parsed** is the same thing for the palette or a keybinding, where a direction-free toggle is the more useful shape.
 

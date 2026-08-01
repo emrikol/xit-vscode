@@ -117,8 +117,24 @@ export function escapeHtml(text: string): string {
  */
 const DANGEROUS = /^(javascript|data|vbscript):/i;
 
-/** `[label](target)`, and a bare URL, in one pass so neither can nest in the other. */
-const LINK = /\[([^\]\n]*)\]\(([^)\s]+)\)|\b[a-zA-Z][a-zA-Z\d+.-]*:\/\/[^\s)]+/g;
+/**
+ * `[label](target)`, and a bare URL, in one pass so neither can nest in the
+ * other.
+ *
+ * Three things the first version got wrong, all of them ordinary in a
+ * meeting-notes file:
+ *
+ *   - A target may contain `)`. `https://x/a_(b)_c` was cut at the first one.
+ *     The target is matched lazily up to a `)` that ends the link - one
+ *     followed by whitespace, punctuation or the end - so an inner pair is
+ *     kept.
+ *   - A label may contain a bracketed aside: `[a [b] c]`. One level is
+ *     allowed, which is as deep as anyone writes.
+ *   - A bare URL may contain `)` too, and equally may be followed by one that
+ *     is not part of it. Same trailing rule.
+ */
+const LINK =
+	/\[((?:[^[\]\n]|\[[^[\]\n]*\])*)\]\((\S*?)\)(?=[\s.,;:!?]|$)|\b[a-zA-Z][a-zA-Z\d+.-]*:\/\/\S*?(?=[\s.,;:!?]*(?:[\s]|$))/g;
 
 /**
  * Text with its links made clickable, everything else escaped.
@@ -138,16 +154,32 @@ export function linkify(text: string): string {
 		at = start + match[0].length;
 
 		const [whole, label, target] = match;
-		const href = target ?? whole;
+
+		// A bare URL may legitimately contain `(` and `)`, and may equally be
+		// followed by a `)` that closes a sentence: `(see https://x.com)`. The
+		// difference is balance. Anything trimmed goes back as text rather than
+		// being eaten.
+		let bare = whole;
+		if (target === undefined) {
+			while (bare.endsWith(')') && bare.split(')').length - 1 > bare.split('(').length - 1) {
+				bare = bare.slice(0, -1);
+			}
+			at = start + bare.length;
+		}
+
+		const href = target ?? bare;
 
 		// A scheme that executes is written out as text, not linked. It stays
 		// visible - the rule is that nothing is hidden - it just is not live.
 		if (DANGEROUS.test(href.trim())) {
-			out += escapeHtml(whole);
+			out += escapeHtml(target === undefined ? bare : whole);
 			continue;
 		}
 
-		out += `<a href="${escapeHtml(href)}">${escapeHtml(label ?? whole)}</a>`;
+		// An empty label would render an anchor with nothing in it - invisible
+		// and unclickable - so the target is shown instead.
+		const shown = label?.trim() ? label : href;
+		out += `<a href="${escapeHtml(href)}">${escapeHtml(shown)}</a>`;
 	}
 
 	return out + escapeHtml(text.slice(at));
@@ -426,12 +458,14 @@ function blockHtml(block: Block): string {
  * `nonce` is the webview's, and every inline style and script must carry it or
  * the content security policy drops it.
  */
-export function previewHtml(blocks: readonly Block[], nonce: string): string {
-	const body = blocks.length
+export function previewBody(blocks: readonly Block[]): string {
+	return blocks.length
 		? blocks.map(blockHtml).join('')
 		: '<p class="empty">Nothing in this file yet. Switch to Raw to start writing.</p>';
+}
 
-	return `<style nonce="${nonce}">${STYLE}</style><main>${body}</main><script nonce="${nonce}">${CLIENT}</script>`;
+export function previewHtml(blocks: readonly Block[], nonce: string): string {
+	return `<style nonce="${nonce}">${STYLE}</style><main>${previewBody(blocks)}</main><script nonce="${nonce}">${CLIENT}</script>`;
 }
 
 /**
@@ -445,9 +479,20 @@ export function previewHtml(blocks: readonly Block[], nonce: string): string {
  */
 export const CLIENT = `
 const vscode = acquireVsCodeApi();
+
 document.addEventListener('click', (event) => {
 	const box = event.target.closest('.box');
 	if (!box) return;
 	vscode.postMessage({ type: 'cycle', line: Number(box.dataset.line) });
+});
+
+// Content arrives as a message rather than by the extension reassigning
+// webview.html, which reloads the page: scroll jumps to the top and any open
+// disclosure closes. Ticking a box is a document change, so that happened on
+// every click - the further down a file you were, the worse it was.
+window.addEventListener('message', (event) => {
+	if (event.data && event.data.type === 'render') {
+		document.querySelector('main').innerHTML = event.data.body;
+	}
 });
 `;

@@ -165,6 +165,43 @@ describe('links', () => {
 	});
 });
 
+describe('updating without reloading the page', () => {
+	it('replaces the content on a message, keeping the scroll position', async () => {
+		// Reassigning webview.html reloads the page: the scroll jumps to the
+		// top and any open disclosure closes. Ticking a box is a document
+		// change, so that happened on every single click.
+		const { preview, previewBody } = require_('../../out/preview.js');
+		await render(Array.from({ length: 200 }, (_, at) => `[ ] Item ${at}`));
+
+		await page.evaluate(() => window.scrollTo(0, 1200));
+		const before = await page.evaluate(() => window.scrollY);
+		assert.ok(before > 0, 'the fixture is not tall enough to scroll');
+
+		// Same height, different content. Replacing 200 items with one makes the
+		// page shorter, and the browser then clamps the scroll legitimately -
+		// which would be the test proving nothing rather than the code failing.
+		const body = previewBody(
+			preview(
+				Array.from({ length: 200 }, (_, at) => (at === 0 ? '[x] Replaced' : `[ ] Item ${at}`)),
+				{ thresholds: THRESHOLDS },
+			),
+		);
+		await page.evaluate(
+			(html) => window.dispatchEvent(new MessageEvent('message', { data: { type: 'render', body: html } })),
+			body,
+		);
+
+		assert.match(await page.textContent('main'), /Replaced/);
+		assert.equal(await page.evaluate(() => window.scrollY), before, 'the scroll position was lost');
+	});
+
+	it('ignores a message that is not a render', async () => {
+		await render(['[ ] Only']);
+		await page.evaluate(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'other' } })));
+		assert.match(await page.textContent('main'), /Only/);
+	});
+});
+
 describe('clicking', () => {
 	it('posts the line it was clicked on', async () => {
 		await render(['[ ] First', '[ ] Second']);
