@@ -319,6 +319,7 @@ li ul { margin-inline-start: 1.5rem; }
 .chip.overdue, .chip.critical { background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-editor-foreground); }
 .chip.soon { background: var(--vscode-inputValidation-warningBackground); color: var(--vscode-editor-foreground); }
 .priority { color: var(--vscode-editorWarning-foreground); font-weight: 600; }
+.unparsed { font-size: .8em; text-transform: uppercase; letter-spacing: .04em; color: var(--vscode-editorError-foreground, currentColor); }
 .raw {
 	font-family: var(--vscode-editor-font-family); white-space: pre-wrap; overflow-wrap: anywhere;
 	border-inline-start: 2px solid var(--vscode-editorError-foreground, currentColor); padding-inline-start: .5rem; margin: .25rem 0;
@@ -365,13 +366,13 @@ function rowHtml(row: Row): string {
 		: '';
 	const children = row.children.length ? `<ul>${row.children.map(rowHtml).join('')}</ul>` : '';
 
-	return `<li class="item-wrap${row.open ? '' : ' done'}"><div class="item">${box}<span class="text">${priority}${escapeHtml(row.description)}${parts}</span></div>${continued}${children}</li>`;
+	return `<li${row.open ? '' : ' class="done"'}><div class="item">${box}<span class="text">${priority}${escapeHtml(row.description)}${parts}</span></div>${continued}${children}</li>`;
 }
 
 /** One block: a group, a collapsed comment, or a line shown as written. */
 function blockHtml(block: Block): string {
 	if (block.kind === 'raw') {
-		return `<p class="raw" data-line="${block.line}"><span class="visually-hidden">Not recognised: </span>${escapeHtml(block.text)}</p>`;
+		return `<p class="raw" data-line="${block.line}"><span class="unparsed">Not recognised</span> ${escapeHtml(block.text)}</p>`;
 	}
 
 	if (block.kind === 'parked') {

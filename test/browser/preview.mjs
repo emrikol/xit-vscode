@@ -110,7 +110,11 @@ describe('the markup a browser actually parses', () => {
 
 	it('shows a line it cannot parse rather than dropping it', async () => {
 		await render(['[ ] Real', '- [ ] Markdown habit']);
-		assert.equal(await page.textContent('.raw'), 'Not recognised: - [ ] Markdown habit');
+		assert.equal(await page.textContent('.raw'), 'Not recognised - [ ] Markdown habit');
+		// The marker is visible on purpose. A line the preview cannot draw is
+		// exactly the line you need to be told about.
+		const shown = await page.$eval('.unparsed', (node) => getComputedStyle(node).display);
+		assert.notEqual(shown, 'none', 'the unparsed marker is invisible');
 	});
 });
 
