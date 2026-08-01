@@ -614,6 +614,50 @@ describe('the parsed view', () => {
 		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
 	});
 
+	it('offers a Raw | Parsed lens at the top of the text', async () => {
+		// The way back. The parsed view draws its own switch; a text editor is
+		// VS Code's and a code lens is the only place an extension can draw in
+		// one. Without it, going to Raw was a one-way door unless you knew the
+		// keybinding.
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Item\n[ ] Another' });
+		await vscode.window.showTextDocument(document);
+
+		const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+			'vscode.executeCodeLensProvider',
+			document.uri,
+		);
+
+		const mine = lenses.filter((lens) => lens.range.start.line === 0);
+		assert.deepEqual(
+			mine.map((lens) => lens.command?.title),
+			['Raw', 'Parsed'],
+			'the pair is not at the top of the file',
+		);
+		assert.equal(mine[0].command?.command, '', 'Raw should be the state you are in, not a link');
+		assert.equal(mine[1].command?.command, 'xit.openParsed');
+		assert.deepEqual(mine[1].command?.arguments, [document.uri]);
+
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+	});
+
+	it('drops the lens when it is turned off', async () => {
+		const configuration = vscode.workspace.getConfiguration('xit');
+		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Item' });
+		await vscode.window.showTextDocument(document);
+		try {
+			await configuration.update('viewLens', false, vscode.ConfigurationTarget.Workspace);
+			await new Promise((resolve) => setTimeout(resolve, 200));
+			const lenses = await vscode.commands.executeCommand<vscode.CodeLens[]>(
+				'vscode.executeCodeLensProvider',
+				document.uri,
+			);
+			assert.deepEqual(lenses, [], 'the lens ignored its setting');
+		} finally {
+			await configuration.update('viewLens', undefined, vscode.ConfigurationTarget.Workspace);
+			await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		}
+	});
+
 	it('does not remember a view for an untitled buffer', async () => {
 		// Untitled uris are recycled - `untitled:Untitled-1` comes back. A view
 		// remembered against one makes the next unrelated scratch buffer to get

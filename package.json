@@ -195,6 +195,11 @@
                     "default": false,
                     "description": "Draw priority marks in a column, aligned within each group. Nothing is inserted into the file — the padding is a decoration, so it disappears with this setting. Off by default: Sort Group answers \"which is most urgent\" definitively, and a column only helps you eyeball it."
                 },
+                "xit.viewLens": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show a Raw | Parsed switch at the top of an xit file. The parsed view draws its own; this is the other half of the pair, because an extension cannot draw inside the text editor any other way. Turn it off if you would rather use Shift+Cmd+V or the toolbar button."
+                },
                 "xit.itemGrouping": {
                     "type": "string",
                     "enum": [

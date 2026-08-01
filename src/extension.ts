@@ -1233,6 +1233,35 @@ function registerPreview(context: vscode.ExtensionContext) {
 			await vscode.commands.executeCommand('vscode.openWith', editor.document.uri, 'xit.preview');
 		}),
 
+		/**
+		 * The other half of the Raw/Parsed control, for the text editor.
+		 *
+		 * The parsed view can draw its own switch; the raw side is VS Code's
+		 * text editor and an extension cannot draw in it - except here. A code
+		 * lens is rendered *in* the document, and several on one line are
+		 * separated with `|`, so two of them read as the same segmented pair:
+		 * `Raw` as the state you are in, `Parsed` as the way across.
+		 *
+		 * At the top of the file, which is where the other one is, and where it
+		 * costs one line rather than one per item.
+		 */
+		vscode.languages.registerCodeLensProvider(LANGUAGE, {
+			provideCodeLenses(document) {
+				if (!vscode.workspace.getConfiguration(LANGUAGE).get<boolean>('viewLens', true)) return [];
+
+				const top = new vscode.Range(0, 0, 0, 0);
+				return [
+					new vscode.CodeLens(top, { title: 'Raw', command: '' }),
+					new vscode.CodeLens(top, {
+						title: 'Parsed',
+						command: 'xit.openParsed',
+						arguments: [document.uri],
+						tooltip: 'Show this file as components you can click',
+					}),
+				];
+			},
+		}),
+
 		vscode.window.registerCustomEditorProvider(
 			'xit.preview',
 			{
