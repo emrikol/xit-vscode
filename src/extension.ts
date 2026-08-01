@@ -1226,9 +1226,31 @@ function registerPreview(context: vscode.ExtensionContext) {
 			{ webviewOptions: { retainContextWhenHidden: true } },
 		),
 
-		// The Raw/Parsed toggle. VS Code already has the command; this wraps it
-		// so there is one button with an xit title rather than asking people to
-		// find "Reopen Editor With…" in the palette.
+		// Two buttons rather than one, which is what VS Code's own Markdown
+		// preview does: a single toggle can only carry one title and one icon,
+		// so it cannot say which direction it goes. `activeCustomEditorId` is
+		// how the parsed view knows it is the one on screen - the first attempt
+		// keyed the button on `resourceExtname`, which is not what decides
+		// which editor is in front.
+		vscode.commands.registerCommand('xit.openParsed', (uri?: vscode.Uri) =>
+			vscode.commands.executeCommand(
+				'vscode.openWith',
+				uri ?? vscode.window.activeTextEditor?.document.uri,
+				'xit.preview',
+			),
+		),
+		vscode.commands.registerCommand('xit.openRaw', (uri?: vscode.Uri) => {
+			// There is no active *text* editor while the parsed view is in
+			// front, so the document comes from the tab instead. A custom
+			// editor's tab input carries the uri; anything else is not ours.
+			const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+			const fromTab = input instanceof vscode.TabInputCustom ? input.uri : undefined;
+			const target = uri ?? fromTab;
+			if (!target) return undefined;
+			return vscode.commands.executeCommand('vscode.openWith', target, 'default');
+		}),
+		// Kept for the palette and a keybinding, where a direction-free toggle
+		// is the more useful shape.
 		vscode.commands.registerCommand('xit.togglePreview', () =>
 			vscode.commands.executeCommand('workbench.action.toggleEditorType'),
 		),

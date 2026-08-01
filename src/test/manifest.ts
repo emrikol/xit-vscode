@@ -28,6 +28,8 @@ export const COMMANDS = [
 	'xit.refreshItems',
 	'xit.toggleDoneItems',
 	'xit.togglePreview',
+	'xit.openParsed',
+	'xit.openRaw',
 	'xit.setStatus',
 	'xit.filterItemsByTag',
 	'xit.clearItemFilter',

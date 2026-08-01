@@ -342,7 +342,15 @@
                 },
                 {
                     "command": "xit.togglePreview",
-                    "when": "resourceExtname == '.xit'"
+                    "when": "resourceLangId == xit || activeCustomEditorId == 'xit.preview'"
+                },
+                {
+                    "command": "xit.openParsed",
+                    "when": "resourceLangId == xit"
+                },
+                {
+                    "command": "xit.openRaw",
+                    "when": "activeCustomEditorId == 'xit.preview'"
                 },
                 {
                     "command": "xit.toggle",
@@ -395,8 +403,13 @@
             ],
             "editor/title": [
                 {
-                    "command": "xit.togglePreview",
-                    "when": "resourceExtname == '.xit'",
+                    "command": "xit.openParsed",
+                    "when": "activeEditor == workbench.editors.files.textFileEditor && resourceLangId == xit",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "xit.openRaw",
+                    "when": "activeCustomEditorId == 'xit.preview'",
                     "group": "navigation@1"
                 }
             ],
@@ -456,8 +469,19 @@
             {
                 "command": "xit.togglePreview",
                 "title": "Toggle Raw and Parsed",
+                "category": "xit!"
+            },
+            {
+                "command": "xit.openParsed",
+                "title": "Open Parsed View",
                 "category": "xit!",
-                "icon": "$(preview)"
+                "icon": "$(open-preview)"
+            },
+            {
+                "command": "xit.openRaw",
+                "title": "Open Raw View",
+                "category": "xit!",
+                "icon": "$(go-to-file)"
             },
             {
                 "command": "xit.setStatus",

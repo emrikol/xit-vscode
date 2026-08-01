@@ -522,7 +522,7 @@ The link carries its document's URI with encoding skipped. A payload holding a `
 
 ## Raw and Parsed
 
-`.xit` files open as text. The toolbar button, or **Toggle Raw and Parsed**, switches the same tab to a rendered view — the way Chrome switches a JSON file between Raw and Parsed.
+`.xit` files open as text. The toolbar button switches the same tab to a rendered view and back — the way Chrome switches a JSON file between Raw and Parsed. There are two buttons rather than one, because a single toggle can carry only one icon and so cannot say which direction it goes: **Open Parsed View** shows in the text editor, **Open Raw View** shows in the parsed one. **Toggle Raw and Parsed** is the same thing for the palette or a keybinding, where a direction-free toggle is the more useful shape.
 
 Parsed draws the file as components: a real checkbox you click, priority as a badge, dates and estimates as chips coloured by the same urgency tiers the editor and sidebar use, tags as pills, and a progress bar per group. Subtasks nest. Clicking a checkbox moves it to the next status, and goes through the same path as Toggle — so the parent still auto-checks, the completion date is still stamped, and a repeating item still spawns its next occurrence. It is an ordinary document edit, so `Cmd+Z` undoes it and the file goes dirty exactly as if you had typed.
 

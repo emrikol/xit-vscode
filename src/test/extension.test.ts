@@ -541,9 +541,37 @@ describe('the parsed view', () => {
 		assert.equal(document.isDirty, true, 'a WorkspaceEdit should mark the document dirty');
 	});
 
+	it('round-trips between raw and parsed by command', async () => {
+		// The button the title bar shows is keyed on which editor is in front,
+		// so this exercises both directions the two buttons drive. Keying it on
+		// `resourceExtname` instead - the first attempt - put no button on
+		// screen at all, because that is not what decides which editor is
+		// active.
+		const [found] = await vscode.workspace.findFiles('**/Meeting TODOs.xit', undefined, 1);
+		assert.ok(found);
+
+		const document = await vscode.workspace.openTextDocument(found);
+		await vscode.window.showTextDocument(document);
+		const before = document.getText();
+
+		await vscode.commands.executeCommand('xit.openParsed', found);
+		const parsed = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+		assert.ok(parsed instanceof vscode.TabInputCustom, 'the parsed view did not open');
+		assert.equal(parsed.viewType, 'xit.preview');
+
+		await vscode.commands.executeCommand('xit.openRaw');
+		const raw = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+		assert.ok(raw instanceof vscode.TabInputText, 'it did not come back to text');
+
+		assert.equal(document.getText(), before, 'the round trip changed the file');
+		await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+	});
+
 	it('registers the toggle, and it does not throw with an xit file in front', async () => {
 		const registered = await vscode.commands.getCommands(true);
 		assert.ok(registered.includes('xit.togglePreview'));
+		assert.ok(registered.includes('xit.openParsed'));
+		assert.ok(registered.includes('xit.openRaw'));
 
 		const document = await vscode.workspace.openTextDocument({ language: 'xit', content: '[ ] Item' });
 		await vscode.window.showTextDocument(document);
