@@ -316,8 +316,9 @@
         "keybindings": [
             {
                 "command": "xit.togglePreview",
-                "key": "ctrl+alt+v",
-                "when": "resourceLangId == xit || activeCustomEditorId == 'xit.preview'"
+                "key": "shift+ctrl+v",
+                "mac": "shift+cmd+v",
+                "when": "!terminalFocus && ((editorFocus && resourceLangId == xit && !notebookEditorFocused) || activeCustomEditorId == 'xit.preview')"
             },
             {
                 "command": "xit.suggest",

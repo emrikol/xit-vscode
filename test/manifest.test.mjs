@@ -639,13 +639,28 @@ describe('commands', () => {
 		// while the parsed view is in front - and that is a webview, so there
 		// is no focused editor and no editorLangId at all.
 		const inEditor = `editorFocus && editorLangId == '${LANGUAGE_ID}'`;
-		const eitherView = `resourceLangId == ${LANGUAGE_ID} || activeCustomEditorId == 'xit.preview'`;
+		// Copied from VS Code's own markdown.togglePreview, guards included:
+		// `!terminalFocus` because shift+cmd+v is paste in a terminal, and
+		// `!notebookEditorFocused` because a notebook cell is an editor too.
+		const eitherView = `!terminalFocus && ((editorFocus && resourceLangId == ${LANGUAGE_ID} && !notebookEditorFocused) || activeCustomEditorId == 'xit.preview')`;
 
 		for (const binding of manifest.contributes.keybindings) {
 			assert.ok(
 				binding.when === inEditor || binding.when === eitherView,
 				`${binding.command} has an unrecognised scope: ${JSON.stringify(binding.when)}`,
 			);
+		}
+	});
+
+	it('gives every keybinding a mac form, or a key that means the same on both', () => {
+		// `ctrl` is the literal Control key on macOS, not Command. That is fine
+		// for ctrl+alt+x, which is free on both; it is not fine for a chord
+		// macOS spells with Command, and shift+ctrl+v collided with something
+		// that closed the editor.
+		for (const binding of manifest.contributes.keybindings) {
+			if (!binding.key.includes('shift+ctrl') && !binding.key.includes('ctrl+shift')) continue;
+			assert.ok(binding.mac, `${binding.command} uses a Control chord with no mac form`);
+			assert.match(binding.mac, /cmd/, `${binding.command} should use Command on macOS`);
 		}
 	});
 
