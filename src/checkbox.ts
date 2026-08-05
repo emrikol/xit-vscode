@@ -45,6 +45,17 @@ export const STATUSES: readonly Status[] = [' ', 'x', '@', '~', '?', '>'];
 export const STATUS_CLASS = STATUSES.map((status) => status.replace(/[\\\]^-]/g, '\\$&')).join('');
 
 /**
+ * Whether a value is one of the six statuses.
+ *
+ * The webview posts a string, and a message from a page is input like any
+ * other however much we wrote the page ourselves - so it is checked here
+ * rather than cast, against the same list everything else reads.
+ */
+export function isStatus(value: unknown): value is Status {
+	return typeof value === 'string' && (STATUSES as readonly string[]).includes(value);
+}
+
+/**
  * A checkbox, with whatever indentation precedes it.
  *
  * The trailing lookahead matters: `[ ]foo` is not an item, because the spec

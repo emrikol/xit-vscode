@@ -291,24 +291,110 @@ describe('the Raw/Parsed control, in the page', () => {
 	});
 });
 
-describe('clicking', () => {
-	it('posts the line it was clicked on', async () => {
-		await render(['[ ] First', '[ ] Second']);
-		await page.click('.box >> nth=1');
-		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'cycle', line: 1 }]);
+describe('the status menu', () => {
+	it('opens on the checkbox and offers every status', async () => {
+		// Clicking used to cycle: six clicks to get back where you started, and
+		// no way to see what the choices even were.
+		await render(['[@] Ongoing item']);
+		assert.equal(await page.$eval('#status-menu', (node) => node.hidden), true, 'the menu starts open');
+
+		await page.click('.box');
+		assert.equal(await page.$eval('#status-menu', (node) => node.hidden), false);
+
+		const labels = await page.$$eval('#status-menu [data-status]', (nodes) => nodes.map((node) => node.textContent));
+		assert.equal(labels.length, 6, 'not every status is offered');
+		for (const word of ['Open', 'Checked', 'Ongoing', 'Obsolete', 'In question', 'Waiting']) {
+			assert.ok(
+				labels.some((label) => label.includes(word)),
+				`${word} is not in the menu`,
+			);
+		}
 	});
 
-	it('posts for a nested subtask too', async () => {
+	it('sets the status that was chosen, for the line it was opened on', async () => {
+		await render(['[ ] First', '[ ] Second']);
+		await page.click('.box >> nth=1');
+		await page.click('#status-menu [data-status="@"]');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'set', line: 1, status: '@' }]);
+	});
+
+	it('carries a status that needs escaping in an attribute', async () => {
+		// `>` is a status and a character HTML cares about.
+		await render(['[ ] Item']);
+		await page.click('.box');
+		await page.click('#status-menu [data-status=">"]');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'set', line: 0, status: '>' }]);
+	});
+
+	it('closes without choosing when Escape is pressed, and gives focus back', async () => {
+		await render(['[ ] Item']);
+		await page.click('.box');
+		await page.keyboard.press('Escape');
+		assert.equal(await page.$eval('#status-menu', (node) => node.hidden), true);
+		assert.deepEqual(await page.evaluate(() => window.__posted), [], 'Escape chose something');
+		assert.equal(await page.evaluate(() => document.activeElement.className), 'box', 'focus was left nowhere');
+	});
+
+	it('closes when something else is clicked', async () => {
+		await render(['# Todos', '[ ] Item']);
+		await page.click('.box');
+		await page.click('h2');
+		assert.equal(await page.$eval('#status-menu', (node) => node.hidden), true);
+		assert.deepEqual(await page.evaluate(() => window.__posted), []);
+	});
+
+	it('says on the button that it opens a menu', async () => {
+		await render(['[ ] Item']);
+		const before = await page.$eval('.box', (node) => ({
+			pop: node.getAttribute('aria-haspopup'),
+			open: node.getAttribute('aria-expanded'),
+		}));
+		assert.deepEqual(before, { pop: 'menu', open: 'false' });
+
+		await page.click('.box');
+		assert.equal(await page.$eval('.box', (node) => node.getAttribute('aria-expanded')), 'true');
+	});
+
+	it('puts focus in the menu so the keyboard can drive it', async () => {
+		await render(['[ ] Item']);
+		await page.click('.box');
+		assert.equal(await page.evaluate(() => document.activeElement.dataset.status), ' ');
+		await page.keyboard.press('Enter');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'set', line: 0, status: ' ' }]);
+	});
+
+	it('opens above the checkbox when there is no room below', async () => {
+		// On a long file most checkboxes are near the bottom of the viewport,
+		// so a menu that only ever drops downwards is off-screen most of the
+		// time.
+		await render(Array.from({ length: 200 }, (_, at) => `[ ] Item ${at}`));
+		const boxes = await page.$$('.box');
+		const last = boxes[boxes.length - 1];
+		await last.scrollIntoViewIfNeeded();
+		await last.click();
+
+		const placement = await page.evaluate(() => {
+			const menu = document.getElementById('status-menu').getBoundingClientRect();
+			return { top: menu.top, bottom: menu.bottom, height: window.innerHeight };
+		});
+		assert.ok(placement.top >= 0, 'the menu ran off the top');
+		assert.ok(placement.bottom <= placement.height + 1, 'the menu ran off the bottom');
+	});
+});
+
+describe('clicking', () => {
+	it('opens the menu for a nested subtask, on its own line', async () => {
 		await render(['[ ] Parent', '\t[ ] Child']);
 		await page.click('li > ul .box');
-		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'cycle', line: 1 }]);
+		await page.click('#status-menu [data-status="x"]');
+		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'set', line: 1, status: 'x' }]);
 	});
 
 	it('works from the keyboard, because it is a button', async () => {
 		await render(['[ ] Only']);
 		await page.focus('.box');
 		await page.keyboard.press('Enter');
-		assert.deepEqual(await page.evaluate(() => window.__posted), [{ type: 'cycle', line: 0 }]);
+		assert.equal(await page.$eval('#status-menu', (node) => node.hidden), false);
 	});
 
 	it('shows a visible focus ring', async () => {
@@ -324,5 +410,15 @@ describe('clicking', () => {
 		await render(['# Todos', '[ ] Only']);
 		await page.click('h2');
 		assert.deepEqual(await page.evaluate(() => window.__posted), []);
+	});
+
+	it('does not report a status change when the view switch is used', async () => {
+		await render(['[ ] Only']);
+		await page.click('.viewswitch [data-view="raw"]');
+		const posted = await page.evaluate(() => window.__posted);
+		assert.equal(
+			posted.some((message) => message.type === 'set'),
+			false,
+		);
 	});
 });

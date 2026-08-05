@@ -12,9 +12,8 @@ import { readFileSync } from 'node:fs';
 import { tokenizeLine, scoped } from './tokenizer.mjs';
 import { corpusAspects } from './corpus.test.mjs';
 
-const { readCheckbox, readStatus, writeStatus, toggle, shuffle, STATUSES, STATUS_CLASS, priorityOf } = createRequire(
-	import.meta.url,
-)('../out/checkbox.js');
+const { readCheckbox, readStatus, writeStatus, toggle, shuffle, isStatus, STATUSES, STATUS_CLASS, priorityOf } =
+	createRequire(import.meta.url)('../out/checkbox.js');
 
 const GRAMMAR = JSON.parse(readFileSync(new URL('../syntaxes/xit.tmLanguage.json', import.meta.url), 'utf8'));
 
@@ -125,6 +124,23 @@ describe('shuffle', () => {
 			reached.add(status);
 		}
 		assert.deepEqual([...reached].sort(), [...STATUSES].sort());
+	});
+});
+
+describe('checking a status that came from outside', () => {
+	it('accepts every real status and nothing else', () => {
+		// The preview posts a string from a page. However much we wrote that
+		// page, a message from it is input, so it is checked rather than cast.
+		for (const status of STATUSES) assert.equal(isStatus(status), true, `[${status}] was rejected`);
+		for (const wrong of ['X', 'o', '*', '', '  ', 'xx', 'X ']) {
+			assert.equal(isStatus(wrong), false, `${JSON.stringify(wrong)} was accepted`);
+		}
+	});
+
+	it('rejects anything that is not a string', () => {
+		for (const wrong of [null, undefined, 0, 1, {}, [], [' ']]) {
+			assert.equal(isStatus(wrong), false, `${JSON.stringify(wrong)} was accepted`);
+		}
 	});
 });
 

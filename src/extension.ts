@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { readCheckbox, readStatus, writeStatus, toggle, shuffle, type Status } from './checkbox';
+import { readCheckbox, readStatus, writeStatus, toggle, shuffle, isStatus, type Status } from './checkbox';
 import { selectedLines } from './selection';
 import { cascade } from './tree';
 import { outline, type Node } from './outline';
@@ -1323,7 +1323,7 @@ function registerPreview(context: vscode.ExtensionContext) {
 					});
 
 					const received = panel.webview.onDidReceiveMessage(
-						(message: { type?: string; line?: number; view?: string; href?: string }) => {
+						(message: { type?: string; line?: number; view?: string; href?: string; status?: string }) => {
 							if (message?.type === 'open' && typeof message.href === 'string') {
 								// Checked again here. src/preview.ts refuses an
 								// executing scheme when it draws the link; this
@@ -1338,8 +1338,9 @@ function registerPreview(context: vscode.ExtensionContext) {
 								void vscode.commands.executeCommand('xit.openRaw', document.uri);
 								return;
 							}
-							if (message?.type !== 'cycle' || typeof message.line !== 'number') return;
-							void cycleStatusAt(document, message.line);
+							if (message?.type !== 'set' || typeof message.line !== 'number') return;
+							if (!isStatus(message.status)) return;
+							void setStatusAt(document, message.line, message.status);
 						},
 					);
 
@@ -1411,7 +1412,7 @@ function registerPreview(context: vscode.ExtensionContext) {
 }
 
 /**
- * Move one item to its next status, from the preview.
+ * Set one item's status, from the preview.
  *
  * A WorkspaceEdit rather than a TextEditorEdit, because the preview is not a
  * text editor and there may not be one open for this document at all. Undo,
@@ -1423,7 +1424,7 @@ function registerPreview(context: vscode.ExtensionContext) {
  * reusing the same pure functions the editor commands use rather than a second
  * implementation beside them.
  */
-async function cycleStatusAt(document: vscode.TextDocument, line: number): Promise<void> {
+async function setStatusAt(document: vscode.TextDocument, line: number, status: Status): Promise<void> {
 	if (line < 0 || line >= document.lineCount) return;
 
 	const before = documentLines(document);
@@ -1432,7 +1433,7 @@ async function cycleStatusAt(document: vscode.TextDocument, line: number): Promi
 
 	const settings = editSettings();
 	const after = [...before];
-	after[line] = writeStatus(after[line], shuffle(checkbox.status));
+	after[line] = writeStatus(after[line], status);
 
 	const written = new Set([line]);
 	const parked = commentLines(before);

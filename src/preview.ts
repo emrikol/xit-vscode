@@ -22,7 +22,7 @@
  * break out of it. Same discipline as escapeMarkdown in hover.ts.
  */
 
-import { type Status, priorityOf } from './checkbox';
+import { STATUSES, type Status, priorityOf } from './checkbox';
 import { type Collected, type Thresholds, type Urgency, collect, isOpen, totalEstimate, urgencyOf } from './collect';
 import { commentLines } from './comment';
 import { formatCycleTime } from './cycle';
@@ -405,6 +405,28 @@ li ul { margin-inline-start: 1.5rem; }
 	border-inline-start: 2px solid var(--vscode-editorError-foreground, currentColor); padding-inline-start: .5rem; margin: .25rem 0;
 }
 .continued { margin: .1rem 0 .2rem 1.9rem; color: var(--vscode-descriptionForeground); overflow-wrap: anywhere; }
+.menu {
+	position: fixed; z-index: 3; min-inline-size: 11rem; padding: .25rem;
+	display: flex; flex-direction: column;
+	border-radius: 5px;
+	border: 1px solid var(--vscode-menu-border, var(--vscode-widget-border, transparent));
+	background: var(--vscode-menu-background, var(--vscode-editorWidget-background, inherit));
+	box-shadow: 0 2px 8px rgb(0 0 0 / .3);
+}
+.menu[hidden] { display: none; }
+.menu button {
+	display: flex; align-items: center; gap: .5rem;
+	font: inherit; text-align: start; cursor: pointer;
+	padding: .2rem .5rem; border: 0; border-radius: 3px;
+	color: var(--vscode-menu-foreground, inherit); background: transparent;
+}
+.menu button:hover { background: var(--vscode-menu-selectionBackground, rgba(128 128 128 / .25)); }
+.menu button:focus-visible { outline: 2px solid var(--vscode-focusBorder, currentColor); outline-offset: -2px; }
+.menu .glyph {
+	inline-size: 1.4rem; text-align: center; flex: none;
+	font-family: var(--vscode-editor-font-family);
+	border: 1px solid var(--vscode-checkbox-border, currentColor); border-radius: 3px;
+}
 .viewswitch {
 	position: fixed; inset-block-start: .5rem; inset-inline-end: 1rem; z-index: 2;
 	display: flex; border-radius: 4px; overflow: hidden;
@@ -449,6 +471,27 @@ function viewSwitch(): string {
 	);
 }
 
+/**
+ * The status menu, rendered once and moved to whichever checkbox was clicked.
+ *
+ * One menu rather than one per item: a 200-item file would otherwise carry
+ * 1,200 hidden nodes for a control only ever open in one place at a time.
+ *
+ * Clicking used to cycle - six clicks to get from open back to open, and no way
+ * to see what the choices were. In a text editor that is all the API allows;
+ * in a page it is a menu.
+ */
+function statusMenu(): string {
+	const items = STATUSES.map(
+		(status) =>
+			`<button type="button" role="menuitem" data-status="${escapeHtml(status)}">` +
+			`<span class="glyph">${escapeHtml(status === ' ' ? '\u00a0' : status)}</span>` +
+			`${escapeHtml(STATUS_LABEL[status])}</button>`,
+	).join('');
+
+	return `<div class="menu" id="status-menu" role="menu" aria-label="Set status" hidden>${items}</div>`;
+}
+
 /** A chip, or nothing when there is nothing to say. */
 function chip(text: string | null, className = ''): string {
 	return text ? `<span class="chip ${className}">${escapeHtml(text)}</span>` : '';
@@ -460,7 +503,7 @@ function rowHtml(row: Row): string {
 	// free. A styled div with a click handler would have none of them, and is
 	// on the Web Interface Guidelines' anti-pattern list by name.
 	const label = `${row.statusLabel}: ${row.description || 'no description'}. Change status`;
-	const box = `<button class="box" type="button" data-line="${row.line}" aria-label="${escapeHtml(label)}">${escapeHtml(row.status === ' ' ? '' : row.status)}</button>`;
+	const box = `<button class="box" type="button" data-line="${row.line}" aria-haspopup="menu" aria-expanded="false" aria-controls="status-menu" aria-label="${escapeHtml(label)}">${escapeHtml(row.status === ' ' ? '' : row.status)}</button>`;
 
 	const priority =
 		row.priority > 0
@@ -515,7 +558,7 @@ export function previewBody(blocks: readonly Block[]): string {
 }
 
 export function previewHtml(blocks: readonly Block[], nonce: string): string {
-	return `<style nonce="${nonce}">${STYLE}</style>${viewSwitch()}<main>${previewBody(blocks)}</main><script nonce="${nonce}">${CLIENT}</script>`;
+	return `<style nonce="${nonce}">${STYLE}</style>${viewSwitch()}<main>${previewBody(blocks)}</main>${statusMenu()}<script nonce="${nonce}">${CLIENT}</script>`;
 }
 
 /**
@@ -529,6 +572,41 @@ export function previewHtml(blocks: readonly Block[], nonce: string): string {
  */
 export const CLIENT = `
 const vscode = acquireVsCodeApi();
+
+const menu = document.getElementById('status-menu');
+let openFor = null;
+let anchor = null;
+
+function closeMenu() {
+	menu.hidden = true;
+	if (anchor) anchor.setAttribute('aria-expanded', 'false');
+	openFor = null;
+	anchor = null;
+}
+
+function openMenu(box) {
+	const at = box.getBoundingClientRect();
+	openFor = Number(box.dataset.line);
+	anchor = box;
+	menu.hidden = false;
+	box.setAttribute('aria-expanded', 'true');
+	// Placed after unhiding, so the menu has a height to measure. Flipped above
+	// the box when there is no room below, which on a long file is most of it.
+	const below = window.innerHeight - at.bottom;
+	menu.style.insetInlineStart = at.left + 'px';
+	menu.style.insetBlockStart =
+		(below < menu.offsetHeight ? Math.max(0, at.top - menu.offsetHeight) : at.bottom) + 'px';
+	const first = menu.querySelector('[data-status]');
+	if (first) first.focus();
+}
+
+document.addEventListener('keydown', (event) => {
+	if (event.key === 'Escape' && !menu.hidden) {
+		const back = anchor;
+		closeMenu();
+		if (back) back.focus();
+	}
+});
 
 document.addEventListener('click', (event) => {
 	// A webview does not follow a link on its own, and will not hand a custom
@@ -547,9 +625,20 @@ document.addEventListener('click', (event) => {
 		return;
 	}
 
+	const choice = event.target.closest('#status-menu [data-status]');
+	if (choice) {
+		vscode.postMessage({ type: 'set', line: openFor, status: choice.dataset.status });
+		closeMenu();
+		return;
+	}
+
 	const box = event.target.closest('.box');
-	if (!box) return;
-	vscode.postMessage({ type: 'cycle', line: Number(box.dataset.line) });
+	if (!box) {
+		closeMenu();
+		return;
+	}
+
+	openMenu(box);
 });
 
 // Content arrives as a message rather than by the extension reassigning
